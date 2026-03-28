@@ -7,7 +7,7 @@ import type { Score } from "../model/score";
 import { TICKS_PER_QUARTER } from "../model/duration";
 import * as AudioEngine from "./AudioEngine";
 import { scheduleScore, buildTimeToTickMap, type ScheduledEvent } from "./Scheduler";
-import { scheduleClick } from "./Metronome";
+import { scheduleClick, setAudioContext as setMetronomeContext } from "./Metronome";
 
 export type TransportState = "stopped" | "playing" | "paused";
 
@@ -122,6 +122,7 @@ export function play(score: Score, fromTick?: number): void {
   currentTempo = score.tempo;
 
   const ctx = AudioEngine.ensureContext();
+  setMetronomeContext(ctx);
 
   if (state === "stopped" || fromTick !== undefined) {
     // Full restart or seek
@@ -167,11 +168,7 @@ export function play(score: Score, fromTick?: number): void {
 export function pause(): void {
   if (state !== "playing") return;
 
-  const ctx = AudioEngine.ensureContext();
-  const elapsed = ctx.currentTime - playbackStartTime + playbackStartOffset;
-  playbackStartOffset = elapsed;
-
-  AudioEngine.stop();
+  // Clear scheduler first to prevent scheduling new notes after audio stop
   if (scheduleTimer !== null) {
     clearInterval(scheduleTimer);
     scheduleTimer = null;
@@ -180,6 +177,12 @@ export function pause(): void {
     cancelAnimationFrame(animationFrame);
     animationFrame = null;
   }
+
+  const ctx = AudioEngine.ensureContext();
+  const elapsed = ctx.currentTime - playbackStartTime + playbackStartOffset;
+  playbackStartOffset = elapsed;
+
+  AudioEngine.stop();
 
   // Rewind next event index for resume
   nextEventIndex = scheduledEvents.findIndex((e) => e.time >= elapsed);
@@ -189,8 +192,7 @@ export function pause(): void {
 }
 
 export function stop(): void {
-  AudioEngine.stop();
-
+  // Clear scheduler first to prevent scheduling new notes after audio stop
   if (scheduleTimer !== null) {
     clearInterval(scheduleTimer);
     scheduleTimer = null;
@@ -199,6 +201,8 @@ export function stop(): void {
     cancelAnimationFrame(animationFrame);
     animationFrame = null;
   }
+
+  AudioEngine.stop();
 
   playbackStartOffset = 0;
   nextEventIndex = 0;

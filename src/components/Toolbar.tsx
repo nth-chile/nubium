@@ -1,32 +1,14 @@
 import { useEditorStore } from "../state";
 import { useLayoutStore } from "../state/LayoutState";
-import type { DurationType, Accidental } from "../model";
-
-const DURATIONS: { type: DurationType; label: string; key: string }[] = [
-  { type: "whole", label: "W", key: "1" },
-  { type: "half", label: "H", key: "2" },
-  { type: "quarter", label: "Q", key: "3" },
-  { type: "eighth", label: "8", key: "4" },
-  { type: "16th", label: "16", key: "5" },
-  { type: "32nd", label: "32", key: "6" },
-];
-
-const ACCIDENTALS: { acc: Accidental; label: string }[] = [
-  { acc: "flat", label: "\u266D" },
-  { acc: "natural", label: "\u266E" },
-  { acc: "sharp", label: "\u266F" },
-];
 
 interface ToolbarProps {
   onToggleSettings?: () => void;
   onTogglePlugins?: () => void;
+  onOpen?: () => void;
+  onSave?: () => void;
 }
 
-export function Toolbar({ onToggleSettings, onTogglePlugins }: ToolbarProps) {
-  const inputState = useEditorStore((s) => s.inputState);
-  const setDuration = useEditorStore((s) => s.setDuration);
-  const toggleDot = useEditorStore((s) => s.toggleDot);
-  const setAccidental = useEditorStore((s) => s.setAccidental);
+export function Toolbar({ onToggleSettings, onTogglePlugins, onOpen, onSave }: ToolbarProps) {
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
 
@@ -39,67 +21,27 @@ export function Toolbar({ onToggleSettings, onTogglePlugins }: ToolbarProps) {
   return (
     <div style={styles.toolbar}>
       <div style={styles.group}>
-        <span style={styles.label}>Duration</span>
-        {DURATIONS.map((d) => (
-          <button
-            key={d.type}
-            onClick={() => setDuration(d.type)}
-            style={{
-              ...styles.button,
-              ...(inputState.duration.type === d.type ? styles.active : {}),
-            }}
-            title={`${d.type} (${d.key})`}
-          >
-            {d.label}
-          </button>
-        ))}
-        <button
-          onClick={toggleDot}
-          style={{
-            ...styles.button,
-            ...(inputState.duration.dots > 0 ? styles.active : {}),
-          }}
-          title="Dot (.)"
-        >
-          {"\u2022"}{inputState.duration.dots > 0 ? inputState.duration.dots : ""}
-        </button>
-      </div>
-
-      <div style={styles.divider} />
-
-      <div style={styles.group}>
-        <span style={styles.label}>Accidental</span>
-        {ACCIDENTALS.map((a) => (
-          <button
-            key={a.acc}
-            onClick={() => setAccidental(a.acc)}
-            style={{
-              ...styles.button,
-              ...(inputState.accidental === a.acc && a.acc !== "natural" ? styles.active : {}),
-            }}
-            title={a.acc}
-          >
-            {a.label}
-          </button>
-        ))}
-      </div>
-
-      <div style={styles.divider} />
-
-      <div style={styles.group}>
-        <span style={styles.label}>Octave</span>
-        <span style={styles.value}>{inputState.octave}</span>
-      </div>
-
-      <div style={styles.divider} />
-
-      <div style={styles.group}>
         <button onClick={undo} style={styles.button} title="Undo (Ctrl+Z)">
           {"\u21A9"}
         </button>
         <button onClick={redo} style={styles.button} title="Redo (Ctrl+Shift+Z)">
           {"\u21AA"}
         </button>
+      </div>
+
+      <div style={styles.divider} />
+
+      <div style={styles.group}>
+        {onOpen && (
+          <button onClick={onOpen} style={{ ...styles.button, fontSize: 12, padding: "4px 8px" }} title="Open file">
+            Open
+          </button>
+        )}
+        {onSave && (
+          <button onClick={onSave} style={{ ...styles.button, fontSize: 12, padding: "4px 8px" }} title="Save file">
+            Save
+          </button>
+        )}
       </div>
 
       <div style={{ flex: 1 }} />
@@ -185,20 +127,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: 4,
-  },
-  label: {
-    fontSize: 11,
-    color: "#64748b",
-    marginRight: 4,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
-  },
-  value: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#1e293b",
-    minWidth: 20,
-    textAlign: "center" as const,
   },
   button: {
     padding: "4px 8px",

@@ -1,5 +1,6 @@
 import { deserialize } from "../serialization";
 import { importFromMusicXML } from "../musicxml";
+import JSZip from "jszip";
 import type { Score } from "../model";
 
 function isMusicXML(content: string): boolean {
@@ -13,6 +14,33 @@ function isMusicXML(content: string): boolean {
 function isMusicXMLExtension(filename: string): boolean {
   const lower = filename.toLowerCase();
   return lower.endsWith(".musicxml") || lower.endsWith(".xml");
+}
+
+function isMxlExtension(filename: string): boolean {
+  return filename.toLowerCase().endsWith(".mxl");
+}
+
+async function extractMxl(data: ArrayBuffer): Promise<string> {
+  const zip = await JSZip.loadAsync(data);
+  // MXL contains a META-INF/container.xml pointing to the main file,
+  // but most MXLs just have one .xml file at the root
+  const containerXml = zip.file("META-INF/container.xml");
+  if (containerXml) {
+    const containerText = await containerXml.async("string");
+    const match = containerText.match(/full-path="([^"]+)"/);
+    if (match) {
+      const mainFile = zip.file(match[1]);
+      if (mainFile) return mainFile.async("string");
+    }
+  }
+  // Fallback: find any .xml file that looks like MusicXML
+  for (const [name, file] of Object.entries(zip.files)) {
+    if (name.endsWith(".xml") && !name.startsWith("META-INF")) {
+      const content = await file.async("string");
+      if (isMusicXML(content)) return content;
+    }
+  }
+  throw new Error("No MusicXML file found in .mxl archive");
 }
 
 function isJsonContent(content: string): boolean {
@@ -41,15 +69,22 @@ export async function loadScore(): Promise<{ score: Score; path: string } | null
 
     const path = await open({
       filters: [
-        { name: "All Supported", extensions: ["notation", "json", "musicxml", "xml"] },
+        { name: "All Supported", extensions: ["notation", "json", "musicxml", "mxl", "xml"] },
         { name: "Notation Score", extensions: ["notation", "json"] },
-        { name: "MusicXML", extensions: ["musicxml", "xml"] },
+        { name: "MusicXML", extensions: ["musicxml", "mxl", "xml"] },
       ],
       multiple: false,
     });
 
     if (!path) return null;
 
+    if (isMxlExtension(path as string)) {
+      const { readFile } = await import("@tauri-apps/plugin-fs");
+      const buf = await readFile(path as string);
+      const xml = await extractMxl(buf.buffer as ArrayBuffer);
+      const score = importFromMusicXML(xml);
+      return { score, path: path as string };
+    }
     const content = await readTextFile(path as string);
     const score = parseContent(content, path as string);
     return { score, path: path as string };
@@ -58,11 +93,18 @@ export async function loadScore(): Promise<{ score: Score; path: string } | null
     return new Promise((resolve) => {
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = ".notation,.json,.musicxml,.xml";
+      input.accept = ".notation,.json,.musicxml,.mxl,.xml";
       input.onchange = async () => {
         const file = input.files?.[0];
         if (!file) {
           resolve(null);
+          return;
+        }
+        if (isMxlExtension(file.name)) {
+          const buf = await file.arrayBuffer();
+          const xml = await extractMxl(buf);
+          const score = importFromMusicXML(xml);
+          resolve({ score, path: file.name });
           return;
         }
         const text = await file.text();

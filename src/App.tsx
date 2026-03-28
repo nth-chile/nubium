@@ -23,6 +23,7 @@ import {
   PlaybackPlugin,
   AIChatPlugin,
   PartManagerPlugin,
+  ScoreEditorPlugin,
 } from "./plugins";
 
 export function App() {
@@ -56,6 +57,7 @@ export function App() {
     pm.registerAndActivate(AIChatPlugin, true);
     pm.registerAndActivate(PartManagerPlugin, true);
     pm.registerAndActivate(MusicXMLPlugin, true);
+    pm.registerAndActivate(ScoreEditorPlugin, true);
 
     // Register and activate built-in transform plugins (enabled by default)
     pm.registerAndActivate(TransposePlugin, true);
@@ -84,19 +86,22 @@ export function App() {
 
   const handleSave = useCallback(async () => {
     try {
-      const path = await saveScore(score, filePath ?? undefined);
+      // Save exports a .notation JSON file (the working copy)
+      // Never overwrites the imported source file — always prompts for a new path
+      const path = await saveScore(score);
       setFilePath(path);
     } catch (err) {
       console.error("Save failed:", err);
     }
-  }, [score, filePath, setFilePath]);
+  }, [score, setFilePath]);
 
   const handleOpen = useCallback(async () => {
     try {
       const result = await loadScore();
       if (result) {
-        setScore(result.score);
-        setFilePath(result.path);
+        // Store the original import path as metadata but don't overwrite source
+        setScore(result.score, result.path);
+        setFilePath(null); // working copy lives in localStorage, not the source file
       }
     } catch (err) {
       console.error("Load failed:", err);
@@ -128,6 +133,8 @@ export function App() {
       <Toolbar
         onToggleSettings={() => setSettingsVisible((v) => !v)}
         onTogglePlugins={() => setPluginsVisible((v) => !v)}
+        onOpen={handleOpen}
+        onSave={handleSave}
       />
 
       {/* Plugin-registered toolbar panels (e.g. transport bar) */}

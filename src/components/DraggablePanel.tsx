@@ -38,18 +38,6 @@ export function DraggablePanel({ id, title, children, isOverlay }: DraggablePane
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <div style={styles.header}>
-        {/* Drag handle */}
-        <div style={styles.dragHandle} {...listeners} title="Drag to reorder">
-          <svg width="10" height="16" viewBox="0 0 10 16" fill="#94a3b8">
-            <circle cx="2" cy="2" r="1.5" />
-            <circle cx="8" cy="2" r="1.5" />
-            <circle cx="2" cy="8" r="1.5" />
-            <circle cx="8" cy="8" r="1.5" />
-            <circle cx="2" cy="14" r="1.5" />
-            <circle cx="8" cy="14" r="1.5" />
-          </svg>
-        </div>
-
         <span style={styles.title}>{title}</span>
 
         <button
@@ -74,6 +62,18 @@ export function DraggablePanel({ id, title, children, isOverlay }: DraggablePane
             <polyline points="2,4 6,8 10,4" />
           </svg>
         </button>
+
+        {/* Drag handle on the right */}
+        <div style={styles.dragHandle} {...listeners} title="Drag to reorder">
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="#94a3b8">
+            <circle cx="2" cy="2" r="1.5" />
+            <circle cx="8" cy="2" r="1.5" />
+            <circle cx="2" cy="8" r="1.5" />
+            <circle cx="8" cy="8" r="1.5" />
+            <circle cx="2" cy="14" r="1.5" />
+            <circle cx="8" cy="14" r="1.5" />
+          </svg>
+        </div>
       </div>
 
       {!collapsed && (

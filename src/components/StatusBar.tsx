@@ -5,6 +5,8 @@ export function StatusBar() {
   const filePath = useEditorStore((s) => s.filePath);
   const isDirty = useEditorStore((s) => s.isDirty);
   const score = useEditorStore((s) => s.score);
+  const autoSaveStatus = useEditorStore((s) => s.autoSaveStatus);
+  const importSource = useEditorStore((s) => s.importSource);
 
   const { cursor } = inputState;
 
@@ -28,6 +30,16 @@ export function StatusBar() {
       <span style={styles.item}>
         {inputState.accidental !== "natural" ? inputState.accidental : ""}
       </span>
+      {importSource && (
+        <span style={styles.item}>
+          Imported: {importSource.split("/").pop()}
+        </span>
+      )}
+      {autoSaveStatus && (
+        <span style={styles.item}>
+          {autoSaveStatus}
+        </span>
+      )}
       <span style={{ ...styles.item, marginLeft: "auto" }}>
         {filePath ? filePath.split("/").pop() : "unsaved"}
       </span>

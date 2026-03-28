@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { serialize as serializeScore, deserialize as deserializeScore } from "../serialization";
 import type {
   Score,
   DurationType,
@@ -45,11 +46,16 @@ import * as Transport from "../playback/TonePlayback";
 
 const history = new CommandHistory();
 
+const AUTOSAVE_KEY = "notation-autosave";
+const AUTOSAVE_DEBOUNCE_MS = 2000;
+
 interface EditorStore {
   // Document
   score: Score;
   filePath: string | null;
   isDirty: boolean;
+  importSource: string | null;
+  autoSaveStatus: string | null;
 
   // Input
   inputState: InputState;
@@ -67,8 +73,10 @@ interface EditorStore {
   moveCursor(direction: "left" | "right"): void;
   moveCursorToMeasure(direction: "next" | "prev"): void;
   changeOctave(direction: "up" | "down"): void;
-  setScore(score: Score): void;
+  setScore(score: Score, importSource?: string | null): void;
   setFilePath(path: string | null): void;
+  setImportSource(path: string | null): void;
+  setAutoSaveStatus(status: string | null): void;
   setNoteBoxes(boxes: Map<NoteEventId, NoteBox>): void;
   undo(): void;
   redo(): void;
@@ -134,6 +142,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   score: factory.emptyScore(),
   filePath: null,
   isDirty: false,
+  importSource: null,
+  autoSaveStatus: null,
   inputState: defaultInputState(),
   noteBoxes: new Map(),
   isPlaying: false,
@@ -307,12 +317,24 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     }));
   },
 
-  setScore(score: Score) {
-    set({ score, isDirty: false });
+  setScore(score: Score, importSource?: string | null) {
+    set({
+      score,
+      isDirty: false,
+      ...(importSource !== undefined ? { importSource } : {}),
+    });
   },
 
   setFilePath(path: string | null) {
     set({ filePath: path });
+  },
+
+  setImportSource(path: string | null) {
+    set({ importSource: path });
+  },
+
+  setAutoSaveStatus(status: string | null) {
+    set({ autoSaveStatus: status });
   },
 
   setNoteBoxes(boxes: Map<NoteEventId, NoteBox>) {
@@ -785,3 +807,54 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     });
   },
 }));
+
+// --- Auto-save: debounced save to localStorage on score changes ---
+
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function autoSaveToLocalStorage(score: Score, importSource: string | null): void {
+  try {
+    const payload = JSON.stringify({
+      score: serializeScore(score),
+      importSource,
+      savedAt: Date.now(),
+    });
+    localStorage.setItem(AUTOSAVE_KEY, payload);
+    useEditorStore.getState().setAutoSaveStatus("Auto-saved");
+  } catch {
+    // ignore storage errors
+  }
+}
+
+// Subscribe to score changes and debounce auto-save
+useEditorStore.subscribe((state, prevState) => {
+  if (state.score !== prevState.score) {
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      autoSaveToLocalStorage(state.score, state.importSource);
+    }, AUTOSAVE_DEBOUNCE_MS);
+  }
+});
+
+// --- Restore from localStorage on init ---
+
+function restoreAutoSave(): void {
+  try {
+    const raw = localStorage.getItem(AUTOSAVE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.score === "string") {
+      const score = deserializeScore(parsed.score);
+      useEditorStore.setState({
+        score,
+        importSource: parsed.importSource ?? null,
+        isDirty: false,
+        autoSaveStatus: "Restored from auto-save",
+      });
+    }
+  } catch {
+    // ignore corrupt auto-save data
+  }
+}
+
+restoreAutoSave();

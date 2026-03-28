@@ -30,3 +30,4 @@ export { MusicXMLPlugin } from "./builtins/MusicXML";
 export { PlaybackPlugin } from "./builtins/Playback";
 export { AIChatPlugin } from "./builtins/AIChat";
 export { PartManagerPlugin } from "./builtins/PartManager";
+export { ScoreEditorPlugin } from "./builtins/ScoreEditor";
