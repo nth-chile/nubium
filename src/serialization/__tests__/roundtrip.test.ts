@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { serialize } from "../serialize";
 import { deserialize } from "../deserialize";
 import { factory } from "../../model";
-import { durationToTicks } from "../../model/duration";
+import { durationToTicks, voiceTicksUsed, measureCapacity } from "../../model/duration";
 
 describe("serialization round-trip", () => {
   it("round-trips a simple score", () => {
@@ -150,5 +150,26 @@ describe("duration ticks", () => {
 
   it("calculates double-dotted half ticks", () => {
     expect(durationToTicks({ type: "half", dots: 2 })).toBe(960 + 480 + 240);
+  });
+
+  it("calculates voiceTicksUsed", () => {
+    const events = [
+      { duration: { type: "quarter" as const, dots: 0 as const } },
+      { duration: { type: "quarter" as const, dots: 0 as const } },
+      { duration: { type: "half" as const, dots: 0 as const } },
+    ];
+    expect(voiceTicksUsed(events)).toBe(480 + 480 + 960);
+  });
+
+  it("calculates measureCapacity for 4/4", () => {
+    expect(measureCapacity(4, 4)).toBe(1920);
+  });
+
+  it("calculates measureCapacity for 3/4", () => {
+    expect(measureCapacity(3, 4)).toBe(1440);
+  });
+
+  it("calculates measureCapacity for 6/8", () => {
+    expect(measureCapacity(6, 8)).toBe(1440);
   });
 });

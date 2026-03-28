@@ -23,6 +23,9 @@ export function StatusBar() {
         Oct {inputState.octave}
       </span>
       <span style={styles.item}>
+        Voice {inputState.voice + 1}
+      </span>
+      <span style={styles.item}>
         {inputState.accidental !== "natural" ? inputState.accidental : ""}
       </span>
       <span style={{ ...styles.item, marginLeft: "auto" }}>

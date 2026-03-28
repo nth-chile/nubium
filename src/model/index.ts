@@ -6,6 +6,6 @@ export type { Clef, ClefType, TimeSignature, KeySignature, BarlineType } from ".
 export type { ScoreId, PartId, MeasureId, VoiceId, NoteEventId } from "./ids";
 
 export { pitchToMidi, midiToPitch, stepUp, stepDown } from "./pitch";
-export { durationToTicks, measureCapacity, TICKS_PER_QUARTER, DURATION_TYPES_ORDERED } from "./duration";
+export { durationToTicks, measureCapacity, voiceTicksUsed, TICKS_PER_QUARTER, DURATION_TYPES_ORDERED } from "./duration";
 export { newId } from "./ids";
 export * as factory from "./factory";

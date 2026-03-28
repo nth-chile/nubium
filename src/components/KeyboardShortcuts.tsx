@@ -33,6 +33,9 @@ export function KeyboardShortcuts() {
   const changeOctave = useEditorStore((s) => s.changeOctave);
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
+  const setVoice = useEditorStore((s) => s.setVoice);
+  const insertMeasure = useEditorStore((s) => s.insertMeasure);
+  const deleteMeasure = useEditorStore((s) => s.deleteMeasure);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -52,7 +55,28 @@ export function KeyboardShortcuts() {
         return;
       }
 
-      // Note input
+      // Voice switching: Ctrl+1 through Ctrl+4
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && key >= "1" && key <= "4") {
+        e.preventDefault();
+        setVoice(parseInt(key) - 1);
+        return;
+      }
+
+      // Insert measure: Ctrl+M
+      if ((e.ctrlKey || e.metaKey) && key === "m") {
+        e.preventDefault();
+        insertMeasure();
+        return;
+      }
+
+      // Delete measure: Ctrl+Shift+Backspace
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && key === "backspace") {
+        e.preventDefault();
+        deleteMeasure();
+        return;
+      }
+
+      // Note input (also handles ChangePitch when cursor is on existing note)
       if (!e.metaKey && !e.ctrlKey && NOTE_KEYS[key]) {
         e.preventDefault();
         insertNote(NOTE_KEYS[key]);
@@ -107,20 +131,12 @@ export function KeyboardShortcuts() {
       // Octave
       if (key === "arrowup") {
         e.preventDefault();
-        if (e.shiftKey) {
-          changeOctave("up");
-        } else {
-          changeOctave("up");
-        }
+        changeOctave("up");
         return;
       }
       if (key === "arrowdown") {
         e.preventDefault();
-        if (e.shiftKey) {
-          changeOctave("down");
-        } else {
-          changeOctave("down");
-        }
+        changeOctave("down");
         return;
       }
 
@@ -145,6 +161,9 @@ export function KeyboardShortcuts() {
     changeOctave,
     undo,
     redo,
+    setVoice,
+    insertMeasure,
+    deleteMeasure,
   ]);
 
   return null;

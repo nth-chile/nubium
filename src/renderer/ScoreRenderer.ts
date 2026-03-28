@@ -5,6 +5,7 @@ import type { CursorPosition } from "../input/InputState";
 export interface ScoreRenderResult {
   noteBoxes: Map<NoteEventId, NoteBox>;
   measurePositions: { partIndex: number; measureIndex: number; x: number; y: number; width: number }[];
+  contentHeight: number;
 }
 
 const MEASURE_WIDTH = 250;
@@ -12,6 +13,18 @@ const STAFF_HEIGHT = 120;
 const LEFT_MARGIN = 20;
 const TOP_MARGIN = 40;
 const MEASURES_PER_LINE = 4;
+const BOTTOM_MARGIN = 60;
+
+export function calculateContentHeight(score: Score): number {
+  let maxLine = 0;
+  for (let pi = 0; pi < score.parts.length; pi++) {
+    const part = score.parts[pi];
+    const lines = Math.ceil(part.measures.length / MEASURES_PER_LINE);
+    const totalLines = lines * score.parts.length;
+    maxLine = Math.max(maxLine, totalLines);
+  }
+  return TOP_MARGIN + maxLine * STAFF_HEIGHT + BOTTOM_MARGIN;
+}
 
 export function renderScore(
   ctx: RenderContext,
@@ -61,7 +74,9 @@ export function renderScore(
     drawCursor(ctx, score, cursor, measurePositions);
   }
 
-  return { noteBoxes: allNoteBoxes, measurePositions };
+  const contentHeight = calculateContentHeight(score);
+
+  return { noteBoxes: allNoteBoxes, measurePositions, contentHeight };
 }
 
 function drawCursor(

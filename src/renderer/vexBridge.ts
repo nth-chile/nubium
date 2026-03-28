@@ -50,12 +50,21 @@ function pitchToVexKey(p: { pitchClass: string; octave: number }): string {
   return `${p.pitchClass.toLowerCase()}/${p.octave}`;
 }
 
-function eventToStaveNote(event: NoteEvent): StaveNote | null {
+function eventToStaveNote(
+  event: NoteEvent,
+  stemDirection?: "up" | "down"
+): StaveNote | null {
   switch (event.kind) {
     case "note": {
       const key = pitchToVexKey(event.head.pitch);
       const dur = DUR_VEX[event.duration.type];
-      const sn = new StaveNote({ keys: [key], duration: dur });
+      const opts: { keys: string[]; duration: string; stemDirection?: number } = {
+        keys: [key],
+        duration: dur,
+      };
+      if (stemDirection === "up") opts.stemDirection = 1;
+      else if (stemDirection === "down") opts.stemDirection = -1;
+      const sn = new StaveNote(opts);
       const acc = event.head.pitch.accidental;
       if (acc !== "natural" && ACC_VEX[acc]) {
         sn.addModifier(new Accidental(ACC_VEX[acc]));
@@ -68,7 +77,13 @@ function eventToStaveNote(event: NoteEvent): StaveNote | null {
     case "chord": {
       const keys = event.heads.map((h) => pitchToVexKey(h.pitch));
       const dur = DUR_VEX[event.duration.type];
-      const sn = new StaveNote({ keys, duration: dur });
+      const opts: { keys: string[]; duration: string; stemDirection?: number } = {
+        keys,
+        duration: dur,
+      };
+      if (stemDirection === "up") opts.stemDirection = 1;
+      else if (stemDirection === "down") opts.stemDirection = -1;
+      const sn = new StaveNote(opts);
       event.heads.forEach((h, idx) => {
         const acc = h.pitch.accidental;
         if (acc !== "natural" && ACC_VEX[acc]) {
@@ -116,6 +131,13 @@ const KEY_SIG_MAP: Record<number, string> = {
   "7": "C#",
 };
 
+/** Stem direction per voice index: 0=auto (undefined), 1=up, 2=down */
+function voiceStemDirection(voiceIndex: number): "up" | "down" | undefined {
+  if (voiceIndex === 1) return "up";
+  if (voiceIndex === 2) return "down";
+  return undefined;
+}
+
 export function renderMeasure(
   ctx: RenderContext,
   m: Measure,
@@ -138,15 +160,19 @@ export function renderMeasure(
   stave.setContext(ctx.context).draw();
 
   const noteBoxes: NoteBox[] = [];
+  const vfVoices: Voice[] = [];
 
-  // Render first voice (Phase 1: single voice rendering)
-  const voice0 = m.voices[0];
-  if (voice0 && voice0.events.length > 0) {
+  // Build VexFlow voices for all model voices that have events
+  for (let vi = 0; vi < m.voices.length; vi++) {
+    const modelVoice = m.voices[vi];
+    if (!modelVoice || modelVoice.events.length === 0) continue;
+
+    const stemDir = voiceStemDirection(vi);
     const staveNotes: StaveNote[] = [];
     const eventIds: NoteEventId[] = [];
 
-    for (const event of voice0.events) {
-      const sn = eventToStaveNote(event);
+    for (const event of modelVoice.events) {
+      const sn = eventToStaveNote(event, stemDir);
       if (sn) {
         staveNotes.push(sn);
         eventIds.push(event.id);
@@ -154,7 +180,7 @@ export function renderMeasure(
     }
 
     if (staveNotes.length > 0) {
-      const totalTicks = voice0.events.reduce((sum, e) => {
+      const totalTicks = modelVoice.events.reduce((sum, e) => {
         return sum + durationToTicksFn(e.duration);
       }, 0);
       const beats = totalTicks / 480;
@@ -164,16 +190,30 @@ export function renderMeasure(
         beatValue: 4,
       }).setStrict(false);
       vfVoice.addTickables(staveNotes);
+      vfVoices.push(vfVoice);
 
-      new Formatter().joinVoices([vfVoice]).format([vfVoice], width - (stave.getNoteStartX() - x) - 10);
+      // Store staveNotes + eventIds for bounding box collection after draw
+      (vfVoice as unknown as { __staveNotes: StaveNote[]; __eventIds: NoteEventId[] }).__staveNotes = staveNotes;
+      (vfVoice as unknown as { __staveNotes: StaveNote[]; __eventIds: NoteEventId[] }).__eventIds = eventIds;
+    }
+  }
+
+  // Format and draw all voices together
+  if (vfVoices.length > 0) {
+    const formatter = new Formatter();
+    formatter.joinVoices(vfVoices);
+    formatter.format(vfVoices, width - (stave.getNoteStartX() - x) - 10);
+
+    for (const vfVoice of vfVoices) {
       vfVoice.draw(ctx.context, stave);
 
       // Collect bounding boxes
-      staveNotes.forEach((sn, idx) => {
+      const data = vfVoice as unknown as { __staveNotes: StaveNote[]; __eventIds: NoteEventId[] };
+      data.__staveNotes.forEach((sn, idx) => {
         const bb = sn.getBoundingBox();
         if (bb) {
           noteBoxes.push({
-            id: eventIds[idx],
+            id: data.__eventIds[idx],
             x: bb.getX(),
             y: bb.getY(),
             width: bb.getW(),

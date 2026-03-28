@@ -48,3 +48,10 @@ export const DURATION_TYPES_ORDERED: DurationType[] = [
   "32nd",
   "64th",
 ];
+
+/**
+ * Calculates total ticks used by all events in a voice.
+ */
+export function voiceTicksUsed(events: { duration: Duration }[]): number {
+  return events.reduce((sum, e) => sum + durationToTicks(e.duration), 0);
+}

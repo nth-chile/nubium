@@ -1,5 +1,15 @@
 import { create } from "zustand";
-import type { Score, DurationType, Accidental, PitchClass, Octave, NoteEventId } from "../model";
+import type {
+  Score,
+  DurationType,
+  Accidental,
+  PitchClass,
+  Octave,
+  NoteEventId,
+  Clef,
+  TimeSignature,
+  KeySignature,
+} from "../model";
 import { DURATION_TYPES_ORDERED } from "../model";
 import { factory } from "../model";
 import { defaultInputState, type InputState, type CursorPosition } from "../input/InputState";
@@ -7,7 +17,15 @@ import { CommandHistory } from "../commands/CommandHistory";
 import { InsertNote } from "../commands/InsertNote";
 import { InsertRest } from "../commands/InsertRest";
 import { DeleteNote } from "../commands/DeleteNote";
+import { ChangePitch } from "../commands/ChangePitch";
+import { ChangeDuration } from "../commands/ChangeDuration";
+import { InsertMeasure } from "../commands/InsertMeasure";
+import { DeleteMeasure } from "../commands/DeleteMeasure";
+import { ChangeTimeSig } from "../commands/ChangeTimeSig";
+import { ChangeKeySig } from "../commands/ChangeKeySig";
+import { ChangeClef } from "../commands/ChangeClef";
 import type { NoteBox } from "../renderer/vexBridge";
+import { newId, type VoiceId } from "../model/ids";
 
 const history = new CommandHistory();
 
@@ -38,6 +56,24 @@ interface EditorStore {
   setNoteBoxes(boxes: Map<NoteEventId, NoteBox>): void;
   undo(): void;
   redo(): void;
+
+  // Phase 2 actions
+  changePitch(pitchClass: PitchClass): void;
+  changeDuration(type: DurationType): void;
+  setVoice(n: number): void;
+  insertMeasure(): void;
+  deleteMeasure(): void;
+  changeTimeSig(timeSig: TimeSignature): void;
+  changeKeySig(keySig: KeySignature): void;
+  changeClef(clef: Clef): void;
+}
+
+/** Returns true if the cursor is on an existing event (not past the end) */
+function cursorOnExistingEvent(score: Score, cursor: CursorPosition): boolean {
+  const voice =
+    score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+  if (!voice) return false;
+  return cursor.eventIndex < voice.events.length;
 }
 
 export const useEditorStore = create<EditorStore>((set, get) => ({
@@ -49,6 +85,27 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   insertNote(pitchClass: PitchClass) {
     const state = get();
+    const { cursor } = state.inputState;
+
+    // If cursor is on an existing note, change pitch instead of inserting
+    if (cursorOnExistingEvent(state.score, cursor)) {
+      const cmd = new ChangePitch(
+        pitchClass,
+        state.inputState.octave as Octave,
+        state.inputState.accidental
+      );
+      const result = history.execute(cmd, {
+        score: state.score,
+        inputState: state.inputState,
+      });
+      set({
+        score: result.score,
+        inputState: result.inputState,
+        isDirty: true,
+      });
+      return;
+    }
+
     const cmd = new InsertNote(
       pitchClass,
       state.inputState.octave as Octave,
@@ -216,5 +273,140 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     if (result) {
       set({ score: result.score, inputState: result.inputState });
     }
+  },
+
+  // Phase 2 actions
+
+  changePitch(pitchClass: PitchClass) {
+    const state = get();
+    const cmd = new ChangePitch(
+      pitchClass,
+      state.inputState.octave as Octave,
+      state.inputState.accidental
+    );
+    const result = history.execute(cmd, {
+      score: state.score,
+      inputState: state.inputState,
+    });
+    set({
+      score: result.score,
+      inputState: result.inputState,
+      isDirty: true,
+    });
+  },
+
+  changeDuration(type: DurationType) {
+    const state = get();
+    const cmd = new ChangeDuration({ type, dots: state.inputState.duration.dots });
+    const result = history.execute(cmd, {
+      score: state.score,
+      inputState: state.inputState,
+    });
+    set({
+      score: result.score,
+      inputState: result.inputState,
+      isDirty: true,
+    });
+  },
+
+  setVoice(n: number) {
+    set((s) => {
+      const score = structuredClone(s.score);
+      const cursor = { ...s.inputState.cursor };
+      const { partIndex, measureIndex } = cursor;
+
+      const measure = score.parts[partIndex]?.measures[measureIndex];
+      if (!measure) return s;
+
+      // Auto-create voices up to the requested index
+      while (measure.voices.length <= n) {
+        measure.voices.push({
+          id: newId<VoiceId>("vce"),
+          events: [],
+        });
+      }
+
+      cursor.voiceIndex = n;
+      cursor.eventIndex = 0;
+
+      return {
+        score,
+        inputState: {
+          ...s.inputState,
+          voice: n,
+          cursor,
+        },
+      };
+    });
+  },
+
+  insertMeasure() {
+    const state = get();
+    const cmd = new InsertMeasure();
+    const result = history.execute(cmd, {
+      score: state.score,
+      inputState: state.inputState,
+    });
+    set({
+      score: result.score,
+      inputState: result.inputState,
+      isDirty: true,
+    });
+  },
+
+  deleteMeasure() {
+    const state = get();
+    const cmd = new DeleteMeasure();
+    const result = history.execute(cmd, {
+      score: state.score,
+      inputState: state.inputState,
+    });
+    set({
+      score: result.score,
+      inputState: result.inputState,
+      isDirty: true,
+    });
+  },
+
+  changeTimeSig(timeSig: TimeSignature) {
+    const state = get();
+    const cmd = new ChangeTimeSig(timeSig);
+    const result = history.execute(cmd, {
+      score: state.score,
+      inputState: state.inputState,
+    });
+    set({
+      score: result.score,
+      inputState: result.inputState,
+      isDirty: true,
+    });
+  },
+
+  changeKeySig(keySig: KeySignature) {
+    const state = get();
+    const cmd = new ChangeKeySig(keySig);
+    const result = history.execute(cmd, {
+      score: state.score,
+      inputState: state.inputState,
+    });
+    set({
+      score: result.score,
+      inputState: result.inputState,
+      isDirty: true,
+    });
+  },
+
+  changeClef(clef: Clef) {
+    const state = get();
+    const cmd = new ChangeClef(clef);
+    const result = history.execute(cmd, {
+      score: state.score,
+      inputState: state.inputState,
+    });
+    set({
+      score: result.score,
+      inputState: result.inputState,
+      isDirty: true,
+    });
   },
 }));
