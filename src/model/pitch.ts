@@ -55,24 +55,20 @@ export function midiToPitch(midi: number): Pitch {
     }
   }
   // Default to sharp for black keys
-  const SHARP_MAP: [PitchClass, number][] = [
-    ["C", 0],
-    ["C", 1],
-    ["D", 2],
-    ["D", 3],
-    ["E", 4],
-    ["F", 5],
-    ["F", 6],
-    ["G", 7],
-    ["G", 8],
-    ["A", 9],
-    ["A", 10],
-    ["B", 11],
-  ];
-  const [pc, base] = SHARP_MAP[semitone];
-  const diff = semitone - base;
-  const acc: Accidental = diff === 1 ? "sharp" : diff === -1 ? "flat" : "natural";
-  return { pitchClass: pc, accidental: acc, octave: octave as Octave };
+  // Map each black key semitone to its sharp spelling
+  const BLACK_KEY_MAP: Record<number, [PitchClass, Accidental]> = {
+    1: ["C", "sharp"],   // C#
+    3: ["D", "sharp"],   // D#
+    6: ["F", "sharp"],   // F#
+    8: ["G", "sharp"],   // G#
+    10: ["A", "sharp"],  // A#
+  };
+  const entry = BLACK_KEY_MAP[semitone];
+  if (entry) {
+    return { pitchClass: entry[0], accidental: entry[1], octave: octave as Octave };
+  }
+  // Fallback (should not reach here)
+  return { pitchClass: "C", accidental: "natural", octave: octave as Octave };
 }
 
 const PITCH_ORDER: PitchClass[] = ["C", "D", "E", "F", "G", "A", "B"];

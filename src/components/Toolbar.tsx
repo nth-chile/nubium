@@ -19,9 +19,11 @@ const ACCIDENTALS: { acc: Accidental; label: string }[] = [
 interface ToolbarProps {
   onToggleChat?: () => void;
   chatVisible?: boolean;
+  onToggleSettings?: () => void;
+  onTogglePlugins?: () => void;
 }
 
-export function Toolbar({ onToggleChat, chatVisible }: ToolbarProps) {
+export function Toolbar({ onToggleChat, chatVisible, onToggleSettings, onTogglePlugins }: ToolbarProps) {
   const inputState = useEditorStore((s) => s.inputState);
   const setDuration = useEditorStore((s) => s.setDuration);
   const toggleDot = useEditorStore((s) => s.toggleDot);
@@ -96,6 +98,34 @@ export function Toolbar({ onToggleChat, chatVisible }: ToolbarProps) {
       </div>
 
       <div style={{ flex: 1 }} />
+
+      {onToggleSettings && (
+        <button
+          onClick={onToggleSettings}
+          style={{
+            ...styles.button,
+            fontSize: 12,
+            padding: "4px 12px",
+          }}
+          title="Settings"
+        >
+          Settings
+        </button>
+      )}
+
+      {onTogglePlugins && (
+        <button
+          onClick={onTogglePlugins}
+          style={{
+            ...styles.button,
+            fontSize: 12,
+            padding: "4px 12px",
+          }}
+          title="Plugins"
+        >
+          Plugins
+        </button>
+      )}
 
       {onToggleChat && (
         <button
