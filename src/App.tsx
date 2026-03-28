@@ -1,27 +1,34 @@
 import { ScoreCanvas } from "./components/ScoreCanvas";
 import { Toolbar } from "./components/Toolbar";
-import { TransportBar } from "./components/TransportBar";
 import { StatusBar } from "./components/StatusBar";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 import { TextInput } from "./components/TextInput";
-import { PartPanel } from "./components/PartPanel";
-import { ChatSidebar } from "./components/ChatSidebar";
-import { ViewSwitcher } from "./components/ViewSwitcher";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { PluginPanel } from "./components/PluginPanel";
 import { CommandPalette } from "./components/CommandPalette";
+import { PluginViewSwitcher } from "./components/PluginViewSwitcher";
 import { useEditorStore } from "./state";
 import { saveScore } from "./fileio/save";
 import { loadScore } from "./fileio/load";
-import { useEffect, useCallback, useState, useRef } from "react";
-import { PluginManager, TransposePlugin, RetrogradePlugin, AugmentPlugin, ChordAnalysisPlugin } from "./plugins";
+import { useEffect, useCallback, useState, useRef, useSyncExternalStore } from "react";
+import {
+  PluginManager,
+  TransposePlugin,
+  RetrogradePlugin,
+  AugmentPlugin,
+  ChordAnalysisPlugin,
+  ViewsPlugin,
+  MusicXMLPlugin,
+  PlaybackPlugin,
+  AIChatPlugin,
+  PartManagerPlugin,
+} from "./plugins";
 
 export function App() {
   const score = useEditorStore((s) => s.score);
   const filePath = useEditorStore((s) => s.filePath);
   const setScore = useEditorStore((s) => s.setScore);
   const setFilePath = useEditorStore((s) => s.setFilePath);
-  const [chatVisible, setChatVisible] = useState(true);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [pluginsVisible, setPluginsVisible] = useState(false);
 
@@ -40,17 +47,39 @@ export function App() {
       },
     });
 
-    // Register and activate built-in plugins
     const pm = pluginManagerRef.current;
-    pm.register(TransposePlugin);
-    pm.register(RetrogradePlugin);
-    pm.register(AugmentPlugin);
-    pm.register(ChordAnalysisPlugin);
-    pm.activate(TransposePlugin.id);
-    pm.activate(RetrogradePlugin.id);
-    pm.activate(AugmentPlugin.id);
-    pm.activate(ChordAnalysisPlugin.id);
+
+    // Register and activate built-in feature plugins (enabled by default)
+    pm.registerAndActivate(ViewsPlugin, true);
+    pm.registerAndActivate(PlaybackPlugin, true);
+    pm.registerAndActivate(AIChatPlugin, true);
+    pm.registerAndActivate(PartManagerPlugin, true);
+    pm.registerAndActivate(MusicXMLPlugin, true);
+
+    // Register and activate built-in transform plugins (enabled by default)
+    pm.registerAndActivate(TransposePlugin, true);
+    pm.registerAndActivate(RetrogradePlugin, true);
+    pm.registerAndActivate(AugmentPlugin, true);
+    pm.registerAndActivate(ChordAnalysisPlugin, true);
   }
+
+  const pm = pluginManagerRef.current;
+
+  // Subscribe to plugin manager changes so we re-render when plugins are toggled
+  const pluginVersion = useSyncExternalStore(
+    (cb) => pm.subscribe(cb),
+    () => {
+      // Return a snapshot that changes when plugins change
+      const plugins = pm.getPlugins();
+      return plugins.map((p) => `${p.plugin.id}:${p.enabled}`).join(",");
+    }
+  );
+
+  // Derive panels from plugin registry
+  const toolbarPanels = pm.getPanels("toolbar");
+  const leftPanels = pm.getPanels("sidebar-left");
+  const rightPanels = pm.getPanels("sidebar-right");
+  const views = pm.getViews();
 
   const handleSave = useCallback(async () => {
     try {
@@ -73,7 +102,7 @@ export function App() {
     }
   }, [setScore, setFilePath]);
 
-  // Ctrl+S / Ctrl+O / Ctrl+Shift+A
+  // Ctrl+S / Ctrl+O
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
@@ -84,31 +113,44 @@ export function App() {
         e.preventDefault();
         handleOpen();
       }
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "a" || e.key === "A")) {
-        e.preventDefault();
-        setChatVisible((v) => !v);
-      }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleSave, handleOpen]);
 
+  // Suppress unused variable warning — pluginVersion is used to trigger re-renders
+  void pluginVersion;
+
   return (
     <div style={styles.app}>
       <KeyboardShortcuts />
       <Toolbar
-        onToggleChat={() => setChatVisible((v) => !v)}
-        chatVisible={chatVisible}
         onToggleSettings={() => setSettingsVisible((v) => !v)}
         onTogglePlugins={() => setPluginsVisible((v) => !v)}
       />
-      <TransportBar />
-      <ViewSwitcher />
+
+      {/* Plugin-registered toolbar panels (e.g. transport bar) */}
+      {toolbarPanels.map((panel) => (
+        <div key={panel.id}>{panel.config.component()}</div>
+      ))}
+
+      {/* Plugin-registered view switcher */}
+      {views.length > 0 && <PluginViewSwitcher views={views} />}
+
       <div style={styles.mainContent}>
-        <PartPanel />
+        {/* Plugin-registered left sidebar panels (e.g. parts) */}
+        {leftPanels.map((panel) => (
+          <div key={panel.id}>{panel.config.component()}</div>
+        ))}
+
         <ScoreCanvas />
-        <ChatSidebar visible={chatVisible} />
+
+        {/* Plugin-registered right sidebar panels (e.g. AI chat) */}
+        {rightPanels.map((panel) => (
+          <div key={panel.id}>{panel.config.component()}</div>
+        ))}
       </div>
+
       <StatusBar />
       <TextInput />
       <SettingsPanel

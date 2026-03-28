@@ -1,6 +1,14 @@
 import type { Score } from "../model";
 import type { CursorPosition } from "../input/InputState";
-import type { NotationPlugin, PluginAPI, Selection } from "./PluginAPI";
+import type {
+  NotationPlugin,
+  PluginAPI,
+  Selection,
+  PanelConfig,
+  ViewRegistration,
+  ImporterConfig,
+  ExporterConfig,
+} from "./PluginAPI";
 import { serialize, deserialize } from "../serialization";
 
 export interface PluginCommand {
@@ -15,11 +23,39 @@ export interface PluginShortcut {
   commandId: string;
 }
 
+export interface PanelRegistration {
+  id: string;
+  pluginId: string;
+  config: PanelConfig;
+}
+
+export interface ViewEntry {
+  id: string;
+  pluginId: string;
+  config: ViewRegistration;
+}
+
+export interface ImporterEntry {
+  id: string;
+  pluginId: string;
+  config: ImporterConfig;
+}
+
+export interface ExporterEntry {
+  id: string;
+  pluginId: string;
+  config: ExporterConfig;
+}
+
 export interface PluginEntry {
   plugin: NotationPlugin;
   enabled: boolean;
   commands: PluginCommand[];
   shortcuts: PluginShortcut[];
+  panels: PanelRegistration[];
+  views: ViewEntry[];
+  importers: ImporterEntry[];
+  exporters: ExporterEntry[];
 }
 
 type ScoreGetter = () => Score;
@@ -28,10 +64,35 @@ type CursorGetter = () => CursorPosition;
 type SelectionGetter = () => Selection | null;
 type NotificationShower = (message: string, type?: "info" | "error" | "success") => void;
 
+const STORAGE_KEY = "notation-plugin-states";
+
+function loadPluginStates(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
+function savePluginStates(states: Record<string, boolean>): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
+  } catch {
+    // ignore
+  }
+}
+
 export class PluginManager {
   private plugins: Map<string, PluginEntry> = new Map();
   private commandRegistry: Map<string, PluginCommand> = new Map();
   private shortcutRegistry: Map<string, string> = new Map(); // keys -> commandId
+  private panelRegistry: Map<string, PanelRegistration> = new Map();
+  private viewRegistry: Map<string, ViewEntry> = new Map();
+  private importerRegistry: Map<string, ImporterEntry> = new Map();
+  private exporterRegistry: Map<string, ExporterEntry> = new Map();
+  private listeners: Set<() => void> = new Set();
 
   private getScore: ScoreGetter;
   private applyScore: ScoreApplier;
@@ -51,6 +112,20 @@ export class PluginManager {
     this.getCursor = opts.getCursor;
     this.getSelection = opts.getSelection;
     this.showNotification = opts.showNotification;
+  }
+
+  /** Subscribe to changes (plugin enable/disable, registrations) */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify(): void {
+    for (const listener of this.listeners) {
+      listener();
+    }
   }
 
   private createAPI(pluginId: string): PluginAPI {
@@ -78,6 +153,34 @@ export class PluginManager {
       },
       serialize: (score: Score) => serialize(score),
       deserialize: (text: string) => deserialize(text),
+      registerPanel: (id: string, config: PanelConfig) => {
+        const reg: PanelRegistration = { id, pluginId, config };
+        this.panelRegistry.set(id, reg);
+        if (entry) {
+          entry.panels.push(reg);
+        }
+      },
+      registerView: (id: string, config: ViewRegistration) => {
+        const reg: ViewEntry = { id, pluginId, config };
+        this.viewRegistry.set(id, reg);
+        if (entry) {
+          entry.views.push(reg);
+        }
+      },
+      registerImporter: (id: string, config: ImporterConfig) => {
+        const reg: ImporterEntry = { id, pluginId, config };
+        this.importerRegistry.set(id, reg);
+        if (entry) {
+          entry.importers.push(reg);
+        }
+      },
+      registerExporter: (id: string, config: ExporterConfig) => {
+        const reg: ExporterEntry = { id, pluginId, config };
+        this.exporterRegistry.set(id, reg);
+        if (entry) {
+          entry.exporters.push(reg);
+        }
+      },
     };
   }
 
@@ -91,6 +194,10 @@ export class PluginManager {
       enabled: false,
       commands: [],
       shortcuts: [],
+      panels: [],
+      views: [],
+      importers: [],
+      exporters: [],
     });
   }
 
@@ -105,6 +212,13 @@ export class PluginManager {
     const api = this.createAPI(pluginId);
     entry.plugin.activate(api);
     entry.enabled = true;
+
+    // Persist state
+    const states = loadPluginStates();
+    states[pluginId] = true;
+    savePluginStates(states);
+
+    this.notify();
   }
 
   deactivate(pluginId: string): void {
@@ -118,11 +232,48 @@ export class PluginManager {
     for (const shortcut of entry.shortcuts) {
       this.shortcutRegistry.delete(shortcut.keys);
     }
+    // Remove panels, views, importers, exporters
+    for (const panel of entry.panels) {
+      this.panelRegistry.delete(panel.id);
+    }
+    for (const view of entry.views) {
+      this.viewRegistry.delete(view.id);
+    }
+    for (const importer of entry.importers) {
+      this.importerRegistry.delete(importer.id);
+    }
+    for (const exporter of entry.exporters) {
+      this.exporterRegistry.delete(exporter.id);
+    }
+
     entry.commands = [];
     entry.shortcuts = [];
+    entry.panels = [];
+    entry.views = [];
+    entry.importers = [];
+    entry.exporters = [];
 
     entry.plugin.deactivate?.();
     entry.enabled = false;
+
+    // Persist state
+    const states = loadPluginStates();
+    states[pluginId] = false;
+    savePluginStates(states);
+
+    this.notify();
+  }
+
+  /** Register and activate a plugin, respecting persisted enable/disable state.
+   *  If defaultEnabled is true and there's no persisted state, it will be activated.
+   */
+  registerAndActivate(plugin: NotationPlugin, defaultEnabled: boolean = true): void {
+    this.register(plugin);
+    const states = loadPluginStates();
+    const shouldEnable = states[plugin.id] !== undefined ? states[plugin.id] : defaultEnabled;
+    if (shouldEnable) {
+      this.activate(plugin.id);
+    }
   }
 
   getPlugins(): PluginEntry[] {
@@ -146,6 +297,30 @@ export class PluginManager {
 
   getShortcutCommand(keys: string): string | undefined {
     return this.shortcutRegistry.get(keys);
+  }
+
+  // Panel registry
+  getPanels(location?: PanelRegistration["config"]["location"]): PanelRegistration[] {
+    const all = Array.from(this.panelRegistry.values());
+    if (location) {
+      return all.filter((p) => p.config.location === location);
+    }
+    return all;
+  }
+
+  // View registry
+  getViews(): ViewEntry[] {
+    return Array.from(this.viewRegistry.values());
+  }
+
+  // Importer registry
+  getImporters(): ImporterEntry[] {
+    return Array.from(this.importerRegistry.values());
+  }
+
+  // Exporter registry
+  getExporters(): ExporterEntry[] {
+    return Array.from(this.exporterRegistry.values());
   }
 
   /** Handle a keyboard event, return true if a plugin shortcut matched */

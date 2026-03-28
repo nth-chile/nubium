@@ -2,28 +2,26 @@ import { useEditorStore } from "../state";
 import type { DurationType, Accidental } from "../model";
 
 const DURATIONS: { type: DurationType; label: string; key: string }[] = [
-  { type: "whole", label: "𝅝", key: "1" },
-  { type: "half", label: "𝅗𝅥", key: "2" },
-  { type: "quarter", label: "♩", key: "3" },
-  { type: "eighth", label: "♪", key: "4" },
-  { type: "16th", label: "𝅘𝅥𝅯", key: "5" },
-  { type: "32nd", label: "𝅘𝅥𝅰", key: "6" },
+  { type: "whole", label: "W", key: "1" },
+  { type: "half", label: "H", key: "2" },
+  { type: "quarter", label: "Q", key: "3" },
+  { type: "eighth", label: "8", key: "4" },
+  { type: "16th", label: "16", key: "5" },
+  { type: "32nd", label: "32", key: "6" },
 ];
 
 const ACCIDENTALS: { acc: Accidental; label: string }[] = [
-  { acc: "flat", label: "♭" },
-  { acc: "natural", label: "♮" },
-  { acc: "sharp", label: "♯" },
+  { acc: "flat", label: "\u266D" },
+  { acc: "natural", label: "\u266E" },
+  { acc: "sharp", label: "\u266F" },
 ];
 
 interface ToolbarProps {
-  onToggleChat?: () => void;
-  chatVisible?: boolean;
   onToggleSettings?: () => void;
   onTogglePlugins?: () => void;
 }
 
-export function Toolbar({ onToggleChat, chatVisible, onToggleSettings, onTogglePlugins }: ToolbarProps) {
+export function Toolbar({ onToggleSettings, onTogglePlugins }: ToolbarProps) {
   const inputState = useEditorStore((s) => s.inputState);
   const setDuration = useEditorStore((s) => s.setDuration);
   const toggleDot = useEditorStore((s) => s.toggleDot);
@@ -56,7 +54,7 @@ export function Toolbar({ onToggleChat, chatVisible, onToggleSettings, onToggleP
           }}
           title="Dot (.)"
         >
-          •{inputState.duration.dots > 0 ? inputState.duration.dots : ""}
+          {"\u2022"}{inputState.duration.dots > 0 ? inputState.duration.dots : ""}
         </button>
       </div>
 
@@ -90,10 +88,10 @@ export function Toolbar({ onToggleChat, chatVisible, onToggleSettings, onToggleP
 
       <div style={styles.group}>
         <button onClick={undo} style={styles.button} title="Undo (Ctrl+Z)">
-          ↩
+          {"\u21A9"}
         </button>
         <button onClick={redo} style={styles.button} title="Redo (Ctrl+Shift+Z)">
-          ↪
+          {"\u21AA"}
         </button>
       </div>
 
@@ -124,21 +122,6 @@ export function Toolbar({ onToggleChat, chatVisible, onToggleSettings, onToggleP
           title="Plugins"
         >
           Plugins
-        </button>
-      )}
-
-      {onToggleChat && (
-        <button
-          onClick={onToggleChat}
-          style={{
-            ...styles.button,
-            ...(chatVisible ? styles.active : {}),
-            fontSize: 12,
-            padding: "4px 12px",
-          }}
-          title="Toggle AI Chat (Ctrl+Shift+A)"
-        >
-          AI Chat
         </button>
       )}
     </div>

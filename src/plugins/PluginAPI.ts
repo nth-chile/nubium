@@ -1,10 +1,36 @@
 import type { Score } from "../model";
 import type { CursorPosition } from "../input/InputState";
+import type { ViewConfig } from "../views/ViewMode";
 
 export interface Selection {
   partIndex: number;
   measureStart: number;
   measureEnd: number;
+}
+
+export interface PanelConfig {
+  title: string;
+  location: "sidebar-left" | "sidebar-right" | "toolbar" | "bottom";
+  component: () => React.ReactNode;
+  defaultEnabled?: boolean;
+}
+
+export interface ViewRegistration {
+  name: string;
+  icon: string;
+  getViewConfig: () => ViewConfig;
+}
+
+export interface ImporterConfig {
+  name: string;
+  extensions: string[];
+  import: (content: string) => Score;
+}
+
+export interface ExporterConfig {
+  name: string;
+  extension: string;
+  export: (score: Score) => string;
 }
 
 export interface NotationPlugin {
@@ -37,4 +63,14 @@ export interface PluginAPI {
   // Serialization helpers
   serialize(score: Score): string;
   deserialize(text: string): Score;
+
+  // UI panels
+  registerPanel(id: string, config: PanelConfig): void;
+
+  // View modes
+  registerView(id: string, config: ViewRegistration): void;
+
+  // File importers/exporters
+  registerImporter(id: string, config: ImporterConfig): void;
+  registerExporter(id: string, config: ExporterConfig): void;
 }

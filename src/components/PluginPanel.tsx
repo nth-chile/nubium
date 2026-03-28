@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import type { PluginManager, PluginEntry, PluginCommand } from "../plugins";
 
 interface PluginPanelProps {
@@ -7,17 +7,52 @@ interface PluginPanelProps {
   pluginManager: PluginManager | null;
 }
 
-export function PluginPanel({ visible, onClose, pluginManager }: PluginPanelProps) {
-  const [plugins, setPlugins] = useState<PluginEntry[]>([]);
-  const [, setTick] = useState(0); // force re-render
+const CATEGORY_ORDER: Record<string, number> = {
+  "Feature": 0,
+  "Transform": 1,
+};
 
-  useEffect(() => {
-    if (pluginManager) {
-      setPlugins(pluginManager.getPlugins());
+function categorize(pluginId: string): string {
+  // Feature plugins provide UI panels, views, or importers/exporters
+  const featureIds = [
+    "notation.views",
+    "notation.playback",
+    "notation.ai-chat",
+    "notation.part-manager",
+    "notation.musicxml",
+  ];
+  if (featureIds.includes(pluginId)) return "Feature";
+  return "Transform";
+}
+
+export function PluginPanel({ visible, onClose, pluginManager }: PluginPanelProps) {
+  // Subscribe to plugin manager changes for live updates
+  const snapshot = useSyncExternalStore(
+    (cb) => pluginManager?.subscribe(cb) ?? (() => {}),
+    () => {
+      if (!pluginManager) return "";
+      return pluginManager
+        .getPlugins()
+        .map((p) => `${p.plugin.id}:${p.enabled}`)
+        .join(",");
     }
-  }, [pluginManager, visible]);
+  );
+
+  const plugins = pluginManager?.getPlugins() ?? [];
 
   if (!visible || !pluginManager) return null;
+
+  // Group by category
+  const grouped = new Map<string, PluginEntry[]>();
+  for (const entry of plugins) {
+    const cat = categorize(entry.plugin.id);
+    if (!grouped.has(cat)) grouped.set(cat, []);
+    grouped.get(cat)!.push(entry);
+  }
+
+  const sortedCategories = Array.from(grouped.keys()).sort(
+    (a, b) => (CATEGORY_ORDER[a] ?? 99) - (CATEGORY_ORDER[b] ?? 99)
+  );
 
   function handleToggle(pluginId: string, enabled: boolean) {
     if (!pluginManager) return;
@@ -26,13 +61,14 @@ export function PluginPanel({ visible, onClose, pluginManager }: PluginPanelProp
     } else {
       pluginManager.activate(pluginId);
     }
-    setPlugins(pluginManager.getPlugins());
-    setTick((t) => t + 1);
   }
 
   function handleRunCommand(cmd: PluginCommand) {
     cmd.handler();
   }
+
+  // Suppress unused var
+  void snapshot;
 
   return (
     <div style={styles.overlay} onClick={onClose}>
@@ -49,40 +85,87 @@ export function PluginPanel({ visible, onClose, pluginManager }: PluginPanelProp
             <p style={styles.empty}>No plugins installed.</p>
           )}
 
-          {plugins.map((entry) => (
-            <div key={entry.plugin.id} style={styles.pluginCard}>
-              <div style={styles.pluginHeader}>
-                <div>
-                  <div style={styles.pluginName}>{entry.plugin.name}</div>
-                  <div style={styles.pluginMeta}>
-                    v{entry.plugin.version}
-                    {entry.plugin.description && ` - ${entry.plugin.description}`}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleToggle(entry.plugin.id, entry.enabled)}
-                  style={{
-                    ...styles.toggleBtn,
-                    ...(entry.enabled ? styles.toggleEnabled : styles.toggleDisabled),
-                  }}
-                >
-                  {entry.enabled ? "Enabled" : "Disabled"}
-                </button>
-              </div>
-
-              {entry.enabled && entry.commands.length > 0 && (
-                <div style={styles.commandList}>
-                  {entry.commands.map((cmd) => (
+          {sortedCategories.map((category) => (
+            <div key={category}>
+              <div style={styles.categoryHeader}>{category} Plugins</div>
+              {grouped.get(category)!.map((entry) => (
+                <div key={entry.plugin.id} style={styles.pluginCard}>
+                  <div style={styles.pluginHeader}>
+                    <div>
+                      <div style={styles.pluginName}>{entry.plugin.name}</div>
+                      <div style={styles.pluginMeta}>
+                        v{entry.plugin.version}
+                        {entry.plugin.description &&
+                          ` \u2014 ${entry.plugin.description}`}
+                      </div>
+                    </div>
                     <button
-                      key={cmd.id}
-                      onClick={() => handleRunCommand(cmd)}
-                      style={styles.commandBtn}
+                      onClick={() =>
+                        handleToggle(entry.plugin.id, entry.enabled)
+                      }
+                      style={{
+                        ...styles.toggleBtn,
+                        ...(entry.enabled
+                          ? styles.toggleEnabled
+                          : styles.toggleDisabled),
+                      }}
                     >
-                      {cmd.label}
+                      {entry.enabled ? "Enabled" : "Disabled"}
                     </button>
-                  ))}
+                  </div>
+
+                  {entry.enabled && entry.commands.length > 0 && (
+                    <div style={styles.commandList}>
+                      {entry.commands.map((cmd) => (
+                        <button
+                          key={cmd.id}
+                          onClick={() => handleRunCommand(cmd)}
+                          style={styles.commandBtn}
+                        >
+                          {cmd.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {entry.enabled && entry.panels.length > 0 && (
+                    <div style={styles.registrationList}>
+                      {entry.panels.map((p) => (
+                        <span key={p.id} style={styles.registrationTag}>
+                          Panel: {p.config.title}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {entry.enabled && entry.views.length > 0 && (
+                    <div style={styles.registrationList}>
+                      {entry.views.map((v) => (
+                        <span key={v.id} style={styles.registrationTag}>
+                          View: {v.config.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {entry.enabled &&
+                    (entry.importers.length > 0 ||
+                      entry.exporters.length > 0) && (
+                      <div style={styles.registrationList}>
+                        {entry.importers.map((imp) => (
+                          <span key={imp.id} style={styles.registrationTag}>
+                            Import: {imp.config.name}
+                          </span>
+                        ))}
+                        {entry.exporters.map((exp) => (
+                          <span key={exp.id} style={styles.registrationTag}>
+                            Export: {exp.config.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                 </div>
-              )}
+              ))}
             </div>
           ))}
         </div>
@@ -107,7 +190,7 @@ const styles: Record<string, React.CSSProperties> = {
   panel: {
     background: "#fff",
     borderRadius: 8,
-    width: 500,
+    width: 560,
     maxHeight: "80vh",
     display: "flex",
     flexDirection: "column",
@@ -143,6 +226,17 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "center" as const,
     padding: 20,
   },
+  categoryHeader: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: "#475569",
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.05em",
+    marginTop: 12,
+    marginBottom: 8,
+    paddingBottom: 4,
+    borderBottom: "1px solid #e2e8f0",
+  },
   pluginCard: {
     border: "1px solid #e2e8f0",
     borderRadius: 6,
@@ -170,6 +264,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 4,
     fontSize: 12,
     cursor: "pointer",
+    flexShrink: 0,
   },
   toggleEnabled: {
     background: "#2563eb",
@@ -194,5 +289,19 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     background: "#f8fafc",
     color: "#334155",
+  },
+  registrationList: {
+    marginTop: 6,
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: 4,
+  },
+  registrationTag: {
+    fontSize: 10,
+    color: "#64748b",
+    background: "#f1f5f9",
+    padding: "2px 6px",
+    borderRadius: 3,
+    border: "1px solid #e2e8f0",
   },
 };
