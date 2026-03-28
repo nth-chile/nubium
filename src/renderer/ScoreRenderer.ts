@@ -20,14 +20,17 @@ const LEFT_MARGIN = DEFAULT_LAYOUT.leftMargin;
 const TOP_MARGIN = DEFAULT_LAYOUT.topMargin;
 const MEASURES_PER_LINE = DEFAULT_LAYOUT.measuresPerLine;
 
-export function calculateContentHeight(score: Score, viewConfig?: ViewConfig): number {
+export function calculateContentHeight(score: Score, viewConfig?: ViewConfig, availableWidth?: number): number {
+  const width = availableWidth ?? 1000;
   if (!viewConfig) {
-    return totalContentHeight(score, DEFAULT_LAYOUT);
+    return totalContentHeight(score, { ...DEFAULT_LAYOUT, adaptiveWidths: true, availableWidth: width });
   }
   const visiblePartIndices = getVisiblePartIndices(score, viewConfig);
   const filteredScore = filterScoreParts(score, visiblePartIndices);
   const config: LayoutConfig = {
     ...DEFAULT_LAYOUT,
+    adaptiveWidths: true,
+    availableWidth: width,
     ...(viewConfig.layoutConfig.measuresPerLine != null
       ? { measuresPerLine: viewConfig.layoutConfig.measuresPerLine }
       : {}),
@@ -45,7 +48,8 @@ export function renderScore(
   score: Score,
   cursor?: CursorPosition,
   playbackTick?: number | null,
-  viewConfig?: ViewConfig
+  viewConfig?: ViewConfig,
+  availableWidth?: number
 ): ScoreRenderResult {
   clearCanvas(ctx, canvas);
 
@@ -58,8 +62,11 @@ export function renderScore(
   // Build a filtered score for layout computation
   const filteredScore = filterScoreParts(score, visiblePartIndices);
 
+  const effectiveWidth = availableWidth ?? canvas.width / (window.devicePixelRatio || 1);
   const config: LayoutConfig = {
     ...DEFAULT_LAYOUT,
+    adaptiveWidths: true,
+    availableWidth: effectiveWidth,
     ...(viewConfig?.layoutConfig.measuresPerLine != null
       ? { measuresPerLine: viewConfig.layoutConfig.measuresPerLine }
       : {}),

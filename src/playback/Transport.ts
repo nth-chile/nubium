@@ -226,15 +226,35 @@ export function getTransportState(): TransportState {
 }
 
 /**
- * Total duration of the score in seconds (for the first part).
+ * Find the last measure index with actual content across all parts.
+ */
+function findLastContentMeasure(score: Score): number {
+  let last = 0;
+  for (const part of score.parts) {
+    for (let mi = part.measures.length - 1; mi >= 0; mi--) {
+      const m = part.measures[mi];
+      if (m.voices.some((v) => v.events.length > 0) ||
+          (m.annotations && m.annotations.length > 0)) {
+        last = Math.max(last, mi);
+        break;
+      }
+    }
+  }
+  return last;
+}
+
+/**
+ * Total duration of the score in seconds (up to last content measure).
  */
 export function getScoreDuration(score: Score): number {
   let totalSec = 0;
   if (score.parts.length === 0) return 0;
   const part = score.parts[0];
-  for (let mi = 0; mi < part.measures.length; mi++) {
+  const lastContent = findLastContentMeasure(score);
+  for (let mi = 0; mi <= lastContent; mi++) {
     const measure = part.measures[mi];
-    const bpm = score.tempo; // simplified
+    if (!measure) break;
+    const bpm = score.tempo;
     const measureTicks =
       (TICKS_PER_QUARTER * 4 * measure.timeSignature.numerator) /
       measure.timeSignature.denominator;

@@ -157,8 +157,9 @@ export function computeLayout(
   // Determine line breaks
   const useAdaptive = config.adaptiveWidths && score.parts.length > 0;
 
+  const rightMargin = 20;
   const totalAvailableWidth = useAdaptive
-    ? config.availableWidth - config.leftMargin
+    ? config.availableWidth - config.leftMargin - rightMargin
     : config.measuresPerLine * config.measureWidth;
 
   const lineBreaks: { start: number; end: number; widths: number[] }[] = useAdaptive

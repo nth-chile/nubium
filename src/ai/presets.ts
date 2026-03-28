@@ -41,6 +41,13 @@ export const PRESET_COMMANDS: PresetCommand[] = [
     promptTemplate:
       "Add a bass part to this score that fits the existing harmony and chord progression. Use an appropriate bass instrument and create a musical bass line that supports the existing parts.",
   },
+  {
+    command: "/demo-melody",
+    label: "Demo: Bb 1-4-5-4",
+    description: "Write a 1-4-5-4 arpeggiated melody in Bb major",
+    promptTemplate:
+      "Write an arpeggiated melody in Bb major that follows a 1-4-5-4 chord progression (Bb - Eb - F - Eb). Use 4 measures, one chord per measure, with arpeggiated eighth notes. Key signature should be -2 (Bb major). Make it musical and flowing.",
+  },
 ];
 
 /**

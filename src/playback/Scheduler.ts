@@ -70,9 +70,29 @@ function getAudibleParts(score: Score): Set<number> {
   return audible;
 }
 
+/**
+ * Find the last measure index (across all parts) that has actual content.
+ */
+function findLastContentMeasure(score: Score): number {
+  let last = 0;
+  for (const part of score.parts) {
+    for (let mi = part.measures.length - 1; mi >= 0; mi--) {
+      const m = part.measures[mi];
+      const hasEvents = m.voices.some((v) => v.events.length > 0);
+      const hasAnnotations = m.annotations && m.annotations.length > 0;
+      if (hasEvents || hasAnnotations) {
+        last = Math.max(last, mi);
+        break;
+      }
+    }
+  }
+  return last;
+}
+
 export function scheduleScore(score: Score): ScheduledEvent[] {
   const events: ScheduledEvent[] = [];
   const audibleParts = getAudibleParts(score);
+  const lastContentMeasure = findLastContentMeasure(score);
 
   for (let pi = 0; pi < score.parts.length; pi++) {
     const part = score.parts[pi];
@@ -81,10 +101,13 @@ export function scheduleScore(score: Score): ScheduledEvent[] {
     // Use PlaybackOrder to determine measure sequence (handles repeats, D.S., D.C., etc.)
     const measureOrder = computePlaybackOrder(score, pi);
 
+    // Trim playback order to stop after last measure with content
+    const trimmedOrder = measureOrder.filter((mi) => mi <= lastContentMeasure);
+
     let currentTimeSec = 0;
     let currentTick = 0;
 
-    for (const mi of measureOrder) {
+    for (const mi of trimmedOrder) {
       const measure = part.measures[mi];
       if (!measure) continue;
       const bpm = getTempoForMeasure(score, mi);

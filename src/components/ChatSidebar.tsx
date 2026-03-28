@@ -151,14 +151,15 @@ export function ChatSidebar({ visible }: { visible: boolean }) {
           </div>
         )}
 
-        {error && (
-          <div style={styles.errorBox}>
-            {error}
-          </div>
-        )}
-
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Error (shown above input so it's always visible) */}
+      {error && (
+        <div style={styles.errorBanner}>
+          {error}
+        </div>
+      )}
 
       {/* Presets */}
       <div style={styles.presets}>
@@ -332,6 +333,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 6,
     padding: "8px 10px",
     fontSize: 12,
+  },
+  errorBanner: {
+    background: "#3b1c1c",
+    color: "#f88",
+    border: "1px solid #622",
+    padding: "8px 12px",
+    fontSize: 12,
+    flexShrink: 0,
   },
   presets: {
     display: "flex",

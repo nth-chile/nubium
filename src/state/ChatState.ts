@@ -136,59 +136,60 @@ export const useChatStore = create<ChatStore>((set, get) => {
               isLoading: false,
             }));
             return;
-          } else {
-            // First failure — auto-retry once
-            const retryMessages: ChatMessage[] = [
-              ...allMessages,
-              { role: "assistant", content: responseText },
-              {
-                role: "user",
-                content: `That JSON patch failed to apply with error: ${result.error}\nPlease fix the issue and return a corrected JSON patch.`,
-              },
-            ];
-
-            try {
-              const retryText = await provider.sendMessage(retryMessages);
-              const retryJson = extractScoreFromResponse(retryText);
-              if (retryJson) {
-                const retryResult = applyAIEdit(score, retryJson);
-                if (retryResult.ok) {
-                  useEditorStore.getState().setScore(retryResult.score);
-                  useEditorStore.setState({ isDirty: true });
-
-                  const displayText = stripCodeBlock(retryText);
-                  const summary = buildApplySummary(retryJson);
-                  const content = displayText.trim()
-                    ? `${displayText.trim()}\n\n${summary}`
-                    : summary;
-
-                  set((s) => ({
-                    messages: [
-                      ...s.messages,
-                      { role: "assistant" as const, content },
-                    ],
-                    isLoading: false,
-                  }));
-                  return;
-                }
-              }
-            } catch {
-              // retry failed, fall through to show error
-            }
-
-            // Both attempts failed
-            set((s) => ({
-              messages: [
-                ...s.messages,
-                {
-                  role: "assistant" as const,
-                  content: `I couldn't apply that edit: ${result.error}`,
-                },
-              ],
-              isLoading: false,
-            }));
-            return;
           }
+
+          // Validation errors or parse errors — retry with specific feedback
+          const errorMsg = "validationErrors" in result
+            ? result.validationErrors
+            : ("error" in result ? result.error : "Unknown error");
+
+          const retryMessages: ChatMessage[] = [
+            ...allMessages,
+            { role: "assistant", content: responseText },
+            { role: "user", content: errorMsg },
+          ];
+
+          try {
+            const retryText = await provider.sendMessage(retryMessages);
+            const retryJson = extractScoreFromResponse(retryText);
+            if (retryJson) {
+              const retryResult = applyAIEdit(score, retryJson);
+              if (retryResult.ok) {
+                useEditorStore.getState().setScore(retryResult.score);
+                useEditorStore.setState({ isDirty: true });
+
+                const displayText = stripCodeBlock(retryText);
+                const summary = buildApplySummary(retryJson);
+                const content = displayText.trim()
+                  ? `${displayText.trim()}\n\n${summary}`
+                  : summary;
+
+                set((s) => ({
+                  messages: [
+                    ...s.messages,
+                    { role: "assistant" as const, content },
+                  ],
+                  isLoading: false,
+                }));
+                return;
+              }
+            }
+          } catch {
+            // retry failed, fall through
+          }
+
+          // Both attempts failed — show what went wrong
+          set((s) => ({
+            messages: [
+              ...s.messages,
+              {
+                role: "assistant" as const,
+                content: `I couldn't apply that edit. ${errorMsg}`,
+              },
+            ],
+            isLoading: false,
+          }));
+          return;
         }
 
         // No code block — plain conversational response

@@ -21,7 +21,7 @@ export function App() {
   const filePath = useEditorStore((s) => s.filePath);
   const setScore = useEditorStore((s) => s.setScore);
   const setFilePath = useEditorStore((s) => s.setFilePath);
-  const [chatVisible, setChatVisible] = useState(false);
+  const [chatVisible, setChatVisible] = useState(true);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [pluginsVisible, setPluginsVisible] = useState(false);
 

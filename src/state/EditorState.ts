@@ -41,7 +41,7 @@ import type { NavigationMarkType } from "../commands/SetNavigationMark";
 import type { BarlineType, Volta } from "../model";
 import type { NoteBox } from "../renderer/vexBridge";
 import { newId, type VoiceId } from "../model/ids";
-import * as Transport from "../playback/Transport";
+import * as Transport from "../playback/TonePlayback";
 
 const history = new CommandHistory();
 
