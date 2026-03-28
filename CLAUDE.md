@@ -1,11 +1,11 @@
-# Noteflow
+# Notation
 
 AI-native music notation editor. Tauri v2 + React + TypeScript + VexFlow 5.
 
 ## Architecture
 
 - **Data model** (`src/model/`): Source of truth. Score → Part → Measure → Voice → NoteEvent (Note | Chord | Rest). All pitches explicit (no relative), all durations explicit.
-- **Serialization** (`src/serialization/`): Custom `.nflow` text format. Line-per-note, AI-readable/editable. Swappable layer.
+- **Serialization** (`src/serialization/`): Custom `.notation` text format. Line-per-note, AI-readable/editable. Swappable layer.
 - **Renderer** (`src/renderer/`): VexFlow 5 behind adapter (`vexBridge.ts`). Canvas-based.
 - **Commands** (`src/commands/`): All mutations via Command pattern for undo/redo. `CommandHistory` uses snapshot-based undo.
 - **State** (`src/state/`): Zustand store. Single `useEditorStore`.
@@ -28,10 +28,10 @@ A-G: insert note | R: rest | 1-7: duration | .: dot | +/-: sharp/flat
 Arrow L/R: move cursor | Arrow U/D: octave | Backspace: delete
 Ctrl+Z/Ctrl+Shift+Z: undo/redo | Ctrl+S: save | Ctrl+O: open
 
-## Serialization Format (.nflow)
+## Serialization Format (.notation)
 
 ```
-NOTEFLOW v1
+NOTATION v1
 title: "Song"
 composer: "Author"
 

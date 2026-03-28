@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capability for Noteflow",
+  "description": "Default capability for Notation",
   "windows": ["main"],
   "permissions": [
     "core:default",

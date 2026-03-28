@@ -12,8 +12,8 @@ export async function saveScore(score: Score, filePath?: string): Promise<string
     const path =
       filePath ??
       (await save({
-        filters: [{ name: "Noteflow", extensions: ["nflow"] }],
-        defaultPath: `${score.title || "Untitled"}.nflow`,
+        filters: [{ name: "Notation", extensions: ["notation"] }],
+        defaultPath: `${score.title || "Untitled"}.notation`,
       }));
 
     if (!path) throw new Error("Save cancelled");
@@ -26,7 +26,7 @@ export async function saveScore(score: Score, filePath?: string): Promise<string
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${score.title || "Untitled"}.nflow`;
+    a.download = `${score.title || "Untitled"}.notation`;
     a.click();
     URL.revokeObjectURL(url);
     return a.download;

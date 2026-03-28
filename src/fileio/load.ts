@@ -8,7 +8,7 @@ export async function loadScore(): Promise<{ score: Score; path: string } | null
     const { readTextFile } = await import("@tauri-apps/plugin-fs");
 
     const path = await open({
-      filters: [{ name: "Noteflow", extensions: ["nflow"] }],
+      filters: [{ name: "Notation", extensions: ["notation"] }],
       multiple: false,
     });
 
@@ -22,7 +22,7 @@ export async function loadScore(): Promise<{ score: Score; path: string } | null
     return new Promise((resolve) => {
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = ".nflow";
+      input.accept = ".notation";
       input.onchange = async () => {
         const file = input.files?.[0];
         if (!file) {

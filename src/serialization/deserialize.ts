@@ -134,8 +134,8 @@ function parseMeasureHeader(line: string): {
 export function deserialize(text: string): Score {
   const lines = text.split("\n");
 
-  if (!lines[0]?.startsWith("NOTEFLOW")) {
-    throw new Error("Not a Noteflow file");
+  if (!lines[0]?.startsWith("NOTATION")) {
+    throw new Error("Not a Notation file");
   }
 
   let title = "Untitled";

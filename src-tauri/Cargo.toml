@@ -1,12 +1,12 @@
 [package]
-name = "noteflow"
+name = "notation"
 version = "0.1.0"
 description = "AI-native music notation editor"
-authors = ["Noteflow Contributors"]
+authors = ["Notation Contributors"]
 edition = "2021"
 
 [lib]
-name = "noteflow_lib"
+name = "notation_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]
