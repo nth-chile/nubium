@@ -25,11 +25,21 @@ function NoteInputPanel() {
   const setDuration = useEditorStore((s) => s.setDuration);
   const toggleDot = useEditorStore((s) => s.toggleDot);
   const setAccidental = useEditorStore((s) => s.setAccidental);
+  const toggleStepEntry = useEditorStore((s) => s.toggleStepEntry);
   const hotkey = useHotkey();
 
   return (
     <>
       <div className="flex items-center gap-1">
+        <TooltipButton
+          variant={inputState.stepEntry ? "default" : "ghost"}
+          size="icon"
+          onClick={toggleStepEntry}
+          tooltip={`Step entry (${hotkey("toggle-step-entry")})`}
+          className="text-xs font-bold"
+        >
+          N
+        </TooltipButton>
         <span className="text-[11px] text-muted-foreground uppercase tracking-wider mr-1">Duration</span>
         {DURATIONS.map((d) => (
           <TooltipButton

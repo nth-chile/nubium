@@ -30,6 +30,7 @@ export function KeyboardShortcuts() {
   const moveCursorPart = useEditorStore((s) => s.moveCursorPart);
   const setViewMode = useEditorStore((s) => s.setViewMode);
   const toggleArticulation = useEditorStore((s) => s.toggleArticulation);
+  const toggleStepEntry = useEditorStore((s) => s.toggleStepEntry);
   const selection = useEditorStore((s) => s.selection);
   const setSelection = useEditorStore((s) => s.setSelection);
   const extendSelection = useEditorStore((s) => s.extendSelection);
@@ -64,6 +65,7 @@ export function KeyboardShortcuts() {
       "duration:32nd": () => setDuration("32nd" as DurationType),
       "duration:64th": () => setDuration("64th" as DurationType),
       "toggle-dot": () => toggleDot(),
+      "toggle-step-entry": () => toggleStepEntry(),
 
       // Accidentals
       "accidental:sharp": () => setAccidental("sharp"),
@@ -146,7 +148,7 @@ export function KeyboardShortcuts() {
     enterChordMode, enterLyricMode, showLyrics, textInputMode, isPlaying, play,
     pause, stopPlayback, toggleMetronome, moveCursorPart, setViewMode, selection,
     copySelection, pasteAtCursor, clipboardMeasures, deleteSelectedMeasures,
-    toggleArticulation, setSelection, extendSelection,
+    toggleArticulation, toggleStepEntry, setSelection, extendSelection,
   ]);
 
   return null;

@@ -41,6 +41,7 @@ import { SetRepeatBarline } from "../commands/SetRepeatBarline";
 import { SetVolta } from "../commands/SetVolta";
 import { SetNavigationMark } from "../commands/SetNavigationMark";
 import { ToggleArticulation } from "../commands/ToggleArticulation";
+import { OverwriteNote } from "../commands/OverwriteNote";
 import type { NavigationMarkType } from "../commands/SetNavigationMark";
 import type { BarlineType, Volta } from "../model";
 import type { NoteBox, AnnotationBox } from "../renderer/vexBridge";
@@ -78,6 +79,7 @@ interface EditorStore {
   setDuration(type: DurationType): void;
   toggleDot(): void;
   setAccidental(acc: Accidental): void;
+  toggleStepEntry(): void;
   moveCursor(direction: "left" | "right"): void;
   moveCursorToMeasure(direction: "next" | "prev"): void;
   changeOctave(direction: "up" | "down"): void;
@@ -203,6 +205,25 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const state = get();
     const { cursor } = state.inputState;
 
+    // Step entry mode: overwrite existing events with input duration
+    if (state.inputState.stepEntry && cursorOnExistingEvent(state.score, cursor)) {
+      const cmd = new OverwriteNote(
+        pitchClass,
+        state.inputState.octave as Octave,
+        state.inputState.accidental,
+        { ...state.inputState.duration },
+      );
+      const result = history.execute(cmd, {
+        score: state.score,
+        inputState: state.inputState,
+      });
+      set({
+        score: result.score,
+        inputState: result.inputState,
+      });
+      return;
+    }
+
     // If cursor is on an existing note, change pitch instead of inserting
     if (cursorOnExistingEvent(state.score, cursor)) {
       const cmd = new ChangePitch(
@@ -265,7 +286,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   setDuration(type: DurationType) {
     const state = get();
-    if (state.selection) {
+    if (state.selection && !state.inputState.stepEntry) {
       const { partIndex, measureStart, measureEnd } = state.selection;
       const score = structuredClone(state.score);
       const part = score.parts[partIndex];
@@ -307,6 +328,15 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       inputState: {
         ...s.inputState,
         accidental: s.inputState.accidental === acc ? "natural" : acc,
+      },
+    }));
+  },
+
+  toggleStepEntry() {
+    set((s) => ({
+      inputState: {
+        ...s.inputState,
+        stepEntry: !s.inputState.stepEntry,
       },
     }));
   },

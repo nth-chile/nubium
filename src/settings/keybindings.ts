@@ -39,6 +39,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   { id: "duration:32nd", label: "32nd note", category: "Duration", defaultBinding: { key: "6" } },
   { id: "duration:64th", label: "64th note", category: "Duration", defaultBinding: { key: "7" } },
   { id: "toggle-dot", label: "Toggle dot", category: "Duration", defaultBinding: { key: "." } },
+  { id: "toggle-step-entry", label: "Step entry mode", category: "Notes", defaultBinding: { key: "n" } },
 
   // Accidentals
   { id: "accidental:sharp", label: "Sharp", category: "Accidentals", defaultBinding: { key: "=" } },

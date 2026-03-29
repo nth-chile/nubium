@@ -60,12 +60,6 @@ class SmplrPlayer implements NotePlayer {
     const pending = this.loading.get(gmName);
     if (pending) return pending;
 
-    const promise = new Soundfont(this.ctx, { instrument: gmName as any }).load.then(() => {
-      const sf = this.instruments.get(gmName);
-      return sf!;
-    });
-
-    // Actually create and store it
     const sf = new Soundfont(this.ctx, { instrument: gmName as any });
     this.instruments.set(gmName, sf);
     const loadPromise = sf.load.then(() => sf);
@@ -74,10 +68,9 @@ class SmplrPlayer implements NotePlayer {
     return loadPromise;
   }
 
-  play(midi: number, duration: number, time: number): void {
-    // Use the first loaded instrument (piano by default)
-    // For multi-instrument support, we'd need the part's instrument ID
-    const instrument = this.instruments.values().next().value;
+  play(midi: number, duration: number, time: number, instrumentId?: string): void {
+    const gmName = resolveInstrument(instrumentId ?? "");
+    const instrument = this.instruments.get(gmName) ?? this.instruments.values().next().value;
     if (!instrument) return;
 
     instrument.start({

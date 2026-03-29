@@ -17,7 +17,7 @@ export interface TransportOptions {
 }
 
 export interface NotePlayer {
-  play(midi: number, duration: number, time: number): void;
+  play(midi: number, duration: number, time: number, instrumentId?: string): void;
   stop(): void;
 }
 
@@ -25,6 +25,7 @@ interface PlayEvent {
   tick: number;
   midi: number;
   durationTicks: number;
+  instrumentId: string;
 }
 
 interface MetronomeBeat {
@@ -167,15 +168,16 @@ function buildEvents(score: Score): void {
       if (part.muted) continue;
       const m = part.measures[mi];
       if (!m) continue;
+      const instId = part.instrumentId;
       for (const voice of m.voices) {
         let offset = 0;
         for (const evt of voice.events) {
           const evtTicks = durationToTicks(evt.duration);
           if (evt.kind === "note") {
-            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch), durationTicks: evtTicks });
+            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch), durationTicks: evtTicks, instrumentId: instId });
           } else if (evt.kind === "chord") {
             for (const h of evt.heads) {
-              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch), durationTicks: evtTicks });
+              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch), durationTicks: evtTicks, instrumentId: instId });
             }
           }
           offset += evtTicks;
@@ -227,7 +229,7 @@ function schedulerTick(): void {
       const audioTime = tickToAudioTime(e.tick);
       const dur = Math.max(ticksToSec(e.durationTicks, currentBpm) * 0.9, 0.05);
       if (customPlayer) {
-        customPlayer.play(e.midi, dur, audioTime);
+        customPlayer.play(e.midi, dur, audioTime, e.instrumentId);
       } else if (s) {
         s.triggerAttackRelease(midiToNoteName(e.midi), dur, audioTime);
       }
