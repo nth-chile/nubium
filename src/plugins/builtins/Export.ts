@@ -34,5 +34,19 @@ export const ExportPlugin: NotationPlugin = {
         exportPartPDF(score, partIndex).catch((err) => console.error("PDF export failed:", err));
       });
     });
+
+    api.registerCommand("notation.export-pdf-a4", "Export as PDF (A4)", () => {
+      const score = api.getScore();
+      import("../../fileio/pdf").then(({ exportPDF }) => {
+        exportPDF(score, undefined, { pageSize: "a4" }).catch((err) => console.error("PDF export failed:", err));
+      });
+    });
+
+    api.registerCommand("notation.export-pdf-landscape", "Export as PDF (Landscape)", () => {
+      const score = api.getScore();
+      import("../../fileio/pdf").then(({ exportPDF }) => {
+        exportPDF(score, undefined, { orientation: "landscape" }).catch((err) => console.error("PDF export failed:", err));
+      });
+    });
   },
 };
