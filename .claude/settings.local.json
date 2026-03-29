@@ -36,7 +36,9 @@
       "Bash(ls -la /Users/jared/work/notation/src/commands/*.ts)",
       "Bash(ls -lt .playwright-mcp/console-*.log)",
       "Bash(lsof -ti:3891)",
-      "Bash(grep -r \"edit.*chord\\\\|edit.*lyric\\\\|update.*chord\\\\|update.*lyric\" /Users/jared/work/notation/src --include=*.ts --include=*.tsx)"
+      "Bash(grep -r \"edit.*chord\\\\|edit.*lyric\\\\|update.*chord\\\\|update.*lyric\" /Users/jared/work/notation/src --include=*.ts --include=*.tsx)",
+      "Bash(gh issue:*)",
+      "Bash(gh label:*)"
     ]
   }
 }
