@@ -1,4 +1,4 @@
-import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Dot, Beam, StaveConnector, Barline, Repetition, Volta as VexVolta, StaveTie, MultiMeasureRest, Tuplet as VexTuplet, Articulation as VexArticulation, GraceNote as VexGraceNote, GraceNoteGroup } from "vexflow";
+import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Dot, Beam, StaveConnector, Barline, Repetition, Volta as VexVolta, StaveTie, MultiMeasureRest, Tuplet as VexTuplet, Articulation as VexArticulation, Ornament as VexOrnament, GraceNote as VexGraceNote, GraceNoteGroup } from "vexflow";
 import type { Measure, NoteEvent, NoteEventId } from "../model";
 import type { BarlineType } from "../model/time";
 import type { Annotation } from "../model/annotations";
@@ -65,17 +65,30 @@ const DUR_VEX: Record<string, string> = {
 
 const ARTICULATION_VEX: Partial<Record<ArticulationKind, string>> = {
   staccato: "a.",
+  staccatissimo: "av",
   accent: "a>",
   tenuto: "a-",
   fermata: "afermata",
   marcato: "a^",
+  "up-bow": "a|",
+  "down-bow": "am",
+  "open-string": "ao",
+  stopped: "a+",
+  trill: "tr",
+  mordent: "mordent",
+  turn: "turn",
 };
 
+const ORNAMENT_KINDS = new Set(["trill", "mordent", "turn"]);
+
 function addArticulations(sn: StaveNote, event: NoteEvent): void {
-  if ((event.kind === "note" || event.kind === "chord") && event.articulations) {
+  if ((event.kind === "note" || event.kind === "chord" || event.kind === "grace") && event.articulations) {
     for (const art of event.articulations) {
       const code = ARTICULATION_VEX[art.kind];
-      if (code) {
+      if (!code) continue;
+      if (ORNAMENT_KINDS.has(art.kind)) {
+        sn.addModifier(new VexOrnament(code));
+      } else {
         sn.addModifier(new VexArticulation(code));
       }
     }

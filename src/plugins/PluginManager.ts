@@ -359,6 +359,10 @@ export function setGlobalPluginManager(pm: PluginManager): void {
   _instance = pm;
 }
 
+export function getGlobalPluginManager(): PluginManager | null {
+  return _instance;
+}
+
 export function getCommandLabels(): string[] {
   if (!_instance) return [];
   return _instance.getCommands()

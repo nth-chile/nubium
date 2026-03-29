@@ -114,6 +114,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   { id: "command-palette", label: "Command palette", category: "UI", defaultBinding: { key: "p", ctrl: true, shift: true } },
   { id: "toggle-plugins", label: "Toggle plugins", category: "UI", defaultBinding: { key: "e", ctrl: true, shift: true } },
   { id: "file-history", label: "File history", category: "File", defaultBinding: { key: "h", ctrl: true, shift: true } },
+  { id: "go-to-measure", label: "Go to measure", category: "Navigation", defaultBinding: { key: "g", ctrl: true } },
 ];
 
 /** Build default bindings map from action definitions */

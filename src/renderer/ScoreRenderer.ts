@@ -19,11 +19,17 @@ function isMeasureAllRests(m: Measure): boolean {
 }
 
 /** Check if a measure has features that should break a multi-measure rest span. */
-function breaksRestSpan(m: Measure): boolean {
+function breaksRestSpan(m: Measure, prev?: Measure): boolean {
   if (m.barlineEnd !== "single") return true;
   if (m.navigation?.segno || m.navigation?.coda || m.navigation?.volta) return true;
   if (m.navigation?.fine || m.navigation?.toCoda || m.navigation?.dsText || m.navigation?.dcText) return true;
   if (m.annotations.some(a => a.kind === "rehearsal-mark" || a.kind === "tempo-mark")) return true;
+  if (prev) {
+    if (prev.keySignature.fifths !== m.keySignature.fifths) return true;
+    if (prev.timeSignature.numerator !== m.timeSignature.numerator ||
+        prev.timeSignature.denominator !== m.timeSignature.denominator) return true;
+    if (prev.clef.type !== m.clef.type) return true;
+  }
   return false;
 }
 
@@ -40,10 +46,10 @@ function detectRestRuns(
   const runs = new Map<number, number>();
   let mi = startMeasure;
   while (mi < endMeasure) {
-    if (isMeasureAllRests(measures[mi]) && !breaksRestSpan(measures[mi])) {
+    if (isMeasureAllRests(measures[mi]) && !breaksRestSpan(measures[mi], measures[mi - 1])) {
       const runStart = mi;
       mi++;
-      while (mi < endMeasure && isMeasureAllRests(measures[mi]) && !breaksRestSpan(measures[mi])) {
+      while (mi < endMeasure && isMeasureAllRests(measures[mi]) && !breaksRestSpan(measures[mi], measures[mi - 1])) {
         mi++;
       }
       const runLength = mi - runStart;
@@ -442,6 +448,8 @@ export function renderScore(
   return { noteBoxes: allNoteBoxes, annotationBoxes: allAnnotationBoxes, measurePositions, contentHeight };
 }
 
+const VOICE_COLORS = ["#3b82f6", "#22c55e", "#f97316", "#ef4444"];
+
 function drawCursor(
   ctx: RenderContext,
   score: Score,
@@ -458,6 +466,8 @@ function drawCursor(
   const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
   if (!rawCtx.strokeStyle) return;
 
+  const cursorColor = VOICE_COLORS[cursor.voiceIndex] ?? VOICE_COLORS[0];
+
   // Try to find the actual noteBox at the cursor position
   let targetBox: NoteBox | undefined;
   if (noteBoxes) {
@@ -471,7 +481,7 @@ function drawCursor(
   if (targetBox) {
     // Highlight the note with a rounded rect
     rawCtx.save();
-    rawCtx.strokeStyle = "#da9c14";
+    rawCtx.strokeStyle = cursorColor;
     rawCtx.lineWidth = 2;
     const pad = 3;
     const rx = targetBox.x - pad;
@@ -508,7 +518,7 @@ function drawCursor(
     }
 
     rawCtx.save();
-    rawCtx.strokeStyle = "#da9c14";
+    rawCtx.strokeStyle = cursorColor;
     rawCtx.lineWidth = 2;
     rawCtx.setLineDash([4, 4]);
     rawCtx.beginPath();

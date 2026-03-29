@@ -103,5 +103,21 @@ export const ScoreEditorPlugin: NotationPlugin = {
     api.registerCommand("notation.file-history", "File History", () => {
       import("../../components/HistoryModal").then((m) => m.showHistoryModal());
     });
+
+    api.registerCommand("notation.go-to-measure", "Go to measure...", () => {
+      const input = prompt("Go to measure:");
+      if (!input) return;
+      const num = parseInt(input, 10);
+      if (isNaN(num) || num < 1) return;
+      const store = useEditorStore.getState();
+      const part = store.score.parts[store.inputState.cursor.partIndex];
+      if (!part) return;
+      const measureIndex = Math.min(num - 1, part.measures.length - 1);
+      store.setCursorDirect({
+        ...store.inputState.cursor,
+        measureIndex,
+        eventIndex: 0,
+      });
+    });
   },
 };

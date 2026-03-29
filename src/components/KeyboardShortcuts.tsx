@@ -3,6 +3,7 @@ import { useEditorStore } from "../state";
 import type { PitchClass, DurationType } from "../model";
 import type { ViewModeType } from "../views/ViewMode";
 import { getSettings, matchesBinding } from "../settings";
+import { getGlobalPluginManager } from "../plugins/PluginManager";
 
 export function KeyboardShortcuts() {
   const insertNote = useEditorStore((s) => s.insertNote);
@@ -72,6 +73,7 @@ export function KeyboardShortcuts() {
       "toggle-step-entry": () => toggleStepEntry(),
       "toggle-grace-note": () => toggleGraceNoteMode(),
       "toggle-slur": () => toggleSlur(),
+      "go-to-measure": () => getGlobalPluginManager()?.executeCommand("notation.go-to-measure"),
 
       // Accidentals
       "accidental:sharp": () => setAccidental("sharp"),

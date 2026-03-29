@@ -5,10 +5,18 @@ import type { TabInfo } from "./guitar";
 
 export type Articulation =
   | { kind: "staccato" }
+  | { kind: "staccatissimo" }
   | { kind: "accent" }
   | { kind: "tenuto" }
   | { kind: "fermata" }
   | { kind: "marcato" }
+  | { kind: "up-bow" }
+  | { kind: "down-bow" }
+  | { kind: "open-string" }
+  | { kind: "stopped" }
+  | { kind: "trill" }
+  | { kind: "mordent" }
+  | { kind: "turn" }
   | { kind: "bend"; semitones: number }
   | { kind: "slide-up" }
   | { kind: "slide-down" }
