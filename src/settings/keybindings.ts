@@ -82,6 +82,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   // Annotation
   { id: "chord-mode", label: "Chord input", category: "Annotation", defaultBinding: { key: "c", shift: true } },
   { id: "lyric-mode", label: "Lyric input", category: "Annotation", defaultBinding: { key: "l", shift: true } },
+  { id: "dynamics-popover", label: "Dynamics", category: "Annotation", defaultBinding: { key: "d", shift: true } },
 
   // Articulations
   { id: "articulation:accent", label: "Accent", category: "Articulations", defaultBinding: { key: ">", shift: true } },

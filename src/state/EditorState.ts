@@ -41,6 +41,7 @@ import { SetRepeatBarline } from "../commands/SetRepeatBarline";
 import { SetVolta } from "../commands/SetVolta";
 import { SetNavigationMark } from "../commands/SetNavigationMark";
 import { ToggleArticulation } from "../commands/ToggleArticulation";
+import { SetDynamic } from "../commands/SetDynamic";
 import { OverwriteNote } from "../commands/OverwriteNote";
 import type { NavigationMarkType } from "../commands/SetNavigationMark";
 import type { BarlineType, Volta } from "../model";
@@ -155,6 +156,11 @@ interface EditorStore {
   setVolta(volta: Volta | null): void;
   setNavigationMark(markType: NavigationMarkType, value?: string | boolean): void;
 
+  // Dynamics
+  dynamicsPopoverOpen: boolean;
+  setDynamicsPopoverOpen(open: boolean): void;
+  setDynamic(level: import("../model/annotations").DynamicLevel | null): void;
+
   // Plugin display toggles
   showTitle: boolean;
   showComposer: boolean;
@@ -200,6 +206,23 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   showTitle: true,
   showComposer: false,
   showLyrics: true,
+  dynamicsPopoverOpen: false,
+
+  setDynamicsPopoverOpen(open: boolean) {
+    set({ dynamicsPopoverOpen: open });
+  },
+
+  setDynamic(level: import("../model/annotations").DynamicLevel | null) {
+    const state = get();
+    const { cursor } = state.inputState;
+    const voice = state.score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+    if (!voice) return;
+    const evt = voice.events[cursor.eventIndex];
+    if (!evt) return;
+    const cmd = new SetDynamic(level, evt.id);
+    const result = history.execute(cmd, { score: state.score, inputState: state.inputState });
+    set({ score: result.score, inputState: result.inputState, dynamicsPopoverOpen: false });
+  },
 
   insertNote(pitchClass: PitchClass) {
     const state = get();

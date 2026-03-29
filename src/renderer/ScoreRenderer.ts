@@ -1,5 +1,5 @@
 import type { Score, NoteEventId } from "../model";
-import { TICKS_PER_QUARTER } from "../model/duration";
+import { TICKS_PER_QUARTER, durationToTicks } from "../model/duration";
 import { renderMeasure, renderMultiMeasureRest, renderSystemBarline, clearCanvas, type RenderContext, type NoteBox, type AnnotationBox } from "./vexBridge";
 import { renderTabMeasure } from "./TabRenderer";
 import { computeLayout, totalContentHeight, totalPageCount, partStaveCount, DEFAULT_LAYOUT, type LayoutConfig } from "./SystemLayout";
@@ -431,8 +431,9 @@ export function renderScore(
     drawCursor(ctx, score, cursor, measurePositions, config, allNoteBoxes);
   }
 
-  // Draw playback cursor
+  // Draw playback note highlights and cursor
   if (playbackTick != null && playbackTick >= 0) {
+    drawPlaybackHighlights(rawCtx, score, playbackTick, allNoteBoxes);
     drawPlaybackCursor(ctx, score, playbackTick, measurePositions, config);
   }
 
@@ -516,6 +517,59 @@ function drawCursor(
     rawCtx.stroke();
     rawCtx.restore();
   }
+}
+
+function getActiveNoteIds(score: Score, playbackTick: number): Set<NoteEventId> {
+  const active = new Set<NoteEventId>();
+  let accumulated = 0;
+
+  for (const part of score.parts) {
+    if (part.muted) continue;
+    accumulated = 0;
+    for (const measure of part.measures) {
+      const ts = measure.timeSignature;
+      const measureTicks = (TICKS_PER_QUARTER * 4 * ts.numerator) / ts.denominator;
+      if (accumulated > playbackTick) break;
+
+      for (const voice of measure.voices) {
+        let offset = accumulated;
+        for (const evt of voice.events) {
+          const evtTicks = durationToTicks(evt.duration);
+          if (offset <= playbackTick && playbackTick < offset + evtTicks) {
+            if (evt.kind === "note" || evt.kind === "chord") {
+              active.add(evt.id);
+            }
+          }
+          offset += evtTicks;
+        }
+      }
+      accumulated += measureTicks;
+    }
+  }
+  return active;
+}
+
+function drawPlaybackHighlights(
+  rawCtx: CanvasRenderingContext2D,
+  score: Score,
+  playbackTick: number,
+  noteBoxes: Map<NoteEventId, NoteBox>,
+): void {
+  const activeIds = getActiveNoteIds(score, playbackTick);
+  if (activeIds.size === 0) return;
+
+  rawCtx.save();
+  rawCtx.fillStyle = "#ef467e";
+  rawCtx.globalAlpha = 0.18;
+  const pad = 3;
+  for (const id of activeIds) {
+    const box = noteBoxes.get(id);
+    if (!box) continue;
+    rawCtx.beginPath();
+    rawCtx.roundRect(box.x - pad, box.y - pad, box.width + pad * 2, box.height + pad * 2, 4);
+    rawCtx.fill();
+  }
+  rawCtx.restore();
 }
 
 function drawPlaybackCursor(
