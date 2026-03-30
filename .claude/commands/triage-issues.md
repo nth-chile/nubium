@@ -37,11 +37,20 @@ If a test/feedback issue has been fully split into sub-issues:
 
 Do NOT close an issue if it contains any unaddressed items.
 
-## Step 5: Summary
+## Step 5: Label Decision Issues
+
+For issues that are questions or design choices (not bugs or features with a clear fix):
+
+1. Add the `needs-decision` label: `gh issue edit <number> --add-label "needs-decision"`
+2. These need human input to resolve — the skill can't answer them
+
+Also check for conversation context that was mentioned but never turned into an issue. If you find something, create it.
+
+## Step 6: Summary
 
 Print:
 - Issues scanned (count)
 - New issues created (with links)
 - Duplicates found and linked
 - Parent issues closed
-- Any items that need human decision (questions, design choices)
+- Decision issues flagged (with links)
