@@ -35,6 +35,7 @@ function TransportPanel() {
   }, [tempoInput, setTempo]);
 
   const positionDisplay = formatPosition(playbackTick, score);
+  const effectiveBpm = isPlaying ? getEffectiveBpm(playbackTick, score) : score.tempo;
 
   return (
     <>
@@ -53,7 +54,7 @@ function TransportPanel() {
         <span className="text-[11px] text-muted-foreground uppercase tracking-wider mr-1">BPM</span>
         <Input
           type="text"
-          value={tempoInput !== null ? tempoInput : String(score.tempo)}
+          value={tempoInput !== null ? tempoInput : String(effectiveBpm)}
           onChange={(e) => setTempoInput(e.target.value)}
           onBlur={handleTempoCommit}
           onKeyDown={(e) => { if (e.key === "Enter") handleTempoCommit(); else if (e.key === "Escape") setTempoInput(null); }}
@@ -86,6 +87,38 @@ function TransportPanel() {
       </div>
     </>
   );
+}
+
+function getEffectiveBpm(
+  tick: number | null,
+  score: { tempo: number; parts: Array<{ measures: Array<{ timeSignature: { numerator: number; denominator: number }; annotations: Array<{ kind: string; bpm?: number }> }> }> }
+): number {
+  if (tick === null || tick <= 0) return score.tempo;
+  const part = score.parts[0];
+  if (!part) return score.tempo;
+
+  // Find which measure the tick is in
+  let accumulated = 0;
+  let currentMi = 0;
+  for (let mi = 0; mi < part.measures.length; mi++) {
+    const ts = part.measures[mi].timeSignature;
+    const measureTicks = (TICKS_PER_QUARTER * 4 * ts.numerator) / ts.denominator;
+    if (accumulated + measureTicks > tick) { currentMi = mi; break; }
+    accumulated += measureTicks;
+    currentMi = mi;
+  }
+
+  // Search backwards for most recent tempo mark
+  for (let i = currentMi; i >= 0; i--) {
+    for (const p of score.parts) {
+      const m = p.measures[i];
+      if (!m) continue;
+      for (const ann of m.annotations) {
+        if (ann.kind === "tempo-mark" && ann.bpm) return ann.bpm;
+      }
+    }
+  }
+  return score.tempo;
 }
 
 function formatPosition(

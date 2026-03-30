@@ -113,11 +113,14 @@ function secToTicks(sec: number, bpm: number): number {
 }
 
 function getTempoForMeasure(score: Score, mi: number, fallbackBpm?: number): number {
-  for (const part of score.parts) {
-    const m = part.measures[mi];
-    if (!m) continue;
-    for (const ann of m.annotations) {
-      if (ann.kind === "tempo-mark") return (ann as TempoMark).bpm;
+  // Search backwards from the current measure to find the most recent tempo mark
+  for (let i = mi; i >= 0; i--) {
+    for (const part of score.parts) {
+      const m = part.measures[i];
+      if (!m) continue;
+      for (const ann of m.annotations) {
+        if (ann.kind === "tempo-mark") return (ann as TempoMark).bpm;
+      }
     }
   }
   return fallbackBpm ?? globalBpm;

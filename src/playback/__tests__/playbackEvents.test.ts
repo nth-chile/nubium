@@ -91,4 +91,21 @@ describe("getScoreDuration", () => {
     // 4 quarter notes at 60 BPM = 4 seconds
     expect(getScoreDuration(score)).toBe(4);
   });
+
+  it("tempo mark persists to subsequent measures", () => {
+    const m1 = factory.measure([
+      factory.voice([factory.note("C", 4, factory.dur("whole"))]),
+    ]);
+    m1.annotations.push({ kind: "tempo-mark", bpm: 60, beatUnit: "quarter" });
+
+    const m2 = factory.measure([
+      factory.voice([factory.note("D", 4, factory.dur("whole"))]),
+    ]);
+    // m2 has no tempo mark — should inherit 60 BPM from m1
+
+    const score = factory.score("", "", [factory.part("P", "P", [m1, m2])]);
+    score.tempo = 120;
+    // m1: 4 beats at 60 BPM = 4 sec, m2: 4 beats at 60 BPM (inherited) = 4 sec → total 8 sec
+    expect(getScoreDuration(score)).toBe(8);
+  });
 });

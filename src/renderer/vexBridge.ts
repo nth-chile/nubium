@@ -630,12 +630,15 @@ export function renderMeasure(
           }
           case "tempo-mark": {
             rawCtx.save();
-            rawCtx.font = "bold 12px sans-serif";
             rawCtx.fillStyle = "#000";
-            const label = annotation.text
-              ? `${annotation.text} (${annotation.beatUnit} = ${annotation.bpm})`
-              : `${annotation.beatUnit} = ${annotation.bpm}`;
-            rawCtx.fillText(label, x + 2, y - 4);
+            const noteGlyph: Record<string, string> = {
+              whole: "\uD834\uDD5D", half: "\uD834\uDD5E", quarter: "\uD834\uDD5F",
+              eighth: "\uD834\uDD60", "16th": "\uD834\uDD61", "32nd": "\uD834\uDD62",
+            };
+            const glyph = noteGlyph[annotation.beatUnit] ?? annotation.beatUnit;
+            const tempoText = annotation.text ? `${annotation.text} (${glyph} = ${annotation.bpm})` : `${glyph} = ${annotation.bpm}`;
+            rawCtx.font = "bold 12px sans-serif";
+            rawCtx.fillText(tempoText, x + 2, y - 4);
             rawCtx.restore();
             break;
           }
