@@ -347,6 +347,9 @@ export function renderScore(
             const keySigChanged = isFirstInLine || (prevMeasure != null &&
               m.keySignature.fifths !== prevMeasure.keySignature.fifths
             );
+            const clefChanged = isFirstInLine || (prevMeasure != null &&
+              m.clef.type !== prevMeasure.clef.type
+            );
 
             result = renderMeasure(
               ctx,
@@ -354,7 +357,7 @@ export function renderScore(
               layout.x,
               layout.y,
               layout.width,
-              isFirstInLine,
+              clefChanged,
               timeSigChanged,
               keySigChanged,
               score.stylesheet,
