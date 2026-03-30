@@ -231,8 +231,9 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const state = get();
     const { cursor } = state.inputState;
     const voice = state.score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
-    if (!voice) return;
-    const evt = voice.events[cursor.eventIndex];
+    if (!voice || voice.events.length === 0) return;
+    // If cursor is past the last event, apply to the last event
+    const evt = voice.events[cursor.eventIndex] ?? voice.events[voice.events.length - 1];
     if (!evt) return;
     const cmd = new SetDynamic(level, evt.id);
     const result = history.execute(cmd, { score: state.score, inputState: state.inputState });
@@ -461,29 +462,46 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   moveCursor(direction: "left" | "right") {
     set((s) => {
       const cursor = { ...s.inputState.cursor };
-      const voice =
-        s.score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+      const part = s.score.parts[cursor.partIndex];
+      const voice = part?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
       // Allow navigation even when voice doesn't exist in current measure
       const eventCount = voice?.events.length ?? 0;
 
       if (direction === "right") {
         if (cursor.eventIndex < eventCount) {
           cursor.eventIndex++;
+          // Skip grace notes — they're rendered as modifiers, not standalone
+          while (cursor.eventIndex < eventCount && voice?.events[cursor.eventIndex]?.kind === "grace") {
+            cursor.eventIndex++;
+          }
         } else {
           // Move to next measure
-          const part = s.score.parts[cursor.partIndex];
           if (part && cursor.measureIndex < part.measures.length - 1) {
             cursor.measureIndex++;
             cursor.eventIndex = 0;
+            // Skip leading grace notes in new measure
+            const newVoice = part.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+            while (newVoice && cursor.eventIndex < newVoice.events.length && newVoice.events[cursor.eventIndex]?.kind === "grace") {
+              cursor.eventIndex++;
+            }
           }
         }
       } else {
         if (cursor.eventIndex > 0) {
           cursor.eventIndex--;
+          // Skip grace notes going left
+          while (cursor.eventIndex > 0 && voice?.events[cursor.eventIndex]?.kind === "grace") {
+            cursor.eventIndex--;
+          }
+          // If we landed on a grace note at position 0, move to the append position of previous measure
+          if (cursor.eventIndex === 0 && voice?.events[0]?.kind === "grace" && cursor.measureIndex > 0) {
+            cursor.measureIndex--;
+            const prevVoice = part?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+            cursor.eventIndex = prevVoice?.events.length ?? 0;
+          }
         } else if (cursor.measureIndex > 0) {
           cursor.measureIndex--;
-          const prevVoice =
-            s.score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+          const prevVoice = part?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
           cursor.eventIndex = prevVoice?.events.length ?? 0;
         }
       }
@@ -591,19 +609,28 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         voiceIndex: cursor.voiceIndex,
         startEvent: cursor.eventIndex,
         endEvent: cursor.eventIndex,
+        anchorEvent: cursor.eventIndex,
       };
 
-      const newNs = { ...ns };
-      if (direction === "right" && newNs.endEvent < voice.events.length - 1) {
-        newNs.endEvent++;
-      } else if (direction === "left") {
-        if (newNs.endEvent > newNs.startEvent) {
-          newNs.endEvent--;
-        } else if (newNs.startEvent > 0) {
-          newNs.startEvent--;
-        }
+      const anchor = ns.anchorEvent ?? ns.startEvent;
+      // The "moving end" is whichever end isn't the anchor
+      let movingEnd = ns.endEvent === anchor ? ns.startEvent : ns.endEvent;
+
+      if (direction === "right" && movingEnd < voice.events.length - 1) {
+        movingEnd++;
+      } else if (direction === "left" && movingEnd > 0) {
+        movingEnd--;
       }
-      return { noteSelection: newNs, selection: null };
+
+      return {
+        noteSelection: {
+          ...ns,
+          anchorEvent: anchor,
+          startEvent: Math.min(anchor, movingEnd),
+          endEvent: Math.max(anchor, movingEnd),
+        },
+        selection: null,
+      };
     });
   },
 
