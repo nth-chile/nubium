@@ -20,15 +20,25 @@ Before creating any new issue:
 3. If a matching issue exists (open or closed), do NOT create a duplicate. Instead, add a comment linking the related issues together.
 4. Look for issues that describe the same root cause with different symptoms — group them.
 
-## Step 3: Create Sub-Issues
+## Step 3: Link Related Issues
+
+Group issues that share a root cause or should be fixed together:
+
+1. Look for issues affecting the same subsystem (e.g., multiple voice bugs, multiple selection bugs, multiple cursor issues)
+2. Look for issues that are different symptoms of the same underlying problem
+3. Add a "Related: #X, #Y, #Z. Fix together." comment to each issue in the group
+4. This prevents separate sessions from fixing them independently and missing the shared root cause
+
+## Step 4: Create Sub-Issues
 
 For each untracked item found in Step 1:
 
 1. Create a new issue with a clear, specific title (bug, feature, or question)
 2. Reference the source issue in the body (e.g., "Reported in #75 comment")
 3. Apply appropriate labels if they exist
+4. Immediately check if it's related to existing issues and link them (Step 3)
 
-## Step 4: Close Parent Issues
+## Step 5: Close Parent Issues
 
 If a test/feedback issue has been fully split into sub-issues:
 
