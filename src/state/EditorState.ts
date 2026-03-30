@@ -394,6 +394,15 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         }
         set({ score });
       }
+    } else if (cursorOnExistingEvent(state.score, state.inputState.cursor)) {
+      // Single note at cursor: change its duration
+      const { cursor } = state.inputState;
+      const score = structuredClone(state.score);
+      const voice = score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+      if (voice && cursor.eventIndex < voice.events.length) {
+        voice.events[cursor.eventIndex] = { ...voice.events[cursor.eventIndex], duration: { type, dots: 0 } };
+        set({ score });
+      }
     } else if (state.selection && !state.inputState.stepEntry) {
       const { partIndex, measureStart, measureEnd } = state.selection;
       const score = structuredClone(state.score);
@@ -587,8 +596,12 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       const newNs = { ...ns };
       if (direction === "right" && newNs.endEvent < voice.events.length - 1) {
         newNs.endEvent++;
-      } else if (direction === "left" && newNs.startEvent > 0) {
-        newNs.startEvent--;
+      } else if (direction === "left") {
+        if (newNs.endEvent > newNs.startEvent) {
+          newNs.endEvent--;
+        } else if (newNs.startEvent > 0) {
+          newNs.startEvent--;
+        }
       }
       return { noteSelection: newNs, selection: null };
     });
@@ -1276,6 +1289,7 @@ async function autoSave(score: Score, filePath: string | null): Promise<void> {
 useEditorStore.subscribe((state, prevState) => {
   if (state.score !== prevState.score) {
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    useEditorStore.getState().setAutoSaveStatus("Saving...");
     autoSaveTimer = setTimeout(() => {
       autoSave(state.score, state.filePath);
     }, AUTOSAVE_DEBOUNCE_MS);

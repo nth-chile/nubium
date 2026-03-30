@@ -107,7 +107,7 @@ export function TextInput() {
           onBlur={() => cancelTextInput()}
         />
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          Enter to advance, Esc to exit
+          {textInputMode === "chord" ? "Enter to set, Esc to cancel" : "Enter to advance, Esc to exit"}
         </span>
       </div>
     </div>
