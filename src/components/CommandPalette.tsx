@@ -71,6 +71,7 @@ export function CommandPalette({ pluginManager }: CommandPaletteProps) {
               className={`px-4 py-2 cursor-pointer flex justify-between items-center ${i === selectedIndex ? "bg-accent" : "hover:bg-accent/50"}`}
             >
               <span className="text-sm">{cmd.label}</span>
+              <span className="text-xs text-muted-foreground font-mono">{cmd.id}</span>
             </div>
           ))}
         </div>
