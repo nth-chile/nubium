@@ -670,7 +670,8 @@ export function renderMeasure(
               rawCtx.font = "italic bold 16px serif";
               rawCtx.fillStyle = "#000";
               rawCtx.textAlign = "center";
-              rawCtx.fillText(annotation.level, box.x + box.width / 2, y + 75);
+              const dynY = stave.getBottomY() + 14;
+              rawCtx.fillText(annotation.level, box.x + box.width / 2, dynY);
               rawCtx.textAlign = "start";
               rawCtx.restore();
             }
@@ -684,7 +685,7 @@ export function renderMeasure(
               rawCtx.save();
               rawCtx.strokeStyle = "#000";
               rawCtx.lineWidth = 1.5;
-              const hairpinY = y + 75;
+              const hairpinY = stave.getBottomY() + 10;
               const spread = 5; // half-height of the wedge opening
               const startX = startBox.x + startBox.width;
               const endX = endBox.x;
