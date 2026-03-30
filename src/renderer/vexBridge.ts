@@ -632,8 +632,8 @@ export function renderMeasure(
             rawCtx.save();
             rawCtx.fillStyle = "#000";
             const noteGlyph: Record<string, string> = {
-              whole: "\uD834\uDD5D", half: "\uD834\uDD5E", quarter: "\uD834\uDD5F",
-              eighth: "\uD834\uDD60", "16th": "\uD834\uDD61", "32nd": "\uD834\uDD62",
+              whole: "o", half: "d", quarter: "♩",
+              eighth: "♪", "16th": "♬", "32nd": "♬",
             };
             const glyph = noteGlyph[annotation.beatUnit] ?? annotation.beatUnit;
             const tempoText = annotation.text ? `${annotation.text} (${glyph} = ${annotation.bpm})` : `${glyph} = ${annotation.bpm}`;
