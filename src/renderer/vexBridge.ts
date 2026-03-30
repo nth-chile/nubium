@@ -360,8 +360,9 @@ export function renderMeasure(
       vfVoice.addTickables(staveNotes);
       vfVoices.push(vfVoice);
 
-      // Compute beam groups for this voice
-      const beamGroups = getBeamGroups(modelVoice.events, m.timeSignature);
+      // Compute beam groups — filter out grace notes since they aren't in staveNotes
+      const nonGraceEvents = modelVoice.events.filter((e) => e.kind !== "grace");
+      const beamGroups = getBeamGroups(nonGraceEvents, m.timeSignature);
       for (const group of beamGroups) {
         const beamNotes = group.map((idx) => staveNotes[idx]);
         if (beamNotes.length >= 2) {

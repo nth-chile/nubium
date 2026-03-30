@@ -26,6 +26,7 @@ function NoteInputPanel() {
   const toggleDot = useEditorStore((s) => s.toggleDot);
   const setAccidental = useEditorStore((s) => s.setAccidental);
   const toggleStepEntry = useEditorStore((s) => s.toggleStepEntry);
+  const toggleGraceNoteMode = useEditorStore((s) => s.toggleGraceNoteMode);
   const hotkey = useHotkey();
 
   return (
@@ -39,6 +40,15 @@ function NoteInputPanel() {
           className="text-xs font-bold"
         >
           N
+        </TooltipButton>
+        <TooltipButton
+          variant={inputState.graceNoteMode ? "default" : "ghost"}
+          size="icon"
+          onClick={toggleGraceNoteMode}
+          tooltip={`Grace note (${hotkey("toggle-grace-note")})`}
+          className="text-xs font-bold italic"
+        >
+          G
         </TooltipButton>
         <span className="text-[11px] text-muted-foreground uppercase tracking-wider mr-1">Duration</span>
         {DURATIONS.map((d) => (

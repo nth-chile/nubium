@@ -176,8 +176,23 @@ function buildEvents(score: Score): void {
       const instId = part.instrumentId;
       for (const voice of m.voices) {
         let offset = 0;
+        const graceBuffer: { midi: number; instrumentId: string }[] = [];
         for (const evt of voice.events) {
+          if (evt.kind === "grace") {
+            // Collect grace notes — they'll play as short ornaments before the next note
+            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch), instrumentId: instId });
+            continue;
+          }
           const evtTicks = durationToTicks(evt.duration);
+          // Play buffered grace notes just before this event
+          if (graceBuffer.length > 0) {
+            const graceDur = Math.min(60, evtTicks / (graceBuffer.length + 1)); // short ornamental duration in ticks
+            for (let gi = 0; gi < graceBuffer.length; gi++) {
+              const graceOffset = offset - graceDur * (graceBuffer.length - gi);
+              events.push({ tick: tick + Math.max(0, graceOffset), midi: graceBuffer[gi].midi, durationTicks: graceDur, instrumentId: graceBuffer[gi].instrumentId });
+            }
+            graceBuffer.length = 0;
+          }
           if (evt.kind === "note") {
             events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch), durationTicks: evtTicks, instrumentId: instId });
           } else if (evt.kind === "chord") {
