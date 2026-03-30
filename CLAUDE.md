@@ -94,3 +94,12 @@ JSON representation used for AI context, undo history, and clipboard. Files are 
 Pitches: Letter + octave (C4 = middle C). Accidentals: "sharp", "flat", "double-sharp", "double-flat".
 Durations: "whole", "half", "quarter", "eighth", "16th", "32nd", "64th". Append "." for dotted.
 Key signatures (fifths): -7 to 7. Barlines: single, double, final, repeat-start, repeat-end, repeat-both.
+
+## Gotchas
+
+- **`roundRect` not available everywhere.** Always guard: `if (rawCtx.roundRect) { rawCtx.roundRect(...) } else { rawCtx.rect(...) }`. Crashes canvas rendering without this.
+- **VexFlow tick mismatch.** `joinVoices()` and `format()` throw when voices have different total ticks (e.g., voice 2 not fully filled). These calls are wrapped in try/catch in `vexBridge.ts` — don't remove the try/catch.
+- **Time/key sig changes apply to all parts.** `ChangeTimeSig` and `ChangeKeySig` commands iterate all parts at the measure. Don't change this to single-part.
+- **GitHub issues are linked.** Related issues have "Related: #X, #Y" comments. Always read issue comments before starting work — fix related issues together.
+- **Run `/test-changes` after finishing work.** It writes unit tests and updates GitHub issues.
+- **Run `/triage-issues` after closing issues.** It catches unaddressed items in comments and links related issues.
