@@ -25,6 +25,7 @@ VITE_CLEAN_SETTINGS=1 npm run tauri dev
 
 - `/test-changes` — After a feature or bug fix, finds untested changes, writes unit tests, and creates/updates GitHub issues (label: `manual-test`) for anything requiring manual verification.
 - `/test-matrix` — Comprehensive scan of all features vs test coverage. Writes missing unit tests and creates GitHub issues for manual-only items.
+- `/triage-issues` — Scans open and recently-closed issues for unaddressed items in comments. Splits compound issues into individual ones, deduplicates, and links related issues. Also checks closed issues for new comments that slipped through.
 
 ## License
 
