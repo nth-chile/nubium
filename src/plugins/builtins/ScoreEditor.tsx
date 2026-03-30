@@ -129,5 +129,43 @@ export const ScoreEditorPlugin: NotationPlugin = {
         eventIndex: 0,
       });
     });
+
+    // Articulations
+    const articulations = [
+      "staccato", "accent", "tenuto", "fermata", "marcato",
+      "trill", "mordent", "turn", "up-bow", "down-bow",
+    ] as const;
+    for (const art of articulations) {
+      api.registerCommand(`notation.articulation-${art}`, `Toggle ${art}`, () => {
+        useEditorStore.getState().toggleArticulation(art);
+      });
+    }
+
+    // Clef changes
+    const clefs = ["treble", "bass", "alto", "tenor"] as const;
+    for (const clef of clefs) {
+      api.registerCommand(`notation.clef-${clef}`, `Change clef to ${clef}`, () => {
+        useEditorStore.getState().changeClef({ type: clef });
+      });
+    }
+
+    // Views
+    api.registerCommand("notation.view-full-score", "View: Full Score", () => {
+      useEditorStore.getState().setViewMode("full-score");
+    });
+    api.registerCommand("notation.view-lead-sheet", "View: Lead Sheet", () => {
+      useEditorStore.getState().setViewMode("lead-sheet");
+    });
+    api.registerCommand("notation.view-songwriter", "View: Songwriter", () => {
+      useEditorStore.getState().setViewMode("songwriter");
+    });
+    api.registerCommand("notation.view-tab", "View: Tab", () => {
+      useEditorStore.getState().setViewMode("tab");
+    });
+
+    // Pickup measure
+    api.registerCommand("notation.toggle-pickup", "Toggle pickup measure", () => {
+      useEditorStore.getState().togglePickup();
+    });
   },
 };
