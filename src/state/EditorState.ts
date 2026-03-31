@@ -395,15 +395,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         }
         set({ score });
       }
-    } else if (cursorOnExistingEvent(state.score, state.inputState.cursor)) {
-      // Single note at cursor: change its duration
-      const { cursor } = state.inputState;
-      const score = structuredClone(state.score);
-      const voice = score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
-      if (voice && cursor.eventIndex < voice.events.length) {
-        voice.events[cursor.eventIndex] = { ...voice.events[cursor.eventIndex], duration: { type, dots: 0 } };
-        set({ score });
-      }
     } else if (state.selection && !state.inputState.stepEntry) {
       const { partIndex, measureStart, measureEnd } = state.selection;
       const score = structuredClone(state.score);
@@ -420,6 +411,15 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         }
       }
       set({ score });
+    } else if (cursorOnExistingEvent(state.score, state.inputState.cursor)) {
+      // Single note at cursor: change its duration
+      const { cursor } = state.inputState;
+      const score = structuredClone(state.score);
+      const voice = score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+      if (voice && cursor.eventIndex < voice.events.length) {
+        voice.events[cursor.eventIndex] = { ...voice.events[cursor.eventIndex], duration: { type, dots: 0 } };
+        set({ score });
+      }
     }
     set((s) => ({
       inputState: {
