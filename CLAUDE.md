@@ -101,7 +101,9 @@ Key signatures (fifths): -7 to 7. Barlines: single, double, final, repeat-start,
 - **VexFlow tick mismatch.** `joinVoices()` and `format()` throw when voices have different total ticks (e.g., voice 2 not fully filled). These calls are wrapped in try/catch in `vexBridge.ts` — don't remove the try/catch.
 - **Time/key sig changes apply to all parts.** `ChangeTimeSig` and `ChangeKeySig` commands iterate all parts at the measure. Don't change this to single-part.
 - **GitHub issues are linked.** Related issues have "Related: #X, #Y" comments. Always read issue comments before starting work — fix related issues together.
+- **Use `/fix-issues` for bug fix groups.** It reads related issues together, fixes them, writes tests, and submits a PR.
 - **Run `/test-changes` after finishing work.** It writes unit tests and updates GitHub issues.
 - **Run `/triage-issues` after closing issues.** It catches unaddressed items in comments and links related issues.
+- **Run `/convo-review` before ending a conversation.** It saves context to memory, surfaces loose ends, and keeps the README up to date.
 - **Work on a branch, not main.** Create a branch named after the issue group (e.g., `fix/voice-bugs`, `fix/selection`). Submit a PR when done. This prevents parallel agents from stepping on each other.
 - **Push back on bad fixes.** Don't force a change just because an issue says so. If the current behavior is correct or the fix would make things worse, explain your reasoning to the user and comment on the GitHub issue — don't silently skip it.

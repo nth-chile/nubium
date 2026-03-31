@@ -39,7 +39,10 @@
       "Bash(grep -r \"edit.*chord\\\\|edit.*lyric\\\\|update.*chord\\\\|update.*lyric\" /Users/jared/work/notation/src --include=*.ts --include=*.tsx)",
       "Bash(gh issue:*)",
       "Bash(gh label:*)",
-      "Bash(grep -h \"describe\\\\|it\\(\" src/serialization/__tests__/*.test.ts src/renderer/__tests__/*.test.ts src/model/__tests__/*.test.ts src/playback/__tests__/*.test.ts src/ai/__tests__/*.test.ts src/settings/__tests__/*.test.ts src/plugins/__tests__/*.test.ts)"
+      "Bash(grep -h \"describe\\\\|it\\(\" src/serialization/__tests__/*.test.ts src/renderer/__tests__/*.test.ts src/model/__tests__/*.test.ts src/playback/__tests__/*.test.ts src/ai/__tests__/*.test.ts src/settings/__tests__/*.test.ts src/plugins/__tests__/*.test.ts)",
+      "Bash(pbcopy)",
+      "Bash(ls /Users/jared/work/notation/src/components/*.tsx)",
+      "Bash(grep -r midiToPitch /Users/jared/work/notation/src/model/ --include=*.ts)"
     ]
   }
 }

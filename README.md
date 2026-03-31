@@ -23,9 +23,11 @@ VITE_CLEAN_SETTINGS=1 npm run tauri dev
 
 ### Claude Code Skills
 
+- `/fix-issues` — Takes issue numbers or a description, reads related issues together, fixes them as a group, writes tests, and submits a PR.
 - `/test-changes` — After a feature or bug fix, finds untested changes, writes unit tests, and creates/updates GitHub issues (label: `manual-test`) for anything requiring manual verification.
 - `/test-matrix` — Comprehensive scan of all features vs test coverage. Writes missing unit tests and creates GitHub issues for manual-only items.
 - `/triage-issues` — Scans open and recently-closed issues for unaddressed items in comments. Splits compound issues, deduplicates, links related issues, and labels questions/design choices with `needs-decision`.
+- `/convo-review` — End-of-conversation review. Saves important context to memory, surfaces loose ends that got ignored, suggests new skills for repeated workflows, and keeps the README up to date.
 
 ## License
 
