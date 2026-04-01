@@ -1,4 +1,4 @@
-import { TabStave, TabNote, Formatter, Voice, Bend, Vibrato, TabSlide, TabTie } from "vexflow";
+import { TabStave, TabNote, GhostNote, Formatter, Voice, Bend, Vibrato, TabSlide, TabTie } from "vexflow";
 import type { Measure, NoteEvent, NoteEventId } from "../model";
 import type { Articulation } from "../model/note";
 import { pitchToTab, STANDARD_TUNING, type Tuning } from "../model/guitar";
@@ -47,19 +47,13 @@ function getTabPositions(
 function eventToTabNote(
   event: NoteEvent,
   tuning: Tuning
-): TabNote | null {
+): TabNote | GhostNote | null {
   const dur = DUR_VEX[event.duration.type];
   if (!dur) return null;
 
   if (event.kind === "rest") {
-    // TabNote doesn't support rests the same way; use a ghost note on string 1
-    const tn = new TabNote({
-      positions: [{ str: 1, fret: 0 }],
-      duration: dur,
-    });
-    // Make it invisible/ghost
-    tn.setGhost(true);
-    return tn;
+    // GhostNote takes up rhythmic space but renders nothing — correct for tab rests
+    return new GhostNote({ duration: dur });
   }
 
   const positions = getTabPositions(event, tuning);
@@ -123,7 +117,7 @@ export function renderTabMeasure(
   stave.setContext(ctx.context).draw();
 
   const noteBoxes: NoteBox[] = [];
-  const allTabNotes: TabNote[] = [];
+  const allTabNotes: (TabNote | GhostNote)[] = [];
   const eventIds: NoteEventId[] = [];
 
   // Process first voice only for tab (tab is typically single-voice)
@@ -161,8 +155,9 @@ export function renderTabMeasure(
     // Render slides and ties between consecutive notes
     renderTabConnections(ctx, modelVoice.events, allTabNotes);
 
-    // Collect bounding boxes
+    // Collect bounding boxes (skip GhostNotes — they have no visual)
     allTabNotes.forEach((tn, idx) => {
+      if (tn instanceof GhostNote) return;
       const bb = tn.getBoundingBox();
       if (bb) {
         noteBoxes.push({
@@ -171,6 +166,10 @@ export function renderTabMeasure(
           y: bb.getY(),
           width: bb.getW(),
           height: bb.getH(),
+          headX: bb.getX(),
+          headY: bb.getY(),
+          headWidth: bb.getW(),
+          headHeight: bb.getH(),
           partIndex,
           measureIndex,
           voiceIndex: 0,
@@ -189,7 +188,7 @@ export function renderTabMeasure(
 function renderTabConnections(
   ctx: RenderContext,
   events: NoteEvent[],
-  tabNotes: TabNote[]
+  tabNotes: (TabNote | GhostNote)[]
 ): void {
   for (let i = 0; i < events.length - 1; i++) {
     const event = events[i];
@@ -200,8 +199,8 @@ function renderTabConnections(
       if (art.kind === "slide-up" || art.kind === "slide-down") {
         try {
           const slide = new TabSlide({
-            firstNote: tabNotes[i],
-            lastNote: tabNotes[i + 1],
+            firstNote: tabNotes[i] as TabNote,
+            lastNote: tabNotes[i + 1] as TabNote,
           }, art.kind === "slide-up"
             ? TabSlide.SLIDE_UP
             : TabSlide.SLIDE_DOWN);
@@ -212,8 +211,8 @@ function renderTabConnections(
       } else if (art.kind === "hammer-on" || art.kind === "pull-off") {
         try {
           const tie = new TabTie({
-            firstNote: tabNotes[i],
-            lastNote: tabNotes[i + 1],
+            firstNote: tabNotes[i] as TabNote,
+            lastNote: tabNotes[i + 1] as TabNote,
           }, art.kind === "hammer-on" ? "H" : "P");
           tie.setContext(ctx.context).draw();
         } catch {
