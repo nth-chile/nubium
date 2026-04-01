@@ -12,9 +12,6 @@ export interface AppSettings {
   theme: "light" | "dark";
   historyMaxSnapshots: number;
   keyBindings: Record<string, KeyBinding>;
-  showComposer: boolean;
-  showTitle: boolean;
-  showLyrics: boolean;
   viewMode: string;
 }
 
@@ -36,9 +33,6 @@ function defaultSettings(): AppSettings {
     theme: "light",
     historyMaxSnapshots: 50,
     keyBindings: defaultKeyBindings(),
-    showComposer: false,
-    showTitle: true,
-    showLyrics: true,
     viewMode: "full-score",
   };
 }

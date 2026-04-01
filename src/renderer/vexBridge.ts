@@ -1,4 +1,5 @@
-import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Dot, Beam, StaveConnector, Barline, Repetition, Volta as VexVolta, StaveTie, MultiMeasureRest, Tuplet as VexTuplet, Articulation as VexArticulation, Ornament as VexOrnament, GraceNote as VexGraceNote, GraceNoteGroup, GhostNote } from "vexflow";
+import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Dot, Beam, StaveConnector, Barline, Repetition, Volta as VexVolta, StaveTie, StaveHairpin, MultiMeasureRest, Tuplet as VexTuplet, Articulation as VexArticulation, Ornament as VexOrnament, Annotation as VexAnnotation, StaveText, StaveModifierPosition, GraceNote as VexGraceNote, GraceNoteGroup, GhostNote } from "vexflow";
+import type { ChordSymbol, DynamicMark, Lyric, Hairpin } from "../model/annotations";
 import type { Measure, NoteEvent, NoteEventId } from "../model";
 import type { BarlineType } from "../model/time";
 import type { Annotation, TempoMark } from "../model/annotations";
@@ -328,6 +329,64 @@ export function renderMeasure(
 
   stave.setContext(ctx.context).draw();
 
+  // Draw stave-level annotations manually with coordinated Y tracking.
+  // VexFlow handles note-level annotations (chord symbols, dynamics, lyrics) and
+  // stave features (tempo, volta, segno/coda). We draw rehearsal marks and nav text
+  // manually because VexFlow has no rehearsal mark class and StaveText doesn't
+  // coordinate with tempo/volta positioning.
+  //
+  // Y tracker starts above VexFlow's stave elements and moves upward.
+  const aboveStaveCtx = ctx.context as unknown as CanvasRenderingContext2D;
+  let aboveY = y - 6; // just above stave top
+  if (m.navigation?.volta) aboveY -= 22; // volta bracket takes ~22px
+  if (tempoAnn) aboveY -= 22; // tempo mark takes ~22px
+  if (m.navigation?.segno || m.navigation?.coda) aboveY -= 20; // segno/coda glyph
+
+  // Rehearsal marks — boxed text (Dorico/MuseScore style)
+  for (const ann of m.annotations) {
+    if (ann.kind !== "rehearsal-mark") continue;
+    if (!aboveStaveCtx.save) continue;
+    aboveStaveCtx.save();
+    aboveStaveCtx.font = "bold 14px sans-serif";
+    const tw = aboveStaveCtx.measureText(ann.text).width;
+    const pad = 4;
+    const boxH = 14 + pad * 2;
+    aboveY -= boxH + 2;
+    aboveStaveCtx.strokeStyle = "#000";
+    aboveStaveCtx.lineWidth = 1.5;
+    aboveStaveCtx.beginPath();
+    aboveStaveCtx.rect(x + 2 - pad, aboveY, tw + pad * 2, boxH);
+    aboveStaveCtx.stroke();
+    aboveStaveCtx.fillStyle = "#000";
+    aboveStaveCtx.fillText(ann.text, x + 2, aboveY + boxH - pad - 2);
+    aboveStaveCtx.restore();
+  }
+
+  // Navigation text (Fine, D.S., D.C., To Coda) — italic, right-aligned
+  if (m.navigation && aboveStaveCtx.save) {
+    const nav = m.navigation;
+    const textItems: string[] = [];
+    if (nav.fine) textItems.push("Fine");
+    if (nav.toCoda) textItems.push("To Coda");
+    if (nav.dsText) textItems.push(nav.dsText);
+    if (nav.dcText) textItems.push(nav.dcText);
+    if (textItems.length > 0) {
+      aboveStaveCtx.save();
+      aboveStaveCtx.font = "italic bold 11px serif";
+      aboveStaveCtx.fillStyle = "#000";
+      aboveStaveCtx.textAlign = "right";
+      // Use a separate Y tracker for right-aligned text starting at stave top
+      let navY = y - 6;
+      if (m.navigation?.volta) navY -= 22;
+      for (const text of textItems) {
+        navY -= 14;
+        aboveStaveCtx.fillText(text, x + width - 4, navY + 12);
+      }
+      aboveStaveCtx.textAlign = "start";
+      aboveStaveCtx.restore();
+    }
+  }
+
   const noteBoxes: NoteBox[] = [];
   const vfVoices: Voice[] = [];
   const allBeams: Beam[] = [];
@@ -362,6 +421,31 @@ export function renderMeasure(
           pendingGraceNotes = [];
           pendingGraceIds = [];
         }
+
+        // Attach annotations as VexFlow modifiers so VexFlow handles collision avoidance
+        for (const ann of m.annotations) {
+          if (ann.kind === "chord-symbol" && ann.noteEventId === event.id) {
+            const vAnn = new VexAnnotation(ann.text)
+              .setVerticalJustification(VexAnnotation.VerticalJustify.TOP)
+              .setFont("sans-serif", style.chordSymbolSize, "bold");
+            sn.addModifier(vAnn);
+          }
+          if (ann.kind === "dynamic" && ann.noteEventId === event.id) {
+            const vAnn = new VexAnnotation(ann.level)
+              .setVerticalJustification(VexAnnotation.VerticalJustify.BOTTOM)
+              .setFont("serif", 16, "bold", "italic");
+            sn.addModifier(vAnn);
+          }
+          if (ann.kind === "lyric" && ann.noteEventId === event.id) {
+            const lyricText = ann.syllableType === "begin" || ann.syllableType === "middle"
+              ? ann.text + "-" : ann.text;
+            const vAnn = new VexAnnotation(lyricText)
+              .setVerticalJustification(VexAnnotation.VerticalJustify.BOTTOM)
+              .setFont(style.fontFamily, style.lyricSize, "normal", "italic");
+            sn.addModifier(vAnn);
+          }
+        }
+
         staveNotes.push(sn);
         eventIds.push(event.id);
       }
@@ -619,176 +703,61 @@ export function renderMeasure(
         }
       }
     }
-  }
 
-  // Render annotations (chord symbols above, lyrics below, rehearsal marks, tempo marks)
-  const annotationBoxes: AnnotationBox[] = [];
-  if (m.annotations.length > 0) {
-    const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
-    if (rawCtx.save) {
-      for (const annotation of m.annotations) {
-        switch (annotation.kind) {
-          case "chord-symbol": {
-            const box = annotation.noteEventId
-              ? noteBoxes.find((nb) => nb.id === annotation.noteEventId)
-              : undefined;
-            if (!box) break;
-            rawCtx.save();
-            const chordFont = `bold ${style.chordSymbolSize}px sans-serif`;
-            rawCtx.font = chordFont;
-            rawCtx.fillStyle = "#333";
-            const textMetrics = rawCtx.measureText(annotation.text);
-            const textX = box.x;
-            const textY = y + 10;
-            rawCtx.fillText(annotation.text, textX, textY);
-            rawCtx.restore();
-            annotationBoxes.push({
-              kind: "chord-symbol",
-              x: textX,
-              y: textY - style.chordSymbolSize,
-              width: textMetrics.width,
-              height: style.chordSymbolSize + 4,
-              partIndex,
-              measureIndex,
-              noteEventId: annotation.noteEventId,
-              text: annotation.text,
-            });
-            break;
-          }
-          case "lyric": {
-            // Skip lyric rendering when lyrics are disabled
-            if (!useEditorStore.getState().showLyrics) break;
-            // Find matching noteBox by noteEventId
-            const box = noteBoxes.find((nb) => nb.id === annotation.noteEventId);
-            if (box) {
-              rawCtx.save();
-              const lyricFont = `italic ${style.lyricSize}px ${style.fontFamily}`;
-              rawCtx.font = lyricFont;
-              rawCtx.fillStyle = "#555";
-              rawCtx.textAlign = "center";
-              const lyricText =
-                annotation.syllableType === "begin" || annotation.syllableType === "middle"
-                  ? annotation.text + "-"
-                  : annotation.text;
-              const lyricX = box.x + box.width / 2;
-              // Stack verses: verse 1 at baseline, verse 2+ offset down
-              const verseOffset = ((annotation.verseNumber || 1) - 1) * (style.lyricSize + 4);
-              const lyricY = stave.getBottomY() + 22 + verseOffset;
-              const lyricMetrics = rawCtx.measureText(lyricText);
-              rawCtx.fillText(lyricText, lyricX, lyricY);
-              rawCtx.textAlign = "start";
-              rawCtx.restore();
-              annotationBoxes.push({
-                kind: "lyric",
-                x: lyricX - lyricMetrics.width / 2,
-                y: lyricY - style.lyricSize,
-                width: lyricMetrics.width,
-                height: style.lyricSize + 4,
-                partIndex,
-                measureIndex,
-                noteEventId: annotation.noteEventId,
-                text: annotation.text,
-              });
-            }
-            break;
-          }
-          case "rehearsal-mark": {
-            rawCtx.save();
-            rawCtx.font = "bold 14px sans-serif";
-            rawCtx.fillStyle = "#000";
-            const textWidth = rawCtx.measureText(annotation.text).width;
-            const boxPadding = 4;
-            rawCtx.strokeStyle = "#000";
-            rawCtx.lineWidth = 1.5;
-            rawCtx.beginPath();
-            rawCtx.rect(
-              x + 2 - boxPadding,
-              y - 6 - boxPadding,
-              textWidth + boxPadding * 2,
-              14 + boxPadding * 2
-            );
-            rawCtx.stroke();
-            rawCtx.fillText(annotation.text, x + 2, y + 6);
-            rawCtx.restore();
-            break;
-          }
-          case "tempo-mark":
-            // Rendered via VexFlow stave.setTempo() above
-            break;
-          case "dynamic": {
-            // Find the StaveNote attached to this dynamic via noteEventId
-            const box = noteBoxes.find((nb) => nb.id === annotation.noteEventId);
-            if (box) {
-              rawCtx.save();
-              rawCtx.font = "italic bold 16px serif";
-              rawCtx.fillStyle = "#000";
-              rawCtx.textAlign = "center";
-              const dynY = stave.getBottomY() + 4;
-              rawCtx.fillText(annotation.level, box.x + box.width / 2, dynY);
-              rawCtx.textAlign = "start";
-              rawCtx.restore();
-            }
-            break;
-          }
-          case "hairpin": {
-            // Draw a wedge (crescendo or diminuendo) between start and end notes
-            const startBox = noteBoxes.find((nb) => nb.id === annotation.startEventId);
-            const endBox = noteBoxes.find((nb) => nb.id === annotation.endEventId);
-            if (startBox && endBox) {
-              rawCtx.save();
-              rawCtx.strokeStyle = "#000";
-              rawCtx.lineWidth = 1.5;
-              const hairpinY = stave.getBottomY() + 2;
-              const spread = 5; // half-height of the wedge opening
-              const startX = startBox.x + startBox.width;
-              const endX = endBox.x;
-              rawCtx.beginPath();
-              if (annotation.type === "crescendo") {
-                // Two lines diverging from left to right: < shape
-                rawCtx.moveTo(startX, hairpinY);
-                rawCtx.lineTo(endX, hairpinY - spread);
-                rawCtx.moveTo(startX, hairpinY);
-                rawCtx.lineTo(endX, hairpinY + spread);
-              } else {
-                // Two lines converging from left to right: > shape
-                rawCtx.moveTo(startX, hairpinY - spread);
-                rawCtx.lineTo(endX, hairpinY);
-                rawCtx.moveTo(startX, hairpinY + spread);
-                rawCtx.lineTo(endX, hairpinY);
-              }
-              rawCtx.stroke();
-              rawCtx.restore();
-            }
-            break;
-          }
+    // Draw hairpins using VexFlow StaveHairpin
+    for (const annotation of m.annotations) {
+      if (annotation.kind !== "hairpin") continue;
+
+      let startNote: StaveNote | null = null;
+      let endNote: StaveNote | null = null;
+
+      for (const vfVoice of vfVoices) {
+        const data = vfVoice as unknown as { __staveNotes: StaveNote[]; __eventIds: NoteEventId[] };
+        for (let idx = 0; idx < data.__eventIds.length; idx++) {
+          if (data.__eventIds[idx] === annotation.startEventId) startNote = data.__staveNotes[idx];
+          if (data.__eventIds[idx] === annotation.endEventId) endNote = data.__staveNotes[idx];
+        }
+      }
+
+      if (startNote && endNote) {
+        try {
+          const hpType = annotation.type === "crescendo" ? StaveHairpin.type.CRESC : StaveHairpin.type.DECRESC;
+          const hp = new StaveHairpin({ firstNote: startNote, lastNote: endNote }, hpType);
+          hp.setRenderOptions({ leftShiftPx: 0, rightShiftPx: 0, height: 10, yShift: 0 });
+          hp.setContext(ctx.context).draw();
+        } catch {
+          // VexFlow may reject; skip gracefully
         }
       }
     }
   }
 
-  // Render navigation text marks (D.S., D.C., To Coda, Fine)
-  if (m.navigation) {
-    const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
-    if (rawCtx.save) {
-      const nav = m.navigation;
-      const textItems: string[] = [];
-      if (nav.dsText) textItems.push(nav.dsText);
-      if (nav.dcText) textItems.push(nav.dcText);
-      if (nav.toCoda) textItems.push("To Coda \uD834\uDD21");
-      if (nav.fine) textItems.push("Fine");
-
-      if (textItems.length > 0) {
-        rawCtx.save();
-        rawCtx.font = "italic bold 11px serif";
-        rawCtx.fillStyle = "#000";
-        rawCtx.textAlign = "right";
-        let textY = y - 4;
-        for (const text of textItems) {
-          rawCtx.fillText(text, x + width - 4, textY);
-          textY -= 14;
-        }
-        rawCtx.textAlign = "start";
-        rawCtx.restore();
+  // All annotations are now rendered by VexFlow — no manual canvas drawing.
+  // Collect annotation boxes for interactive editing (chord symbols, lyrics).
+  const annotationBoxes: AnnotationBox[] = [];
+  for (const annotation of m.annotations) {
+    if (annotation.kind === "chord-symbol") {
+      const box = annotation.noteEventId ? noteBoxes.find((nb) => nb.id === annotation.noteEventId) : undefined;
+      if (box) {
+        annotationBoxes.push({
+          kind: "chord-symbol",
+          x: box.x, y: box.y - style.chordSymbolSize - 4,
+          width: box.width, height: style.chordSymbolSize + 4,
+          partIndex, measureIndex,
+          noteEventId: annotation.noteEventId, text: annotation.text,
+        });
+      }
+    }
+    if (annotation.kind === "lyric") {
+      const box = noteBoxes.find((nb) => nb.id === annotation.noteEventId);
+      if (box) {
+        annotationBoxes.push({
+          kind: "lyric",
+          x: box.x, y: stave.getBottomY() + 10,
+          width: box.width, height: style.lyricSize + 4,
+          partIndex, measureIndex,
+          noteEventId: annotation.noteEventId, text: annotation.text,
+        });
       }
     }
   }

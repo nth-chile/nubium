@@ -79,7 +79,6 @@ const MEASURES_PER_LINE = DEFAULT_LAYOUT.measuresPerLine;
 
 function titleHeight(score: Score): number {
   const state = useEditorStore.getState();
-  if (!state.showTitle) return 0;
   const hasComposer = !!score.composer || state.editingComposer;
   return 48 + (hasComposer ? 22 : 0) + 16;
 }
@@ -159,11 +158,9 @@ export function renderScore(
     ...(pageLayoutEnabled ? { pageBreaks: true } : {}),
   };
   // Add space for title/composer above the first system
-  const showTitle = useEditorStore.getState().showTitle;
   const editorState = useEditorStore.getState();
   const hasComposer = !!score.composer || editorState.editingComposer;
-  // Always reserve title space when showTitle is on (HTML overlay handles display)
-  const tHeight = showTitle ? 48 + (hasComposer ? 22 : 0) + 16 : 0;
+  const tHeight = 48 + (hasComposer ? 22 : 0) + 16;
   config = { ...config, topMargin: config.topMargin + tHeight };
 
   const systems = computeLayout(filteredScore, config);
@@ -202,7 +199,7 @@ export function renderScore(
 
   // Calculate title/composer positions for HTML overlay (no canvas text drawing)
   const titlePositions: { title?: { x: number; y: number; width: number; height: number }; composer?: { x: number; y: number; width: number; height: number } } = {};
-  if (showTitle) {
+  {
     const centerX = pageLayoutEnabled ? config.pageWidth / 2 : effectiveWidth / 2;
     let y = DEFAULT_LAYOUT.topMargin;
 

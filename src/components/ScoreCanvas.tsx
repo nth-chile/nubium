@@ -20,9 +20,6 @@ export function ScoreCanvas() {
   const viewConfig = useEditorStore((s) => s.viewConfig);
   const selection = useEditorStore((s) => s.selection);
   const noteSelection = useEditorStore((s) => s.noteSelection);
-  const showTitle = useEditorStore((s) => s.showTitle);
-  const showComposer = useEditorStore((s) => s.showComposer);
-  const showLyrics = useEditorStore((s) => s.showLyrics);
   const editingTitle = useEditorStore((s) => s.editingTitle);
   const editingComposer = useEditorStore((s) => s.editingComposer);
   const measurePositions = useEditorStore((s) => s.measurePositions);
@@ -126,7 +123,7 @@ export function ScoreCanvas() {
     setNoteBoxes(result.noteBoxes);
     setAnnotationBoxes(result.annotationBoxes);
     setMeasurePositions(result.measurePositions);
-  }, [score, inputState.cursor, playbackTick, viewConfig, containerWidth, selection, noteSelection, showTitle, showComposer, showLyrics, editingTitle, editingComposer, setNoteBoxes, setAnnotationBoxes, setMeasurePositions]);
+  }, [score, inputState.cursor, playbackTick, viewConfig, containerWidth, selection, noteSelection, editingTitle, editingComposer, setNoteBoxes, setAnnotationBoxes, setMeasurePositions]);
 
   return (
     <div

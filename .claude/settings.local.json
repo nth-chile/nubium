@@ -42,7 +42,15 @@
       "Bash(grep -h \"describe\\\\|it\\(\" src/serialization/__tests__/*.test.ts src/renderer/__tests__/*.test.ts src/model/__tests__/*.test.ts src/playback/__tests__/*.test.ts src/ai/__tests__/*.test.ts src/settings/__tests__/*.test.ts src/plugins/__tests__/*.test.ts)",
       "Bash(pbcopy)",
       "Bash(ls /Users/jared/work/notation/src/components/*.tsx)",
-      "Bash(grep -r midiToPitch /Users/jared/work/notation/src/model/ --include=*.ts)"
+      "Bash(grep -r midiToPitch /Users/jared/work/notation/src/model/ --include=*.ts)",
+      "Bash(for num:*)",
+      "Bash(do echo:*)",
+      "Bash(gh api:*)",
+      "Bash(grep -n \"initRenderer\\\\|export.*initRenderer\" /Users/jared/work/notation/src/renderer/*.ts /Users/jared/work/notation/src/renderer/*.tsx)",
+      "Bash(grep -n \"rehearsal\\\\|mark\\\\|label\" /Users/jared/work/notation/src/model/*.ts)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(lsof -ti:1420)"
     ]
   }
 }

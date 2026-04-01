@@ -26,8 +26,6 @@ export function ScoreOverlay({ width, height }: Props) {
   const editAnnotation = useEditorStore((s) => s.editAnnotation);
   const setTitle = useEditorStore((s) => s.setTitle);
   const setComposer = useEditorStore((s) => s.setComposer);
-  const showTitle = useEditorStore((s) => s.showTitle);
-  const showComposer = useEditorStore((s) => s.showComposer);
 
   const [titleValue, setTitleValue] = useState("");
   const [composerValue, setComposerValue] = useState("");
@@ -125,7 +123,7 @@ export function ScoreOverlay({ width, height }: Props) {
         return;
       }
     }
-  }, [noteBoxes, annotationBoxes, measurePositions, score, width, titleRect, composerRect, setCursorDirect, setSelection, setNoteSelection, editAnnotation, setEditingTitle, setEditingComposer, showTitle, showComposer]);
+  }, [noteBoxes, annotationBoxes, measurePositions, score, width, titleRect, composerRect, setCursorDirect, setSelection, setNoteSelection, editAnnotation, setEditingTitle, setEditingComposer]);
 
   const commitTitle = useCallback(() => {
     setTitle(titleValue);
@@ -149,7 +147,7 @@ export function ScoreOverlay({ width, height }: Props) {
         cursor: "default",
       }}
     >
-      {showTitle && titleRect && (
+      {titleRect && (
         editingTitle ? (
           <input
             ref={titleRef}
@@ -198,7 +196,7 @@ export function ScoreOverlay({ width, height }: Props) {
         )
       )}
 
-      {showTitle && composerRect && (
+      {composerRect && (
         editingComposer ? (
           <input
             ref={composerRef}

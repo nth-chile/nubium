@@ -176,13 +176,6 @@ interface EditorStore {
   slurStartEventId: NoteEventId | null;
   toggleSlur(): void;
 
-  // Plugin display toggles
-  showTitle: boolean;
-  showComposer: boolean;
-  showLyrics: boolean;
-  setShowTitle(show: boolean): void;
-  setShowComposer(show: boolean): void;
-  setShowLyrics(show: boolean): void;
 }
 
 /** Default octave per clef — places notes in the middle of the staff */
@@ -236,9 +229,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     "songwriter": 0,
     "tab": 0,
   },
-  showTitle: true,
-  showComposer: false,
-  showLyrics: true,
   popover: null,
 
   setPopover(popover: EditorStore["popover"]) {
@@ -1314,16 +1304,6 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     });
   },
 
-  // Plugin display toggles
-  setShowTitle(show: boolean) {
-    set({ showTitle: show });
-  },
-  setShowComposer(show: boolean) {
-    set({ showComposer: show });
-  },
-  setShowLyrics(show: boolean) {
-    set({ showLyrics: show });
-  },
 }));
 
 // --- Auto-save: debounced save to localStorage on score changes ---
@@ -1378,18 +1358,12 @@ let settingsSaveTimer: ReturnType<typeof setTimeout> | null = null;
 useEditorStore.subscribe((state, prevState) => {
   if (
     state.viewMode !== prevState.viewMode ||
-    state.showTitle !== prevState.showTitle ||
-    state.showComposer !== prevState.showComposer ||
-    state.showLyrics !== prevState.showLyrics ||
     state.metronomeOn !== prevState.metronomeOn
   ) {
     if (settingsSaveTimer) clearTimeout(settingsSaveTimer);
     settingsSaveTimer = setTimeout(() => {
       updateSettings({
         viewMode: state.viewMode,
-        showTitle: state.showTitle,
-        showComposer: state.showComposer,
-        showLyrics: state.showLyrics,
         metronomeEnabled: state.metronomeOn,
       });
     }, 500);
@@ -1423,8 +1397,6 @@ function restoreUiPreferences(): void {
     useEditorStore.setState({
       viewMode,
       viewConfig: getDefaultViewConfig(viewMode),
-      showTitle: settings.showTitle ?? true,
-      showLyrics: settings.showLyrics ?? true,
       metronomeOn: settings.metronomeEnabled ?? false,
     });
   } catch {

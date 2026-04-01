@@ -21,7 +21,6 @@ export function KeyboardShortcuts() {
   const deleteMeasure = useEditorStore((s) => s.deleteMeasure);
   const enterChordMode = useEditorStore((s) => s.enterChordMode);
   const enterLyricMode = useEditorStore((s) => s.enterLyricMode);
-  const showLyrics = useEditorStore((s) => s.showLyrics);
   const textInputMode = useEditorStore((s) => s.inputState.textInputMode);
   const isPlaying = useEditorStore((s) => s.isPlaying);
   const play = useEditorStore((s) => s.play);
@@ -122,7 +121,7 @@ export function KeyboardShortcuts() {
 
       // Annotation
       "chord-mode": () => enterChordMode(),
-      "lyric-mode": () => { if (showLyrics) enterLyricMode(); },
+      "lyric-mode": () => { enterLyricMode(); },
       "dynamics-popover": () => setPopover(popover === "dynamics" ? null : "dynamics"),
       "tempo-popover": () => setPopover(popover === "tempo" ? null : "tempo"),
       "time-sig-popover": () => setPopover(popover === "time-sig" ? null : "time-sig"),
@@ -166,7 +165,7 @@ export function KeyboardShortcuts() {
   }, [
     insertNote, insertRest, deleteNote, setDuration, toggleDot, setAccidental,
     moveCursor, changeOctave, undo, redo, setVoice, insertMeasure, deleteMeasure,
-    enterChordMode, enterLyricMode, showLyrics, textInputMode, isPlaying, play,
+    enterChordMode, enterLyricMode, textInputMode, isPlaying, play,
     pause, stopPlayback, toggleMetronome, moveCursorPart, setViewMode, selection,
     copySelection, pasteAtCursor, clipboardMeasures, deleteSelectedMeasures,
     toggleArticulation, toggleStepEntry, toggleGraceNoteMode, toggleSlur, popover, setPopover,
