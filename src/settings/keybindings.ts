@@ -133,18 +133,18 @@ export function defaultKeyBindings(): Record<string, KeyBinding> {
 export function formatBinding(binding: KeyBinding): string {
   const isMac = navigator.platform?.includes("Mac") ?? false;
   const parts: string[] = [];
-  if (binding.ctrl) parts.push(isMac ? "\u2318" : "Ctrl");
-  if (binding.alt) parts.push(isMac ? "\u2325" : "Alt");
-  if (binding.shift) parts.push(isMac ? "\u21E7" : "Shift");
+  if (binding.ctrl) parts.push(isMac ? "⌘" : "Ctrl");
+  if (binding.alt) parts.push(isMac ? "⌥" : "Alt");
+  if (binding.shift) parts.push(isMac ? "⇧" : "Shift");
 
   // Friendly key names
   const keyNames: Record<string, string> = {
     " ": "Space",
-    arrowleft: "\u2190",
-    arrowright: "\u2192",
-    arrowup: "\u2191",
-    arrowdown: "\u2193",
-    backspace: "\u232B",
+    arrowleft: "←",
+    arrowright: "→",
+    arrowup: "↑",
+    arrowdown: "↓",
+    backspace: "⌫",
     escape: "Esc",
     ">": ">",
     "<": "<",
@@ -157,6 +157,23 @@ export function formatBinding(binding: KeyBinding): string {
   const keyDisplay = keyNames[binding.key] ?? binding.key.toUpperCase();
   parts.push(keyDisplay);
   return parts.join(isMac ? "" : "+");
+}
+
+/** Return individual key parts for rendering each as a separate element */
+export function getBindingParts(binding: KeyBinding): string[] {
+  const isMac = navigator.platform?.includes("Mac") ?? false;
+  const parts: string[] = [];
+  if (binding.ctrl) parts.push(isMac ? "⌘" : "Ctrl");
+  if (binding.alt) parts.push(isMac ? "⌥" : "Alt");
+  if (binding.shift) parts.push(isMac ? "⇧" : "Shift");
+
+  const keyNames: Record<string, string> = {
+    " ": "Space", arrowleft: "←", arrowright: "→", arrowup: "↑",
+    arrowdown: "↓", backspace: "⌫", escape: "Esc",
+    ">": ">", "<": "<", "^": "^", "=": "=", "-": "-", ".": ".",
+  };
+  parts.push(keyNames[binding.key] ?? binding.key.toUpperCase());
+  return parts;
 }
 
 /** Check if a keyboard event matches a binding. ctrl maps to metaKey on Mac. */

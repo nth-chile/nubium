@@ -15,4 +15,5 @@ export {
   matchesBinding,
   eventToBinding,
   getBindingLabel,
+  getBindingParts,
 } from "./keybindings";

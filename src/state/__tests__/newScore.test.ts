@@ -43,10 +43,10 @@ describe("New score (reset)", () => {
     expect(after.filePath).toBeNull();
   });
 
-  it("emptyScore has 32 empty measures", () => {
+  it("emptyScore has 4 empty measures", () => {
     const score = emptyScore();
     expect(score.parts).toHaveLength(1);
-    expect(score.parts[0].measures).toHaveLength(32);
+    expect(score.parts[0].measures).toHaveLength(4);
     for (const m of score.parts[0].measures) {
       expect(m.voices[0].events).toHaveLength(0);
     }

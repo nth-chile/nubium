@@ -142,7 +142,7 @@ export function score(title: string, composer: string, parts: Part[], tempo = 12
 
 export function emptyScore(): Score {
   const emptyMeasures: Measure[] = [];
-  for (let i = 0; i < 32; i++) {
+  for (let i = 0; i < 4; i++) {
     emptyMeasures.push(measure([voice([])]));
   }
   return score("", "", [part("Part 1", "P1", emptyMeasures)]);

@@ -166,7 +166,7 @@ interface EditorStore {
   setNavigationMark(markType: NavigationMarkType, value?: string | boolean): void;
 
   // Popovers
-  popover: "dynamics" | "tempo" | "time-sig" | "key-sig" | "rehearsal" | "barline" | null;
+  popover: "dynamics" | "tempo" | "time-sig" | "key-sig" | "rehearsal" | "barline" | "go-to-measure" | null;
   setPopover(popover: EditorStore["popover"]): void;
   setDynamic(level: import("../model/annotations").DynamicLevel | null): void;
   setTempoMark(bpm: number, beatUnit?: DurationType, text?: string): void;
@@ -670,6 +670,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           anchorEvent: anchor,
           startEvent: Math.min(anchor, movingEnd),
           endEvent: Math.max(anchor, movingEnd),
+        },
+        inputState: {
+          ...s.inputState,
+          cursor: { ...cursor, eventIndex: movingEnd },
         },
         selection: null,
       };

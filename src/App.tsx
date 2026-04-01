@@ -153,7 +153,7 @@ export function App() {
   void pluginVersion;
 
   return (
-    <TooltipProvider delayDuration={150} skipDelayDuration={100}>
+    <TooltipProvider delayDuration={600} skipDelayDuration={400}>
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       <KeyboardShortcuts />
       <Toolbar

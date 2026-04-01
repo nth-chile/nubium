@@ -194,6 +194,46 @@ function BarlineContent() {
   );
 }
 
+function GoToMeasureContent() {
+  const setPopover = useEditorStore((s) => s.setPopover);
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const go = () => {
+    const num = parseInt(value, 10);
+    if (isNaN(num) || num < 1) return;
+    const store = useEditorStore.getState();
+    const part = store.score.parts[store.inputState.cursor.partIndex];
+    if (!part) return;
+    const measureIndex = Math.min(num - 1, part.measures.length - 1);
+    store.setCursorDirect({
+      ...store.inputState.cursor,
+      measureIndex,
+      eventIndex: 0,
+    });
+    setPopover(null);
+  };
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); go(); }} className="flex gap-1">
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => setValue(e.target.value.replace(/[^0-9]/g, ""))}
+        placeholder="Measure #"
+        className="w-20 px-2 py-1 text-sm bg-background border rounded"
+      />
+      <button type="submit" className="px-2 py-1 text-sm hover:bg-accent rounded">Go</button>
+    </form>
+  );
+}
+
+const FLOATING_POPOVERS = new Set(["go-to-measure"]);
+
 const CONTENT: Record<string, () => React.ReactNode> = {
   dynamics: DynamicsContent,
   tempo: TempoContent,
@@ -201,6 +241,7 @@ const CONTENT: Record<string, () => React.ReactNode> = {
   "key-sig": KeySigContent,
   rehearsal: RehearsalContent,
   barline: BarlineContent,
+  "go-to-measure": GoToMeasureContent,
 };
 
 const LABELS: Record<string, string> = {
@@ -210,6 +251,7 @@ const LABELS: Record<string, string> = {
   "key-sig": "Key Signature",
   rehearsal: "Rehearsal Mark",
   barline: "Barline",
+  "go-to-measure": "Go to Measure",
 };
 
 export function AnnotationPopover() {
@@ -239,10 +281,15 @@ export function AnnotationPopover() {
   const Content = CONTENT[popover];
   if (!Content) return null;
 
+  const isFloating = FLOATING_POPOVERS.has(popover);
+
   return (
     <div
       ref={ref}
-      style={{ position: "absolute", zIndex: 50, top: pos.top, left: pos.left }}
+      style={isFloating
+        ? { position: "fixed", zIndex: 50, top: "30%", left: "50%", transform: "translateX(-50%)" }
+        : { position: "absolute", zIndex: 50, top: pos.top, left: pos.left }
+      }
       className="bg-popover border rounded-lg shadow-lg p-2"
     >
       <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{LABELS[popover]}</div>
