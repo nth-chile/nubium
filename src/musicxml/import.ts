@@ -423,6 +423,48 @@ function parseMeasure(
           }
         }
 
+        // Parse rehearsal marks
+        const rehearsalEl = getDirectChild(dirTypeEl, "rehearsal");
+        if (rehearsalEl) {
+          annotations.push({
+            kind: "rehearsal-mark",
+            text: rehearsalEl.textContent?.trim() || "A",
+          });
+        }
+
+        // Parse tempo marks from <sound> or <metronome>
+        const soundEl = getDirectChild(el, "sound");
+        const metronomeEl = getDirectChild(dirTypeEl, "metronome");
+        if (soundEl || metronomeEl) {
+          let bpm = 0;
+          let beatUnit: import("../model/duration").DurationType = "quarter";
+          if (soundEl) {
+            bpm = parseFloat(soundEl.getAttribute("tempo") ?? "0");
+          }
+          if (metronomeEl) {
+            const buEl = getDirectChild(metronomeEl, "beat-unit");
+            const pmEl = getDirectChild(metronomeEl, "per-minute");
+            if (buEl?.textContent) {
+              const buMap: Record<string, import("../model/duration").DurationType> = {
+                whole: "whole", half: "half", quarter: "quarter",
+                eighth: "eighth", "16th": "16th", "32nd": "32nd", "64th": "64th",
+              };
+              beatUnit = buMap[buEl.textContent.trim()] ?? "quarter";
+            }
+            if (pmEl?.textContent) bpm = parseFloat(pmEl.textContent.trim()) || bpm;
+          }
+          if (bpm > 0) {
+            // Check for text label (e.g. "Allegro") in <words> element
+            const wordsEl = getDirectChild(dirTypeEl, "words");
+            annotations.push({
+              kind: "tempo-mark",
+              bpm,
+              beatUnit,
+              ...(wordsEl?.textContent?.trim() ? { text: wordsEl.textContent.trim() } : {}),
+            });
+          }
+        }
+
         // Parse wedge (hairpin)
         const wedgeEl = getDirectChild(dirTypeEl, "wedge");
         if (wedgeEl) {
@@ -543,10 +585,10 @@ export function importFromMusicXML(xml: string): Score {
       const sp = scoreParts[i];
       const id = sp.getAttribute("id") ?? "";
       const name = getTextContent(sp, "part-name") ?? `Part ${i + 1}`;
-      const displayEl = getDirectChild(sp, "part-name-display");
-      const abbreviation = displayEl
-        ? getTextContent(displayEl, "display-text") ?? ""
-        : "";
+      const abbreviation = getTextContent(sp, "part-abbreviation")
+        ?? (getDirectChild(sp, "part-name-display")
+          ? getTextContent(getDirectChild(sp, "part-name-display")!, "display-text") ?? ""
+          : "");
       partNames.set(id, { name, abbreviation });
     }
   }

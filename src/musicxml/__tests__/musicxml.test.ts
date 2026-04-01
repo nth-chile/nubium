@@ -904,4 +904,113 @@ describe("MusicXML Round-trip", () => {
     expect(dynamics[0].kind === "dynamic" && dynamics[0].level).toBe("sfz");
     expect(dynamics[1].kind === "dynamic" && dynamics[1].level).toBe("fp");
   });
+
+  it("should round-trip rehearsal marks", () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes><divisions>480</divisions>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <key><fifths>0</fifths></key>
+        <clef><sign>G</sign><line>2</line></clef>
+      </attributes>
+      <direction placement="above">
+        <direction-type><rehearsal>A</rehearsal></direction-type>
+      </direction>
+      <note>
+        <pitch><step>C</step><octave>4</octave></pitch>
+        <duration>1920</duration><type>whole</type><voice>1</voice>
+      </note>
+    </measure>
+  </part>
+</score-partwise>`;
+
+    const imported = importFromMusicXML(xml);
+    const rehearsals = imported.parts[0].measures[0].annotations.filter((a) => a.kind === "rehearsal-mark");
+    expect(rehearsals).toHaveLength(1);
+    expect(rehearsals[0].kind === "rehearsal-mark" && rehearsals[0].text).toBe("A");
+
+    // Re-export and verify
+    const reExported = exportToMusicXML(imported);
+    expect(reExported).toContain("<rehearsal>A</rehearsal>");
+
+    // Re-import and verify round-trip
+    const reimported = importFromMusicXML(reExported);
+    const reimportedR = reimported.parts[0].measures[0].annotations.filter((a) => a.kind === "rehearsal-mark");
+    expect(reimportedR).toHaveLength(1);
+    expect(reimportedR[0].kind === "rehearsal-mark" && reimportedR[0].text).toBe("A");
+  });
+
+  it("should round-trip tempo marks", () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes><divisions>480</divisions>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <key><fifths>0</fifths></key>
+        <clef><sign>G</sign><line>2</line></clef>
+      </attributes>
+      <direction placement="above">
+        <direction-type>
+          <words>Allegro</words>
+          <metronome>
+            <beat-unit>quarter</beat-unit>
+            <per-minute>140</per-minute>
+          </metronome>
+        </direction-type>
+        <sound tempo="140"/>
+      </direction>
+      <note>
+        <pitch><step>C</step><octave>4</octave></pitch>
+        <duration>1920</duration><type>whole</type><voice>1</voice>
+      </note>
+    </measure>
+  </part>
+</score-partwise>`;
+
+    const imported = importFromMusicXML(xml);
+    const tempos = imported.parts[0].measures[0].annotations.filter((a) => a.kind === "tempo-mark");
+    expect(tempos).toHaveLength(1);
+    if (tempos[0].kind === "tempo-mark") {
+      expect(tempos[0].bpm).toBe(140);
+      expect(tempos[0].beatUnit).toBe("quarter");
+      expect(tempos[0].text).toBe("Allegro");
+    }
+
+    // Re-export and verify
+    const reExported = exportToMusicXML(imported);
+    expect(reExported).toContain("<per-minute>140</per-minute>");
+    expect(reExported).toContain("<beat-unit>quarter</beat-unit>");
+    expect(reExported).toContain("Allegro");
+  });
+
+  it("should import part abbreviation from part-abbreviation element", () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list>
+    <score-part id="P1">
+      <part-name>Violin I</part-name>
+      <part-abbreviation>Vln. I</part-abbreviation>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes><divisions>480</divisions>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <key><fifths>0</fifths></key>
+        <clef><sign>G</sign><line>2</line></clef>
+      </attributes>
+      <note><rest/><duration>1920</duration><type>whole</type><voice>1</voice></note>
+    </measure>
+  </part>
+</score-partwise>`;
+
+    const imported = importFromMusicXML(xml);
+    expect(imported.parts[0].name).toBe("Violin I");
+    expect(imported.parts[0].abbreviation).toBe("Vln. I");
+  });
 });

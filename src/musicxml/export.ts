@@ -316,6 +316,31 @@ function exportMeasure(
     xml += `      </attributes>\n`;
   }
 
+  // Rehearsal marks
+  for (const ann of measure.annotations) {
+    if (ann.kind === "rehearsal-mark") {
+      xml += `      <direction placement="above">\n`;
+      xml += `        <direction-type>\n`;
+      xml += `          <rehearsal>${esc(ann.text)}</rehearsal>\n`;
+      xml += `        </direction-type>\n`;
+      xml += `      </direction>\n`;
+    }
+    if (ann.kind === "tempo-mark") {
+      xml += `      <direction placement="above">\n`;
+      xml += `        <direction-type>\n`;
+      if (ann.text) {
+        xml += `          <words>${esc(ann.text)}</words>\n`;
+      }
+      xml += `          <metronome>\n`;
+      xml += `            <beat-unit>${ann.beatUnit}</beat-unit>\n`;
+      xml += `            <per-minute>${ann.bpm}</per-minute>\n`;
+      xml += `          </metronome>\n`;
+      xml += `        </direction-type>\n`;
+      xml += `        <sound tempo="${ann.bpm}"/>\n`;
+      xml += `      </direction>\n`;
+    }
+  }
+
   // Chord symbols (harmony elements come before notes at their position)
   const chordSymbols = measure.annotations.filter(
     (a): a is ChordSymbol => a.kind === "chord-symbol"
