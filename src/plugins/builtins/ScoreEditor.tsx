@@ -192,9 +192,7 @@ export const ScoreEditorPlugin: NotationPlugin = {
     api.registerCommand("notation.chord-mode", "Enter chord input", () => {
       useEditorStore.getState().enterChordMode();
     });
-    api.registerCommand("notation.lyric-mode", "Enter lyric input", () => {
-      useEditorStore.getState().enterLyricMode();
-    });
+    // Lyric mode is registered by the Lyrics plugin, not here
     api.registerCommand("notation.toggle-slur", "Toggle slur", () => {
       useEditorStore.getState().toggleSlur();
     });

@@ -6,8 +6,12 @@ export const LyricsPlugin: NotationPlugin = {
   name: "Lyrics",
   version: "1.0.0",
   description: "Display and edit lyrics below notes",
-  activate(_api: PluginAPI) {
+  activate(api: PluginAPI) {
     useEditorStore.getState().setShowLyrics(true);
+
+    api.registerCommand("notation.lyric-mode", "Enter lyric input", () => {
+      useEditorStore.getState().enterLyricMode();
+    });
   },
   deactivate() {
     useEditorStore.getState().setShowLyrics(false);

@@ -75,6 +75,54 @@ describe("annotation serialization round-trip", () => {
     }
   });
 
+  it("round-trips multi-verse lyrics", () => {
+    const noteId = "evt_multiverse" as NoteEventId;
+    const annotations: Annotation[] = [
+      {
+        kind: "lyric",
+        text: "Hel",
+        noteEventId: noteId,
+        syllableType: "begin",
+        verseNumber: 1,
+      },
+      {
+        kind: "lyric",
+        text: "Good",
+        noteEventId: noteId,
+        syllableType: "begin",
+        verseNumber: 2,
+      },
+    ];
+
+    const s = factory.score("Multi-Verse Test", "", [
+      factory.part("Voice", "Vox", [
+        factory.measure(
+          [factory.voice([factory.note("C", 4, factory.dur("quarter"))])],
+          { annotations }
+        ),
+      ]),
+    ]);
+
+    const text = serialize(s);
+    const parsed = deserialize(text);
+    const m = parsed.parts[0].measures[0];
+    const lyrics = m.annotations.filter((a) => a.kind === "lyric");
+    expect(lyrics).toHaveLength(2);
+
+    const v1 = lyrics.find((a) => a.kind === "lyric" && a.verseNumber === 1);
+    const v2 = lyrics.find((a) => a.kind === "lyric" && a.verseNumber === 2);
+    expect(v1).toBeDefined();
+    expect(v2).toBeDefined();
+    if (v1?.kind === "lyric") {
+      expect(v1.text).toBe("Hel");
+      expect(v1.syllableType).toBe("begin");
+    }
+    if (v2?.kind === "lyric") {
+      expect(v2.text).toBe("Good");
+      expect(v2.verseNumber).toBe(2);
+    }
+  });
+
   it("round-trips rehearsal marks", () => {
     const annotations: Annotation[] = [
       { kind: "rehearsal-mark", text: "A" },

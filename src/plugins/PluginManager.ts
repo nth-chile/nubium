@@ -206,6 +206,25 @@ export class PluginManager {
       exporters: [],
       settingsComponent: null,
     });
+
+    // Register a toggle command for this plugin (always available in palette)
+    const toggleId = `${plugin.id}.toggle`;
+    const mgr = this;
+    this.commandRegistry.set(toggleId, {
+      id: toggleId,
+      get label() {
+        const e = mgr.plugins.get(plugin.id);
+        return `Plugin: ${e?.enabled ? "Disable" : "Enable"} ${plugin.name}`;
+      },
+      handler: () => {
+        const entry = mgr.plugins.get(plugin.id);
+        if (entry?.enabled) {
+          mgr.deactivate(plugin.id);
+        } else {
+          mgr.activate(plugin.id);
+        }
+      },
+    });
   }
 
   activate(pluginId: string): void {

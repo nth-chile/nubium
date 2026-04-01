@@ -113,16 +113,18 @@ function pitchToVexKey(p: { pitchClass: string; octave: number }): string {
 
 function eventToStaveNote(
   event: NoteEvent,
-  stemDirection?: "up" | "down"
+  stemDirection?: "up" | "down",
+  clef?: string,
 ): StaveNote | null {
   switch (event.kind) {
     case "note": {
       const key = pitchToVexKey(event.head.pitch);
       const dur = DUR_VEX[event.duration.type];
-      const opts: { keys: string[]; duration: string; stemDirection?: number } = {
+      const opts: { keys: string[]; duration: string; stemDirection?: number; clef?: string } = {
         keys: [key],
         duration: dur,
       };
+      if (clef) opts.clef = clef;
       if (stemDirection === "up") opts.stemDirection = 1;
       else if (stemDirection === "down") opts.stemDirection = -1;
       const sn = new StaveNote(opts);
@@ -139,10 +141,11 @@ function eventToStaveNote(
     case "chord": {
       const keys = event.heads.map((h) => pitchToVexKey(h.pitch));
       const dur = DUR_VEX[event.duration.type];
-      const opts: { keys: string[]; duration: string; stemDirection?: number } = {
+      const opts: { keys: string[]; duration: string; stemDirection?: number; clef?: string } = {
         keys,
         duration: dur,
       };
+      if (clef) opts.clef = clef;
       if (stemDirection === "up") opts.stemDirection = 1;
       else if (stemDirection === "down") opts.stemDirection = -1;
       const sn = new StaveNote(opts);
@@ -343,7 +346,7 @@ export function renderMeasure(
         pendingGraceIds.push(event.id);
         continue;
       }
-      const sn = eventToStaveNote(event, stemDir);
+      const sn = eventToStaveNote(event, stemDir, CLEF_VEX[m.clef.type]);
       if (sn) {
         if (pendingGraceNotes.length > 0) {
           const graceGroup = new GraceNoteGroup(pendingGraceNotes, true);
@@ -424,14 +427,12 @@ export function renderMeasure(
 
   // Format and draw all voices together
   if (vfVoices.length > 0) {
+    // Join each voice individually (internal consistency), then format all together
+    // (shared horizontal alignment). This handles voices with different tick totals
+    // while still aligning notes on the same beat across voices.
     const formatter = new Formatter();
-    try {
-      formatter.joinVoices(vfVoices);
-    } catch {
-      // Voices have mismatched tick totals — join each independently so rendering doesn't crash
-      for (const v of vfVoices) {
-        try { formatter.joinVoices([v]); } catch { /* skip broken voice */ }
-      }
+    for (const v of vfVoices) {
+      try { formatter.joinVoices([v]); } catch { /* skip broken voice */ }
     }
 
     // Use proportional spacing via softmax factor scaled by stylesheet spacingFactor
@@ -647,7 +648,9 @@ export function renderMeasure(
                   ? annotation.text + "-"
                   : annotation.text;
               const lyricX = box.x + box.width / 2;
-              const lyricY = stave.getBottomY() + 22;
+              // Stack verses: verse 1 at baseline, verse 2+ offset down
+              const verseOffset = ((annotation.verseNumber || 1) - 1) * (style.lyricSize + 4);
+              const lyricY = stave.getBottomY() + 22 + verseOffset;
               const lyricMetrics = rawCtx.measureText(lyricText);
               rawCtx.fillText(lyricText, lyricX, lyricY);
               rawCtx.textAlign = "start";
@@ -672,17 +675,20 @@ export function renderMeasure(
             rawCtx.fillStyle = "#000";
             const textWidth = rawCtx.measureText(annotation.text).width;
             const boxPadding = 4;
+            // Push rehearsal mark higher when a tempo mark is also present
+            const hasTempoMark = m.annotations.some((a) => a.kind === "tempo-mark");
+            const rehearsalYOffset = hasTempoMark ? -22 : 0;
             rawCtx.strokeStyle = "#000";
             rawCtx.lineWidth = 1.5;
             rawCtx.beginPath();
             rawCtx.rect(
               x + 2 - boxPadding,
-              y - 6 - boxPadding,
+              y - 6 - boxPadding + rehearsalYOffset,
               textWidth + boxPadding * 2,
               14 + boxPadding * 2
             );
             rawCtx.stroke();
-            rawCtx.fillText(annotation.text, x + 2, y + 6);
+            rawCtx.fillText(annotation.text, x + 2, y + 6 + rehearsalYOffset);
             rawCtx.restore();
             break;
           }

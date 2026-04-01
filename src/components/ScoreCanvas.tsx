@@ -22,8 +22,33 @@ export function ScoreCanvas() {
   const noteSelection = useEditorStore((s) => s.noteSelection);
   const showTitle = useEditorStore((s) => s.showTitle);
   const showComposer = useEditorStore((s) => s.showComposer);
+  const showLyrics = useEditorStore((s) => s.showLyrics);
   const editingTitle = useEditorStore((s) => s.editingTitle);
   const editingComposer = useEditorStore((s) => s.editingComposer);
+  const measurePositions = useEditorStore((s) => s.measurePositions);
+
+  // Auto-scroll to keep cursor visible
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || measurePositions.length === 0) return;
+    const mp = measurePositions.find(
+      (p) => p.partIndex === inputState.cursor.partIndex && p.measureIndex === inputState.cursor.measureIndex,
+    );
+    if (!mp) return;
+
+    const rect = container.getBoundingClientRect();
+    const scrollLeft = container.scrollLeft;
+    const scrollTop = container.scrollTop;
+
+    // Horizontal: ensure the measure is visible
+    if (mp.x < scrollLeft || mp.x + mp.width > scrollLeft + rect.width) {
+      container.scrollTo({ left: Math.max(0, mp.x - 40), behavior: "smooth" });
+    }
+    // Vertical: ensure the staff is visible
+    if (mp.y < scrollTop || mp.y + (mp.height || 80) > scrollTop + rect.height) {
+      container.scrollTo({ top: Math.max(0, mp.y - 40), behavior: "smooth" });
+    }
+  }, [inputState.cursor.partIndex, inputState.cursor.measureIndex, measurePositions]);
 
   // Track container size
   useEffect(() => {
@@ -98,7 +123,7 @@ export function ScoreCanvas() {
     setNoteBoxes(result.noteBoxes);
     setAnnotationBoxes(result.annotationBoxes);
     setMeasurePositions(result.measurePositions);
-  }, [score, inputState.cursor, playbackTick, viewConfig, containerWidth, selection, noteSelection, showTitle, showComposer, editingTitle, editingComposer, setNoteBoxes, setAnnotationBoxes, setMeasurePositions]);
+  }, [score, inputState.cursor, playbackTick, viewConfig, containerWidth, selection, noteSelection, showTitle, showComposer, showLyrics, editingTitle, editingComposer, setNoteBoxes, setAnnotationBoxes, setMeasurePositions]);
 
   return (
     <div

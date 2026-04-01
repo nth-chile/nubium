@@ -158,6 +158,60 @@ describe("SetLyric", () => {
       expect(lyric.syllableType).toBe("single");
     }
   });
+
+  it("supports multiple verses on the same note", () => {
+    const snap = makeSnapshot({ cursor: { eventIndex: 0 } });
+    // Add verse 1
+    const r1 = new SetLyric("Hello", "single", 1).execute(snap);
+    // Reset cursor for verse 2
+    const r2 = { ...r1, inputState: { ...r1.inputState, cursor: { ...r1.inputState.cursor, eventIndex: 0 } } };
+    const result = new SetLyric("Goodbye", "single", 2).execute(r2);
+
+    const lyrics = result.score.parts[0].measures[0].annotations.filter(
+      (a) => a.kind === "lyric"
+    );
+    expect(lyrics).toHaveLength(2);
+    const v1 = lyrics.find((a) => a.kind === "lyric" && a.verseNumber === 1);
+    const v2 = lyrics.find((a) => a.kind === "lyric" && a.verseNumber === 2);
+    expect(v1?.kind === "lyric" && v1.text).toBe("Hello");
+    expect(v2?.kind === "lyric" && v2.text).toBe("Goodbye");
+  });
+
+  it("replaces only the matching verse when updating", () => {
+    const snap = makeSnapshot({ cursor: { eventIndex: 0 } });
+    const r1 = new SetLyric("One", "single", 1).execute(snap);
+    const r2 = { ...r1, inputState: { ...r1.inputState, cursor: { ...r1.inputState.cursor, eventIndex: 0 } } };
+    const r3 = new SetLyric("Two", "single", 2).execute(r2);
+    // Now update verse 1 only
+    const r4 = { ...r3, inputState: { ...r3.inputState, cursor: { ...r3.inputState.cursor, eventIndex: 0 } } };
+    const result = new SetLyric("Updated", "single", 1).execute(r4);
+
+    const lyrics = result.score.parts[0].measures[0].annotations.filter(
+      (a) => a.kind === "lyric"
+    );
+    expect(lyrics).toHaveLength(2);
+    const v1 = lyrics.find((a) => a.kind === "lyric" && a.verseNumber === 1);
+    const v2 = lyrics.find((a) => a.kind === "lyric" && a.verseNumber === 2);
+    expect(v1?.kind === "lyric" && v1.text).toBe("Updated");
+    expect(v2?.kind === "lyric" && v2.text).toBe("Two");
+  });
+
+  it("removes only the matching verse when text is empty", () => {
+    const snap = makeSnapshot({ cursor: { eventIndex: 0 } });
+    const r1 = new SetLyric("One", "single", 1).execute(snap);
+    const r2 = { ...r1, inputState: { ...r1.inputState, cursor: { ...r1.inputState.cursor, eventIndex: 0 } } };
+    const r3 = new SetLyric("Two", "single", 2).execute(r2);
+    // Remove verse 1
+    const r4 = { ...r3, inputState: { ...r3.inputState, cursor: { ...r3.inputState.cursor, eventIndex: 0 } } };
+    const result = new SetLyric("", "single", 1).execute(r4);
+
+    const lyrics = result.score.parts[0].measures[0].annotations.filter(
+      (a) => a.kind === "lyric"
+    );
+    expect(lyrics).toHaveLength(1);
+    expect(lyrics[0].kind === "lyric" && lyrics[0].verseNumber).toBe(2);
+    expect(lyrics[0].kind === "lyric" && lyrics[0].text).toBe("Two");
+  });
 });
 
 describe("SetRehearsalMark", () => {
