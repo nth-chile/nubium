@@ -1,8 +1,8 @@
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useMemo, useCallback, useState, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
-  closestCenter,
+  pointerWithin,
   PointerSensor,
   useSensor,
   useSensors,
@@ -113,17 +113,13 @@ function useToolbarRow(
 
   return useMemo(() => {
     const persistedRow = toolbarOrder[row];
-    // Groups explicitly assigned to this row
     const assigned = new Set(persistedRow);
-    // Groups explicitly assigned to the other row
     const otherRow = row === "primary" ? "secondary" : "primary";
     const assignedOther = new Set(toolbarOrder[otherRow]);
 
-    // Build ordered list: persisted order first, then unassigned defaults
     const ordered: ToolbarGroup[] = [];
     const seen = new Set<string>();
 
-    // First: groups in persisted order for this row
     for (const id of persistedRow) {
       const g = allGroups.find((g) => g.id === id);
       if (g) {
@@ -132,7 +128,6 @@ function useToolbarRow(
       }
     }
 
-    // Then: groups not in any persisted row that default to this row
     for (const g of allGroups) {
       if (!seen.has(g.id) && !assigned.has(g.id) && !assignedOther.has(g.id) && g.defaultRow === row) {
         ordered.push(g);
@@ -144,110 +139,6 @@ function useToolbarRow(
   }, [row, allGroups, toolbarOrder, toolbarHidden]);
 }
 
-function DraggableToolbarRow({
-  row,
-  groups,
-  allGroups,
-  className,
-}: {
-  row: "primary" | "secondary";
-  groups: ToolbarGroup[];
-  allGroups: ToolbarGroup[];
-  className?: string;
-}) {
-  const setToolbarOrder = useLayoutStore((s) => s.setToolbarOrder);
-  const toolbarOrder = useLayoutStore((s) => s.toolbarOrder);
-  const toolbarHidden = useLayoutStore((s) => s.toolbarHidden);
-  const toggleToolbarGroup = useLayoutStore((s) => s.toggleToolbarGroup);
-  const moveToolbarGroup = useLayoutStore((s) => s.moveToolbarGroup);
-  const resetToolbar = useLayoutStore((s) => s.resetToolbar);
-
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  }, []);
-
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      setActiveId(null);
-      const { active, over } = event;
-      if (!over || active.id === over.id) return;
-
-      const ids = groups.map((g) => g.id);
-      const oldIndex = ids.indexOf(active.id as string);
-      const newIndex = ids.indexOf(over.id as string);
-      if (oldIndex === -1 || newIndex === -1) return;
-
-      const reordered = arrayMove(ids, oldIndex, newIndex);
-      // Append hidden items that belong to this row
-      const hiddenInRow = toolbarOrder[row].filter((id) => toolbarHidden.includes(id));
-      setToolbarOrder(row, [...reordered, ...hiddenInRow]);
-    },
-    [groups, toolbarOrder, toolbarHidden, row, setToolbarOrder]
-  );
-
-  const activeGroup = activeId ? allGroups.find((g) => g.id === activeId) : null;
-  const otherRow = row === "primary" ? "secondary" : "primary";
-  const otherLabel = row === "primary" ? "secondary" : "primary";
-
-  const toolbar = (
-    <div className={cn("flex items-center gap-1 px-2 py-1 border-b shrink-0", className)}>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={groups.map((g) => g.id)} strategy={horizontalListSortingStrategy}>
-          {groups.map((group, i) => (
-            <React.Fragment key={group.id}>
-              {i > 0 && <Separator orientation="vertical" />}
-              <SortableToolbarGroup group={group} />
-            </React.Fragment>
-          ))}
-        </SortableContext>
-
-        <DragOverlay>
-          {activeGroup ? <SortableToolbarGroup group={activeGroup} isOverlay /> : null}
-        </DragOverlay>
-      </DndContext>
-    </div>
-  );
-
-  return (
-    <ContextMenu trigger={toolbar}>
-      <ContextMenuLabel>Toolbar groups</ContextMenuLabel>
-      {allGroups.map((group) => (
-        <ContextMenuCheckbox
-          key={group.id}
-          checked={!toolbarHidden.includes(group.id)}
-          onCheckedChange={() => toggleToolbarGroup(group.id)}
-        >
-          {group.label}
-        </ContextMenuCheckbox>
-      ))}
-      {groups.length > 0 && (
-        <>
-          <ContextMenuSeparator />
-          <ContextMenuLabel>Move to {otherLabel} toolbar</ContextMenuLabel>
-          {groups.map((group) => (
-            <ContextMenuItem key={group.id} onClick={() => moveToolbarGroup(group.id, otherRow)}>
-              {group.label}
-            </ContextMenuItem>
-          ))}
-        </>
-      )}
-      <ContextMenuSeparator />
-      <ContextMenuItem onClick={resetToolbar}>Reset toolbar</ContextMenuItem>
-    </ContextMenu>
-  );
-}
-
 export function Toolbar({ onToggleSettings, onTogglePlugins, onNew, onOpen, onSave, toolbarPanels = [], views = [] }: ToolbarProps) {
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
@@ -257,12 +148,18 @@ export function Toolbar({ onToggleSettings, onTogglePlugins, onNew, onOpen, onSa
   const sidebarOpen = useLayoutStore((s) => s.sidebarOpen);
   const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
   const toolbarHidden = useLayoutStore((s) => s.toolbarHidden);
+  const toolbarOrder = useLayoutStore((s) => s.toolbarOrder);
   const toggleToolbarGroup = useLayoutStore((s) => s.toggleToolbarGroup);
+  const setToolbarOrder = useLayoutStore((s) => s.setToolbarOrder);
+  const moveToolbarGroup = useLayoutStore((s) => s.moveToolbarGroup);
   const resetToolbar = useLayoutStore((s) => s.resetToolbar);
   const hasLeftPanels = panels.left.length > 0;
   const hasRightPanels = panels.right.length > 0;
 
-  // Build all toolbar groups (plugins + views only)
+  // Refs for measuring row positions during drag
+  const primaryRowRef = useRef<HTMLDivElement>(null);
+  const secondaryRowRef = useRef<HTMLDivElement>(null);
+
   const allGroups: ToolbarGroup[] = useMemo(() => {
     const groups: ToolbarGroup[] = [];
     if (views.length > 0) {
@@ -287,6 +184,91 @@ export function Toolbar({ onToggleSettings, onTogglePlugins, onNew, onOpen, onSa
   const primary = useToolbarRow("primary", allGroups);
   const secondary = useToolbarRow("secondary", allGroups);
 
+  // Map group id → row
+  const groupRowMap = useMemo(() => {
+    const map = new Map<string, "primary" | "secondary">();
+    for (const g of primary.visible) map.set(g.id, "primary");
+    for (const g of secondary.visible) map.set(g.id, "secondary");
+    return map;
+  }, [primary.visible, secondary.visible]);
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [hoverRow, setHoverRow] = useState<"primary" | "secondary" | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  }, []);
+
+  // Determine which row the pointer is over by checking DOM rects
+  const getRowAtPoint = useCallback((y: number): "primary" | "secondary" | null => {
+    const primaryRect = primaryRowRef.current?.getBoundingClientRect();
+    const secondaryRect = secondaryRowRef.current?.getBoundingClientRect();
+    if (primaryRect && y >= primaryRect.top && y <= primaryRect.bottom) return "primary";
+    if (secondaryRect && y >= secondaryRect.top && y <= secondaryRect.bottom) return "secondary";
+    return null;
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveId(null);
+      setHoverRow(null);
+
+      const activeRow = groupRowMap.get(active.id as string);
+      if (!activeRow) return;
+
+      // Use pointer position to determine target row (more reliable than dnd-kit collision)
+      const pointerY = (event.activatorEvent as PointerEvent).clientY +
+        ((event.delta?.y) ?? 0);
+      const targetRow = getRowAtPoint(pointerY);
+
+      if (!targetRow) return;
+
+      if (activeRow !== targetRow) {
+        // Cross-row drop
+        moveToolbarGroup(active.id as string, targetRow);
+
+        // If dropped on a specific group, insert near it
+        const overGroupId = over && groupRowMap.get(over.id as string) === targetRow ? over.id as string : undefined;
+        if (overGroupId) {
+          const targetGroups = targetRow === "primary" ? primary.visible : secondary.visible;
+          const ids = targetGroups.map((g) => g.id).filter((id) => id !== active.id as string);
+          const overIndex = ids.indexOf(overGroupId);
+          ids.splice(overIndex + 1, 0, active.id as string);
+          const hiddenInRow = toolbarOrder[targetRow].filter((id) => toolbarHidden.includes(id));
+          setToolbarOrder(targetRow, [...ids, ...hiddenInRow]);
+        }
+      } else if (over && active.id !== over.id && groupRowMap.has(over.id as string)) {
+        // Same-row reorder
+        const groups = activeRow === "primary" ? primary.visible : secondary.visible;
+        const ids = groups.map((g) => g.id);
+        const oldIndex = ids.indexOf(active.id as string);
+        const newIndex = ids.indexOf(over.id as string);
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        const reordered = arrayMove(ids, oldIndex, newIndex);
+        const hiddenInRow = toolbarOrder[activeRow].filter((id) => toolbarHidden.includes(id));
+        setToolbarOrder(activeRow, [...reordered, ...hiddenInRow]);
+      }
+    },
+    [groupRowMap, primary.visible, secondary.visible, toolbarOrder, toolbarHidden, setToolbarOrder, moveToolbarGroup, getRowAtPoint]
+  );
+
+  const activeGroup = activeId ? allGroups.find((g) => g.id === activeId) : null;
+
+  // Track pointer position during drag for row highlighting
+  React.useEffect(() => {
+    if (!activeId) { setHoverRow(null); return; }
+    const handlePointerMove = (e: PointerEvent) => {
+      setHoverRow(getRowAtPoint(e.clientY));
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    return () => window.removeEventListener("pointermove", handlePointerMove);
+  }, [activeId, getRowAtPoint]);
+
   const contextMenuContent = (
     <>
       <ContextMenuLabel>Toolbar groups</ContextMenuLabel>
@@ -305,11 +287,22 @@ export function Toolbar({ onToggleSettings, onTogglePlugins, onNew, onOpen, onSa
   );
 
   return (
-    <>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       {/* Primary toolbar — app-level controls */}
       <ContextMenu
         trigger={
-          <div className="flex items-center gap-1 px-2 py-1 border-b bg-card shrink-0">
+          <div
+            ref={primaryRowRef}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 border-b bg-card shrink-0",
+              activeId && hoverRow === "primary" && "bg-accent/30",
+            )}
+          >
             <div className="flex items-center gap-1">
               <TooltipButton variant="ghost" size="icon" onClick={undo} tooltip={`Undo (${hotkey("undo")})`}>
                 <Undo2 className="h-4 w-4" />
@@ -341,14 +334,14 @@ export function Toolbar({ onToggleSettings, onTogglePlugins, onNew, onOpen, onSa
 
             {primary.visible.length > 0 && <Separator orientation="vertical" />}
 
-            {primary.visible.length > 0 && (
-              <DraggableToolbarRow
-                row="primary"
-                groups={primary.visible}
-                allGroups={allGroups}
-                className="border-b-0 px-0 py-0"
-              />
-            )}
+            <SortableContext items={primary.visible.map((g) => g.id)} strategy={horizontalListSortingStrategy}>
+              {primary.visible.map((group, i) => (
+                <React.Fragment key={group.id}>
+                  {i > 0 && <Separator orientation="vertical" />}
+                  <SortableToolbarGroup group={group} />
+                </React.Fragment>
+              ))}
+            </SortableContext>
 
             <div className="flex-1" />
 
@@ -372,7 +365,13 @@ export function Toolbar({ onToggleSettings, onTogglePlugins, onNew, onOpen, onSa
       {/* Secondary toolbar — sidebar toggles + draggable plugin groups */}
       <ContextMenu
         trigger={
-          <div className="flex items-center gap-1 px-2 py-1 border-b bg-card/50 shrink-0">
+          <div
+            ref={secondaryRowRef}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 border-b bg-card/50 shrink-0",
+              activeId && hoverRow === "secondary" && "bg-accent/30",
+            )}
+          >
             {hasLeftPanels && (
               <TooltipButton
                 variant={sidebarOpen.left ? "secondary" : "ghost"}
@@ -388,14 +387,14 @@ export function Toolbar({ onToggleSettings, onTogglePlugins, onNew, onOpen, onSa
               <Separator orientation="vertical" />
             )}
 
-            {secondary.visible.length > 0 && (
-              <DraggableToolbarRow
-                row="secondary"
-                groups={secondary.visible}
-                allGroups={allGroups}
-                className="border-b-0 px-0 py-0"
-              />
-            )}
+            <SortableContext items={secondary.visible.map((g) => g.id)} strategy={horizontalListSortingStrategy}>
+              {secondary.visible.map((group, i) => (
+                <React.Fragment key={group.id}>
+                  {i > 0 && <Separator orientation="vertical" />}
+                  <SortableToolbarGroup group={group} />
+                </React.Fragment>
+              ))}
+            </SortableContext>
 
             <div className="flex-1" />
 
@@ -414,6 +413,10 @@ export function Toolbar({ onToggleSettings, onTogglePlugins, onNew, onOpen, onSa
       >
         {contextMenuContent}
       </ContextMenu>
-    </>
+
+      <DragOverlay>
+        {activeGroup ? <SortableToolbarGroup group={activeGroup} isOverlay /> : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
