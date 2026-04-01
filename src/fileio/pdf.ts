@@ -1,7 +1,7 @@
 import type { Score } from "../model/score";
 import { initRenderer } from "../renderer/vexBridge";
 import { renderScore } from "../renderer/ScoreRenderer";
-import { computeLayout, totalPageCount, DEFAULT_LAYOUT, type LayoutConfig } from "../renderer/SystemLayout";
+import { totalPageCount, DEFAULT_LAYOUT, type LayoutConfig } from "../renderer/SystemLayout";
 import { fullScoreConfig, type ViewConfig } from "../views/ViewMode";
 import { jsPDF } from "jspdf";
 
@@ -34,15 +34,6 @@ const PAGE_SIZES: Record<PageSize, { width: number; height: number; inWidth: num
  */
 export async function exportPDF(score: Score, viewConfig?: ViewConfig, options?: PDFExportOptions): Promise<void> {
   const baseConfig = viewConfig ?? fullScoreConfig();
-  const effectiveConfig = {
-    ...baseConfig,
-    layoutConfig: {
-      ...baseConfig.layoutConfig,
-      pageLayout: true,
-    },
-  };
-
-  const viewCfg = effectiveConfig;
   const size = PAGE_SIZES[options?.pageSize ?? "letter"];
   const isLandscape = (options?.orientation ?? "portrait") === "landscape";
   const pageWidth = isLandscape ? size.height : size.width;
@@ -50,6 +41,20 @@ export async function exportPDF(score: Score, viewConfig?: ViewConfig, options?:
   const inWidth = isLandscape ? size.inHeight : size.inWidth;
   const inHeight = isLandscape ? size.inWidth : size.inHeight;
 
+  const viewCfg: ViewConfig = {
+    ...baseConfig,
+    layoutConfig: {
+      ...baseConfig.layoutConfig,
+      pageLayout: true,
+      pageWidth,
+      pageHeight,
+      ...(options?.marginTop != null ? { topMargin: options.marginTop } : {}),
+      ...(options?.marginBottom != null ? { bottomMargin: options.marginBottom } : {}),
+      ...(options?.marginLeft != null ? { leftMargin: options.marginLeft } : {}),
+    },
+  };
+
+  // Build a LayoutConfig for page count calculation (must match what renderScore uses)
   const hasTitle = !!score.title;
   const hasComposer = !!score.composer;
   const titleExtra = (hasTitle ? 48 : 0) + (hasComposer ? 22 : 0) + (hasTitle || hasComposer ? 16 : 0);
@@ -77,11 +82,19 @@ export async function exportPDF(score: Score, viewConfig?: ViewConfig, options?:
   canvas.style.height = `${pageHeight * pages}px`;
 
   const ctx = initRenderer(canvas);
+
+  // VexFlow's resize() auto-applies window.devicePixelRatio, which conflicts
+  // with our own PRINT_SCALE. Reset canvas to intended dimensions and apply
+  // only PRINT_SCALE.
+  canvas.width = scaledWidth;
+  canvas.height = scaledHeight;
   canvas.style.width = `${pageWidth}px`;
   canvas.style.height = `${pageHeight * pages}px`;
 
-  const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
-  if (rawCtx.scale) rawCtx.scale(PRINT_SCALE, PRINT_SCALE);
+  // Reset the transform (canvas.width assignment clears it) and apply only PRINT_SCALE.
+  // Use VexFlow's scale() wrapper which delegates to the underlying 2D context.
+  const vexCtx = ctx.context as unknown as { scale: (x: number, y: number) => void };
+  vexCtx.scale(PRINT_SCALE, PRINT_SCALE);
 
   renderScore(ctx, canvas, score, undefined, null, viewCfg, pageWidth);
 

@@ -1219,6 +1219,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       const part = score.parts[partIndex];
       if (!part) return s;
       part.muted = !part.muted;
+      // Update playback reference so mute takes effect during playback
+      Transport.updateScore(score);
       return { score };
     });
   },

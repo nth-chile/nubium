@@ -139,14 +139,21 @@ export function renderScore(
 
   const effectiveWidth = availableWidth ?? canvas.width / (window.devicePixelRatio || 1);
   const pageLayoutEnabled = viewConfig?.layoutConfig.pageLayout ?? false;
+  const layoutOverrides = viewConfig?.layoutConfig;
+  const pageW = layoutOverrides?.pageWidth ?? DEFAULT_LAYOUT.pageWidth;
+  const pageH = layoutOverrides?.pageHeight ?? DEFAULT_LAYOUT.pageHeight;
   let config: LayoutConfig = {
     ...DEFAULT_LAYOUT,
     adaptiveWidths: true,
-    availableWidth: pageLayoutEnabled ? DEFAULT_LAYOUT.pageWidth : effectiveWidth,
-    ...(viewConfig?.layoutConfig.measuresPerLine != null
-      ? { measuresPerLine: viewConfig.layoutConfig.measuresPerLine }
+    availableWidth: pageLayoutEnabled ? pageW : effectiveWidth,
+    ...(pageLayoutEnabled ? { pageWidth: pageW, pageHeight: pageH } : {}),
+    ...(layoutOverrides?.topMargin != null ? { topMargin: layoutOverrides.topMargin } : {}),
+    ...(layoutOverrides?.bottomMargin != null ? { bottomMargin: layoutOverrides.bottomMargin } : {}),
+    ...(layoutOverrides?.leftMargin != null ? { leftMargin: layoutOverrides.leftMargin } : {}),
+    ...(layoutOverrides?.measuresPerLine != null
+      ? { measuresPerLine: layoutOverrides.measuresPerLine }
       : {}),
-    ...(viewConfig?.layoutConfig.compact
+    ...(layoutOverrides?.compact
       ? { staffSpacing: 60 }
       : {}),
     ...(!showPartNames ? { partLabelWidth: 0 } : {}),
@@ -474,6 +481,7 @@ const VOICE_COLORS = ["#3b82f6", "#22c55e", "#f97316", "#ef4444"];
 
 function drawCursor(
   ctx: RenderContext,
+  canvas: HTMLCanvasElement,
   score: Score,
   cursor: CursorPosition,
   measurePositions: ScoreRenderResult["measurePositions"],
@@ -485,8 +493,8 @@ function drawCursor(
   );
   if (!mp) return;
 
-  const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
-  if (!rawCtx.strokeStyle) return;
+  const rawCtx = canvas.getContext("2d");
+  if (!rawCtx) return;
 
   const cursorColor = VOICE_COLORS[cursor.voiceIndex] ?? VOICE_COLORS[0];
 
@@ -522,8 +530,10 @@ function drawCursor(
 
   const staffTop = mp.y;
   const staffBottom = mp.y + config.staffHeight;
+  const dpr = window.devicePixelRatio || 1;
 
   rawCtx.save();
+  rawCtx.scale(dpr, dpr);
 
   // Draw note highlight rect if on a note
   if (targetBox) {
@@ -538,7 +548,7 @@ function drawCursor(
   // Draw vertical cursor line spanning full staff.
   // Draw bottom-to-top so the dash pattern starts flush with the bottom staff line.
   rawCtx.strokeStyle = cursorColor;
-  rawCtx.lineWidth = 2;
+  rawCtx.lineWidth = 3;
   rawCtx.setLineDash(targetBox ? [4, 4] : [6, 4]);
   rawCtx.beginPath();
   rawCtx.moveTo(cursorX, staffBottom);
@@ -676,7 +686,7 @@ function drawPlaybackCursor(
   if (rawCtx.strokeStyle !== undefined) {
     rawCtx.save();
     rawCtx.strokeStyle = "#888";
-    rawCtx.lineWidth = 2.5;
+    rawCtx.lineWidth = 3;
     rawCtx.setLineDash([]);
     rawCtx.globalAlpha = 0.7;
     rawCtx.beginPath();

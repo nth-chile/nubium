@@ -14,8 +14,18 @@ export interface ViewLayoutConfig {
   compact: boolean;
   measuresPerLine?: number;
   showPartNames: boolean;
-  /** When true, render score with page breaks (US Letter layout) */
+  /** When true, render score with page breaks */
   pageLayout?: boolean;
+  /** Override page width in CSS pixels (default: 816 = 8.5in at 96dpi) */
+  pageWidth?: number;
+  /** Override page height in CSS pixels (default: 1056 = 11in at 96dpi) */
+  pageHeight?: number;
+  /** Override top margin in pixels */
+  topMargin?: number;
+  /** Override bottom margin in pixels */
+  bottomMargin?: number;
+  /** Override left margin in pixels */
+  leftMargin?: number;
 }
 
 /** Full Score: all parts, full detail (default) */

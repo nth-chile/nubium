@@ -101,9 +101,10 @@ export function ScoreCanvas() {
       const voice = score.parts[noteSelection.partIndex]?.measures[noteSelection.measureIndex]?.voices[noteSelection.voiceIndex];
       if (voice) {
         rawCtx.save();
-        rawCtx.fillStyle = "#3b82f6";
-        rawCtx.globalAlpha = 0.2;
-        const pad = 3;
+        rawCtx.strokeStyle = "#3b82f6";
+        rawCtx.lineWidth = 2;
+        rawCtx.globalAlpha = 0.7;
+        const pad = 4;
         for (let i = noteSelection.startEvent; i <= noteSelection.endEvent && i < voice.events.length; i++) {
           const box = result.noteBoxes.get(voice.events[i].id);
           if (box) {
@@ -114,7 +115,7 @@ export function ScoreCanvas() {
             } else {
               rawCtx.rect(bx, by, bw, bh);
             }
-            rawCtx.fill();
+            rawCtx.stroke();
           }
         }
         rawCtx.restore();

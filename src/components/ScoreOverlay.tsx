@@ -123,13 +123,14 @@ export function ScoreOverlay({ width, height }: Props) {
       }
     }
 
-    // Click on measure — move cursor to measure start
+    // Click on measure — move cursor to measure start, preserve current voice
+    const currentVoice = useEditorStore.getState().inputState.cursor.voiceIndex;
     for (const mp of measurePositions) {
       if (x >= mp.x && x <= mp.x + mp.width && y >= mp.y && y <= mp.y + mp.height) {
         setCursorDirect({
           partIndex: mp.partIndex,
           measureIndex: mp.measureIndex,
-          voiceIndex: 0,
+          voiceIndex: currentVoice,
           eventIndex: 0,
         });
 

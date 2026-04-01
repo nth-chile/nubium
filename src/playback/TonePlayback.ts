@@ -28,6 +28,7 @@ interface PlayEvent {
   midi: number;
   durationTicks: number;
   instrumentId: string;
+  partIndex: number;
 }
 
 interface MetronomeBeat {
@@ -169,8 +170,8 @@ function buildEvents(score: Score): void {
     const mTicks = (TICKS_PER_QUARTER * 4 * m0.timeSignature.numerator) / m0.timeSignature.denominator;
     measureBoundaries.push({ tick, measureIndex: mi });
 
-    for (const part of score.parts) {
-      if (part.muted) continue;
+    for (let pi = 0; pi < score.parts.length; pi++) {
+      const part = score.parts[pi];
       const m = part.measures[mi];
       if (!m) continue;
       const instId = part.instrumentId;
@@ -189,15 +190,15 @@ function buildEvents(score: Score): void {
             const graceDur = Math.min(60, evtTicks / (graceBuffer.length + 1)); // short ornamental duration in ticks
             for (let gi = 0; gi < graceBuffer.length; gi++) {
               const graceOffset = offset - graceDur * (graceBuffer.length - gi);
-              events.push({ tick: tick + Math.max(0, graceOffset), midi: graceBuffer[gi].midi, durationTicks: graceDur, instrumentId: graceBuffer[gi].instrumentId });
+              events.push({ tick: tick + Math.max(0, graceOffset), midi: graceBuffer[gi].midi, durationTicks: graceDur, instrumentId: graceBuffer[gi].instrumentId, partIndex: pi });
             }
             graceBuffer.length = 0;
           }
           if (evt.kind === "note") {
-            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch), durationTicks: evtTicks, instrumentId: instId });
+            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch), durationTicks: evtTicks, instrumentId: instId, partIndex: pi });
           } else if (evt.kind === "chord") {
             for (const h of evt.heads) {
-              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch), durationTicks: evtTicks, instrumentId: instId });
+              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch), durationTicks: evtTicks, instrumentId: instId, partIndex: pi });
             }
           }
           offset += evtTicks;
@@ -241,11 +242,11 @@ function schedulerTick(): void {
 
   const lookaheadTick = currentTick + secToTicks(LOOKAHEAD_SEC, currentBpm);
 
-  // Schedule notes
+  // Schedule notes (skip muted parts at play time so mute toggles take effect immediately)
   const s = customPlayer ? null : ensureSynth();
   while (eventCursor < events.length && events[eventCursor].tick < lookaheadTick) {
     const e = events[eventCursor];
-    if (e.tick >= scheduledUpToTick) {
+    if (e.tick >= scheduledUpToTick && !(currentScore!.parts[e.partIndex]?.muted)) {
       const audioTime = tickToAudioTime(e.tick);
       const dur = Math.max(ticksToSec(e.durationTicks, currentBpm) * 0.9, 0.05);
       if (customPlayer) {
@@ -401,6 +402,10 @@ export function setTempo(bpm: number): void {
   if (state === "playing") {
     currentBpm = getBpmAtTick(anchorTick);
   }
+}
+
+export function updateScore(score: Score): void {
+  currentScore = score;
 }
 
 export function setMetronome(enabled: boolean): void {
