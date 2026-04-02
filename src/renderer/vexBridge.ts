@@ -366,15 +366,15 @@ export function renderMeasure(
       aboveStaveCtx.save();
       aboveStaveCtx.font = "italic bold 11px serif";
       aboveStaveCtx.fillStyle = "#000";
-      aboveStaveCtx.textAlign = "right";
-      // Use a separate Y tracker for right-aligned text starting at stave top
       let navY = y - 6;
       if (m.navigation?.volta) navY -= 22;
       for (const text of textItems) {
         navY -= 14;
-        aboveStaveCtx.fillText(text, x + width - 10, navY + 12);
+        // Measure text width and position so the right edge stays within the measure
+        const tw = aboveStaveCtx.measureText(text).width;
+        const navX = x + width - tw - 8;
+        aboveStaveCtx.fillText(text, navX, navY + 12);
       }
-      aboveStaveCtx.textAlign = "start";
       aboveStaveCtx.restore();
     }
   }
@@ -718,7 +718,9 @@ export function renderMeasure(
           const hpType = annotation.type === "crescendo" ? StaveHairpin.type.CRESC : StaveHairpin.type.DECRESC;
           const hp = new StaveHairpin({ firstNote: startNote, lastNote: endNote }, hpType);
           hp.setPosition(4); // BELOW
-          hp.setRenderOptions({ leftShiftPx: 0, rightShiftPx: 0, height: 10, yShift: 0 });
+          // Push hairpin below dynamics if present in same measure
+          const dynShift = m.annotations.some((a) => a.kind === "dynamic") ? 25 : 0;
+          hp.setRenderOptions({ leftShiftPx: 0, rightShiftPx: 0, height: 10, yShift: dynShift });
           hp.setContext(ctx.context).draw();
         } catch { /* skip */ }
       }
@@ -763,12 +765,9 @@ export function renderMeasure(
     if (lyricAnnotations.length > 0) {
       const lCtx = ctx.context as unknown as CanvasRenderingContext2D;
       if (lCtx.save) {
-        const hasDyn = m.annotations.some((a) => a.kind === "dynamic");
-        const hasHairpin = m.annotations.some((a) => a.kind === "hairpin");
-        // Base Y: below staff, below dynamics if present, below hairpins if present
-        let lyricBaseY = stave.getBottomY() + 18;
-        if (hasDyn) lyricBaseY += 18;
-        if (hasHairpin) lyricBaseY += 14;
+        // Fixed offset from stave bottom — consistent across all measures.
+        // Always reserve space for dynamics and hairpins so lyrics align globally.
+        const lyricBaseY = stave.getBottomY() + 50;
 
         lCtx.save();
         lCtx.font = `italic ${style.lyricSize}px ${style.fontFamily}`;
