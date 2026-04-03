@@ -12,6 +12,10 @@ Inspired by [Obsidian](https://obsidian.md), Notation is extremely flexible. Tur
 claude -p "add my feature and submit pr please"
 ```
 
+## Test in both modes
+
+Test in both browser and Tauri desktop when touching file I/O, settings, clipboard, or MIDI.
+
 ## Clean Settings
 
 Test as a fresh install without affecting your saved settings:

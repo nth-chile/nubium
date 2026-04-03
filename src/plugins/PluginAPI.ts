@@ -51,6 +51,19 @@ export interface ExporterConfig {
   export: (score: Score) => string;
 }
 
+export interface PlaybackService {
+  play(score: Score): Promise<void>;
+  pause(): void;
+  stop(): void;
+  setTempo(bpm: number): void;
+  setMetronome(enabled: boolean): void;
+  updateScore(score: Score): void;
+  setCallbacks(opts: {
+    onTick: (tick: number) => void;
+    onStateChange: (state: string) => void;
+  }): void;
+}
+
 export interface NotationPlugin {
   id: string;
   name: string;
@@ -98,4 +111,7 @@ export interface PluginAPI {
   // Plugin-scoped persistent storage
   getStorage<T = unknown>(key: string): T | undefined;
   setStorage<T = unknown>(key: string, value: T): void;
+
+  // Service registration
+  registerPlaybackService(service: PlaybackService): void;
 }

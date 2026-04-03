@@ -3,6 +3,7 @@ import type { CursorPosition } from "../input/InputState";
 import type {
   NotationPlugin,
   PluginAPI,
+  PlaybackService,
   Selection,
   PanelConfig,
   ViewRegistration,
@@ -111,6 +112,7 @@ export class PluginManager {
   private viewRegistry: Map<string, ViewEntry> = new Map();
   private importerRegistry: Map<string, ImporterEntry> = new Map();
   private exporterRegistry: Map<string, ExporterEntry> = new Map();
+  private playbackService: { pluginId: string; service: PlaybackService } | null = null;
   private listeners: Set<() => void> = new Set();
 
   private getScore: ScoreGetter;
@@ -214,6 +216,9 @@ export class PluginManager {
         data[key] = value;
         savePluginData(pluginId, data);
       },
+      registerPlaybackService: (service: PlaybackService) => {
+        this.playbackService = { pluginId, service };
+      },
     };
   }
 
@@ -307,6 +312,11 @@ export class PluginManager {
     entry.exporters = [];
     entry.settingsComponent = null;
 
+    // Clear playback service if this plugin owns it
+    if (this.playbackService?.pluginId === pluginId) {
+      this.playbackService = null;
+    }
+
     entry.plugin.deactivate?.();
     entry.enabled = false;
 
@@ -375,6 +385,10 @@ export class PluginManager {
   // Exporter registry
   getExporters(): ExporterEntry[] {
     return Array.from(this.exporterRegistry.values());
+  }
+
+  getPlaybackService(): PlaybackService | null {
+    return this.playbackService?.service ?? null;
   }
 
   /** Handle a keyboard event, return true if a plugin shortcut matched */

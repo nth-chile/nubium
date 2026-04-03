@@ -95,6 +95,10 @@ Pitches: Letter + octave (C4 = middle C). Accidentals: "sharp", "flat", "double-
 Durations: "whole", "half", "quarter", "eighth", "16th", "32nd", "64th". Append "." for dotted.
 Key signatures (fifths): -7 to 7. Barlines: single, double, final, repeat-start, repeat-end, repeat-both.
 
+## Testing
+
+**Test in both environments.** Features that touch file I/O, settings, clipboard, MIDI, or native dialogs must be tested in both `npm run dev` (browser) and `npm run tauri dev` (Tauri desktop). Browser uses fallbacks (localStorage, HTML file input, blob download); Tauri uses native APIs.
+
 ## Gotchas
 
 - **`roundRect` not available everywhere.** Always guard: `if (rawCtx.roundRect) { rawCtx.roundRect(...) } else { rawCtx.rect(...) }`. Crashes canvas rendering without this.

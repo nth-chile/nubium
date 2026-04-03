@@ -50,7 +50,6 @@ let state: TransportState = "stopped";
 let onTickCallback: ((tick: number) => void) | null = null;
 let onStateChangeCallback: ((state: TransportState) => void) | null = null;
 let metronomeEnabled = false;
-let synth: Tone.PolySynth | null = null;
 let metronomeSynth: Tone.PolySynth | null = null;
 let customPlayer: NotePlayer | null = null;
 
@@ -88,22 +87,6 @@ function ensureMetronomeSynth(): Tone.PolySynth {
   return metronomeSynth;
 }
 
-function ensureSynth(): Tone.PolySynth {
-  if (!synth) {
-    synth = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: "triangle" },
-      envelope: { attack: 0.01, decay: 0.3, sustain: 0.4, release: 0.3 },
-    }).toDestination();
-    synth.maxPolyphony = 32;
-    synth.volume.value = -6;
-  }
-  return synth;
-}
-
-function midiToNoteName(midi: number): string {
-  const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-  return `${names[midi % 12]}${Math.floor(midi / 12) - 1}`;
-}
 
 function ticksToSec(ticks: number, bpm: number): number {
   return (ticks / TICKS_PER_QUARTER) * (60 / bpm);
@@ -243,17 +226,12 @@ function schedulerTick(): void {
   const lookaheadTick = currentTick + secToTicks(LOOKAHEAD_SEC, currentBpm);
 
   // Schedule notes (skip muted parts at play time so mute toggles take effect immediately)
-  const s = customPlayer ? null : ensureSynth();
   while (eventCursor < events.length && events[eventCursor].tick < lookaheadTick) {
     const e = events[eventCursor];
-    if (e.tick >= scheduledUpToTick && !(currentScore!.parts[e.partIndex]?.muted)) {
+    if (customPlayer && e.tick >= scheduledUpToTick && !(currentScore!.parts[e.partIndex]?.muted)) {
       const audioTime = tickToAudioTime(e.tick);
       const dur = Math.max(ticksToSec(e.durationTicks, currentBpm) * 0.9, 0.05);
-      if (customPlayer) {
-        customPlayer.play(e.midi, dur, audioTime, e.instrumentId);
-      } else if (s) {
-        s.triggerAttackRelease(midiToNoteName(e.midi), dur, audioTime);
-      }
+      customPlayer.play(e.midi, dur, audioTime, e.instrumentId);
     }
     eventCursor++;
   }
@@ -322,8 +300,6 @@ export async function play(score: Score): Promise<void> {
 
   if (events.length === 0 && metronomeBeats.length === 0) return;
 
-  ensureSynth();
-
   if (state === "paused") {
     // Resume — anchorTick already holds the paused position
     anchorAudioTime = Tone.now();
@@ -358,7 +334,6 @@ export function pause(): void {
     animationFrame = null;
   }
 
-  synth?.releaseAll();
   metronomeSynth?.releaseAll();
   setState("paused");
 }
@@ -374,11 +349,6 @@ export function stop(): void {
   }
   if (customPlayer) {
     customPlayer.stop();
-  }
-  if (synth) {
-    synth.releaseAll();
-    synth.dispose();
-    synth = null;
   }
   if (metronomeSynth) {
     metronomeSynth.dispose();

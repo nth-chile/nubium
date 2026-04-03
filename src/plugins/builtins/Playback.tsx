@@ -7,6 +7,107 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { Play, Pause, Square } from "lucide-react";
+import { Soundfont } from "smplr";
+import * as Tone from "tone";
+import * as Transport from "../../playback/TonePlayback";
+import type { NotePlayer } from "../../playback/TonePlayback";
+
+// --- SoundFont instrument player ---
+
+const GM_INSTRUMENTS: Record<string, string> = {
+  piano: "acoustic_grand_piano",
+  "acoustic-piano": "acoustic_grand_piano",
+  "electric-piano": "electric_piano_1",
+  harpsichord: "harpsichord",
+  organ: "church_organ",
+  guitar: "acoustic_guitar_nylon",
+  "electric-guitar": "electric_guitar_clean",
+  "acoustic-guitar": "acoustic_guitar_nylon",
+  bass: "acoustic_bass",
+  "electric-bass": "electric_bass_finger",
+  violin: "violin",
+  viola: "viola",
+  cello: "cello",
+  contrabass: "contrabass",
+  strings: "string_ensemble_1",
+  trumpet: "trumpet",
+  trombone: "trombone",
+  "french-horn": "french_horn",
+  tuba: "tuba",
+  saxophone: "alto_sax",
+  "alto-sax": "alto_sax",
+  "tenor-sax": "tenor_sax",
+  clarinet: "clarinet",
+  flute: "flute",
+  oboe: "oboe",
+  bassoon: "bassoon",
+  drums: "steel_drums",
+  percussion: "steel_drums",
+  voice: "choir_aahs",
+  choir: "choir_aahs",
+  synth: "synth_strings_1",
+  "": "acoustic_grand_piano",
+};
+
+function resolveInstrument(instrumentId: string): string {
+  const lower = instrumentId.toLowerCase().replace(/\s+/g, "-");
+  return GM_INSTRUMENTS[lower] ?? GM_INSTRUMENTS["piano"];
+}
+
+class SmplrPlayer implements NotePlayer {
+  private instruments = new Map<string, Soundfont>();
+  private ctx: AudioContext;
+  private loading = new Map<string, Promise<Soundfont>>();
+
+  constructor() {
+    // Use Tone.js's AudioContext so scheduled times align with the transport
+    this.ctx = Tone.getContext().rawContext as AudioContext;
+  }
+
+  async loadInstrument(name: string): Promise<Soundfont> {
+    const gmName = resolveInstrument(name);
+    const existing = this.instruments.get(gmName);
+    if (existing) return existing;
+
+    const pending = this.loading.get(gmName);
+    if (pending) return pending;
+
+    const sf = new Soundfont(this.ctx, { instrument: gmName as any });
+    this.instruments.set(gmName, sf);
+    const loadPromise = sf.load.then(() => sf);
+    this.loading.set(gmName, loadPromise);
+
+    return loadPromise;
+  }
+
+  async resume(): Promise<void> {
+    if (this.ctx.state === "suspended") {
+      await this.ctx.resume();
+    }
+  }
+
+  play(midi: number, duration: number, time: number, instrumentId?: string): void {
+    const gmName = resolveInstrument(instrumentId ?? "");
+    const instrument = this.instruments.get(gmName) ?? this.instruments.values().next().value;
+    if (!instrument) return;
+    if (this.ctx.state !== "running") return;
+
+    instrument.start({ note: midi, duration, time });
+  }
+
+  stop(): void {
+    for (const instrument of this.instruments.values()) {
+      instrument.stop();
+    }
+  }
+
+  async preloadForScore(instrumentIds: string[]): Promise<void> {
+    const unique = [...new Set(instrumentIds.map(resolveInstrument))];
+    await Promise.all(unique.map((name) => this.loadInstrument(name)));
+  }
+}
+
+// --- Transport UI ---
 
 function TransportPanel() {
   const isPlaying = useEditorStore((s) => s.isPlaying);
@@ -98,7 +199,6 @@ function getEffectiveBpm(
   const part = score.parts[0];
   if (!part) return score.tempo;
 
-  // Find which measure the tick is in
   let accumulated = 0;
   let currentMi = 0;
   for (let mi = 0; mi < part.measures.length; mi++) {
@@ -109,7 +209,6 @@ function getEffectiveBpm(
     currentMi = mi;
   }
 
-  // Search backwards for most recent tempo mark
   for (let i = currentMi; i >= 0; i--) {
     for (const p of score.parts) {
       const m = p.measures[i];
@@ -143,15 +242,48 @@ function formatPosition(
   return `${part.measures.length}:1`;
 }
 
+// --- Plugin ---
+
+let player: SmplrPlayer | null = null;
+
 export const PlaybackPlugin: NotationPlugin = {
   id: "notation.playback",
   name: "Playback",
   version: "1.0.0",
-  description: "Transport bar with play, pause, stop, tempo, and metronome controls",
+  description: "Transport controls and SoundFont instrument playback",
+
   activate(api: PluginAPI) {
+    // Create SoundFont player and wire into transport engine
+    player = new SmplrPlayer();
+    const score = api.getScore();
+    const instrumentIds = score.parts.map((p) => p.instrumentId);
+    player.preloadForScore(instrumentIds.length > 0 ? instrumentIds : [""]);
+    Transport.setNotePlayer(player);
+
+    // Register playback service so EditorState can delegate to us
+    api.registerPlaybackService({
+      play: (s) => Transport.play(s),
+      pause: () => Transport.pause(),
+      stop: () => Transport.stop(),
+      setTempo: (bpm) => Transport.setTempo(bpm),
+      setMetronome: (enabled) => Transport.setMetronome(enabled),
+      updateScore: (s) => Transport.updateScore(s),
+      setCallbacks: (opts) => Transport.setCallbacks(opts),
+    });
+
+    // Register transport UI
     api.registerPanel("playback.transport", { title: "Transport", location: "toolbar", component: () => <TransportPanel />, defaultEnabled: true });
     api.registerCommand("notation.play", "Play", () => { useEditorStore.getState().play(); });
     api.registerCommand("notation.pause", "Pause", () => { useEditorStore.getState().pause(); });
     api.registerCommand("notation.stop", "Stop Playback", () => { useEditorStore.getState().stopPlayback(); });
+  },
+
+  deactivate() {
+    Transport.stop();
+    if (player) {
+      player.stop();
+      Transport.setNotePlayer(null);
+      player = null;
+    }
   },
 };

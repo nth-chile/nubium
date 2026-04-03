@@ -54,7 +54,7 @@ import type { NavigationMarkType } from "../commands/SetNavigationMark";
 import type { BarlineType, Volta } from "../model";
 import type { NoteBox, AnnotationBox } from "../renderer/vexBridge";
 import { newId, type VoiceId, type MeasureId } from "../model/ids";
-import * as Transport from "../playback/TonePlayback";
+import { getGlobalPluginManager } from "../plugins/PluginManager";
 
 const history = new CommandHistory();
 
@@ -139,6 +139,7 @@ interface EditorStore {
   editAnnotation(box: AnnotationBox): void;
   commitTextInput(text: string): void;
   cancelTextInput(): void;
+  setLyricVerse(verse: number): void;
 
   // Phase 4: Playback
   isPlaying: boolean;
@@ -1016,14 +1017,21 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   enterLyricMode() {
-    set((s) => ({
+    const s = get();
+    const { partIndex, measureIndex, voiceIndex, eventIndex } = s.inputState.cursor;
+    const measure = s.score.parts[partIndex]?.measures[measureIndex];
+    const event = measure?.voices[voiceIndex]?.events[eventIndex];
+    const existing = event && measure?.annotations.find(
+      (a) => a.kind === "lyric" && a.noteEventId === event.id && a.verseNumber === s.inputState.lyricVerse
+    );
+    set({
       inputState: {
         ...s.inputState,
         textInputMode: "lyric",
         textInputBuffer: "",
-        textInputInitialValue: "",
+        textInputInitialValue: existing?.kind === "lyric" ? existing.text : "",
       },
-    }));
+    });
   },
 
   editAnnotation(box: AnnotationBox) {
@@ -1118,18 +1126,26 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         cleanText = text.slice(1);
       }
 
-      const cmd = new SetLyric(cleanText, syllableType, 1);
+      const cmd = new SetLyric(cleanText, syllableType, state.inputState.lyricVerse);
       const result = history.execute(cmd, {
         score: state.score,
         inputState: state.inputState,
       });
+      // Pre-populate if the next note already has a lyric at this verse
+      const nextCursor = result.inputState.cursor;
+      const nextMeasure = result.score.parts[nextCursor.partIndex]?.measures[nextCursor.measureIndex];
+      const nextEvent = nextMeasure?.voices[nextCursor.voiceIndex]?.events[nextCursor.eventIndex];
+      const existingLyric = nextEvent && nextMeasure?.annotations.find(
+        (a) => a.kind === "lyric" && a.noteEventId === nextEvent.id && a.verseNumber === state.inputState.lyricVerse
+      );
+
       set({
         score: result.score,
         inputState: {
           ...result.inputState,
           textInputMode: "lyric",
           textInputBuffer: "",
-          textInputInitialValue: "",
+          textInputInitialValue: existingLyric?.kind === "lyric" ? existingLyric.text : "",
         },
       });
     }
@@ -1146,11 +1162,32 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     }));
   },
 
+  setLyricVerse(verse: number) {
+    const s = get();
+    const v = Math.max(1, verse);
+    const { partIndex, measureIndex, voiceIndex, eventIndex } = s.inputState.cursor;
+    const measure = s.score.parts[partIndex]?.measures[measureIndex];
+    const event = measure?.voices[voiceIndex]?.events[eventIndex];
+    const existing = event && measure?.annotations.find(
+      (a) => a.kind === "lyric" && a.noteEventId === event.id && a.verseNumber === v
+    );
+    set({
+      inputState: {
+        ...s.inputState,
+        lyricVerse: v,
+        textInputBuffer: "",
+        textInputInitialValue: existing?.kind === "lyric" ? existing.text : "",
+      },
+    });
+  },
+
   // Phase 4: Playback
 
   play() {
+    const service = getGlobalPluginManager()?.getPlaybackService();
+    if (!service) return;
     const state = get();
-    Transport.setCallbacks({
+    service.setCallbacks({
       onTick: (tick: number) => {
         set({ playbackTick: tick });
       },
@@ -1161,23 +1198,27 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         });
       },
     });
-    Transport.setMetronome(state.metronomeOn);
-    Transport.play(state.score);
+    service.setMetronome(state.metronomeOn);
+    service.play(state.score);
     set({ isPlaying: true });
   },
 
   pause() {
-    Transport.pause();
+    const service = getGlobalPluginManager()?.getPlaybackService();
+    if (!service) return;
+    service.pause();
     set({ isPlaying: false });
   },
 
   stopPlayback() {
-    Transport.stop();
+    const service = getGlobalPluginManager()?.getPlaybackService();
+    if (!service) return;
+    service.stop();
     set({ isPlaying: false, playbackTick: null });
   },
 
   setTempo(bpm: number) {
-    Transport.setTempo(bpm);
+    getGlobalPluginManager()?.getPlaybackService()?.setTempo(bpm);
     set((s) => {
       const score = { ...s.score, tempo: bpm };
       return { score, tempo: bpm };
@@ -1191,7 +1232,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   toggleMetronome() {
     set((s) => {
       const next = !s.metronomeOn;
-      Transport.setMetronome(next);
+      getGlobalPluginManager()?.getPlaybackService()?.setMetronome(next);
       return { metronomeOn: next };
     });
   },
@@ -1261,7 +1302,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       if (!part) return s;
       part.muted = !part.muted;
       // Update playback reference so mute takes effect during playback
-      Transport.updateScore(score);
+      getGlobalPluginManager()?.getPlaybackService()?.updateScore(score);
       return { score };
     });
   },

@@ -1,6 +1,7 @@
 export type {
   NotationPlugin,
   PluginAPI,
+  PlaybackService,
   Selection,
   PanelConfig,
   ViewRegistration,
@@ -30,5 +31,4 @@ export { AIChatPlugin } from "./builtins/AIChat";
 export { PartManagerPlugin } from "./builtins/PartManager";
 export { ScoreEditorPlugin } from "./builtins/ScoreEditor";
 export { ClipboardPlugin } from "./builtins/Clipboard";
-export { SoundFontPlugin } from "./builtins/SoundFont";
 export { MidiInputPlugin } from "./builtins/MidiInput";

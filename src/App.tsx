@@ -27,7 +27,6 @@ import {
   PartManagerPlugin,
   ScoreEditorPlugin,
   ClipboardPlugin,
-  SoundFontPlugin,
   MidiInputPlugin,
 } from "./plugins";
 import { setGlobalPluginManager } from "./plugins/PluginManager";
@@ -69,7 +68,6 @@ export function App() {
     pm.registerAndActivate(TransposePlugin, true);
     pm.registerAndActivate(ChordAnalysisPlugin, true);
     pm.registerAndActivate(ClipboardPlugin, false);
-    pm.registerAndActivate(SoundFontPlugin, false);
     pm.registerAndActivate(MidiInputPlugin, false);
 
     setGlobalPluginManager(pm);
