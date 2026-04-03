@@ -73,15 +73,20 @@ export function ScoreOverlay({ width, height }: Props) {
 
         if (e.shiftKey && noteAnchorRef.current &&
             noteAnchorRef.current.partIndex === nb.partIndex &&
-            noteAnchorRef.current.measureIndex === nb.measureIndex &&
             noteAnchorRef.current.voiceIndex === nb.voiceIndex) {
-          // Note-level selection within same measure/voice
+          // Note-level selection (supports cross-measure within same voice)
+          const anchorPos = noteAnchorRef.current.measureIndex * 10000 + noteAnchorRef.current.eventIndex;
+          const clickPos = nb.measureIndex * 10000 + nb.eventIndex;
+          const startFirst = anchorPos <= clickPos;
           setNoteSelection({
             partIndex: nb.partIndex,
-            measureIndex: nb.measureIndex,
             voiceIndex: nb.voiceIndex,
-            startEvent: Math.min(noteAnchorRef.current.eventIndex, nb.eventIndex),
-            endEvent: Math.max(noteAnchorRef.current.eventIndex, nb.eventIndex),
+            startMeasure: startFirst ? noteAnchorRef.current.measureIndex : nb.measureIndex,
+            startEvent: startFirst ? noteAnchorRef.current.eventIndex : nb.eventIndex,
+            endMeasure: startFirst ? nb.measureIndex : noteAnchorRef.current.measureIndex,
+            endEvent: startFirst ? nb.eventIndex : noteAnchorRef.current.eventIndex,
+            anchorMeasure: noteAnchorRef.current.measureIndex,
+            anchorEvent: noteAnchorRef.current.eventIndex,
           });
         } else if (e.shiftKey && anchorRef.current) {
           // Measure-level selection across measures

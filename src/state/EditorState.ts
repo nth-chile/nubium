@@ -146,7 +146,7 @@ interface EditorStore {
   playbackTick: number | null;
   tempo: number;
   metronomeOn: boolean;
-  play(): void;
+  play(): Promise<void> | void;
   pause(): void;
   stopPlayback(): void;
   setTempo(bpm: number): void;
@@ -431,13 +431,16 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     if (state.noteSelection) {
       const ns = state.noteSelection;
       const score = structuredClone(state.score);
-      const voice = score.parts[ns.partIndex]?.measures[ns.measureIndex]?.voices[ns.voiceIndex];
-      if (voice) {
-        for (let i = ns.startEvent; i <= ns.endEvent && i < voice.events.length; i++) {
+      for (let mi = ns.startMeasure; mi <= ns.endMeasure; mi++) {
+        const voice = score.parts[ns.partIndex]?.measures[mi]?.voices[ns.voiceIndex];
+        if (!voice) continue;
+        const startIdx = mi === ns.startMeasure ? ns.startEvent : 0;
+        const endIdx = mi === ns.endMeasure ? ns.endEvent : voice.events.length - 1;
+        for (let i = startIdx; i <= endIdx && i < voice.events.length; i++) {
           voice.events[i] = { ...voice.events[i], duration: { type, dots: 0 } };
         }
-        set({ score });
       }
+      set({ score });
     } else if (state.selection && !state.inputState.stepEntry) {
       const { partIndex, measureStart, measureEnd } = state.selection;
       const score = structuredClone(state.score);
@@ -661,10 +664,13 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     set({
       noteSelection: {
         partIndex: cursor.partIndex,
-        measureIndex: cursor.measureIndex,
         voiceIndex: cursor.voiceIndex,
+        startMeasure: cursor.measureIndex,
         startEvent: cursor.eventIndex,
+        endMeasure: cursor.measureIndex,
         endEvent: cursor.eventIndex,
+        anchorMeasure: cursor.measureIndex,
+        anchorEvent: cursor.eventIndex,
       },
       selection: null,
     });
@@ -673,38 +679,66 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   extendNoteSelection(direction) {
     set((s) => {
       const { cursor } = s.inputState;
-      const voice = s.score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
-      if (!voice) return s;
+      const part = s.score.parts[cursor.partIndex];
+      if (!part) return s;
 
       const ns = s.noteSelection ?? {
         partIndex: cursor.partIndex,
-        measureIndex: cursor.measureIndex,
         voiceIndex: cursor.voiceIndex,
+        startMeasure: cursor.measureIndex,
         startEvent: cursor.eventIndex,
+        endMeasure: cursor.measureIndex,
         endEvent: cursor.eventIndex,
+        anchorMeasure: cursor.measureIndex,
         anchorEvent: cursor.eventIndex,
       };
 
-      const anchor = ns.anchorEvent ?? ns.startEvent;
-      // The "moving end" is whichever end isn't the anchor
-      let movingEnd = ns.endEvent === anchor ? ns.startEvent : ns.endEvent;
+      // Moving end: the end that isn't the anchor
+      let movMeasure = (ns.endMeasure === ns.anchorMeasure && ns.endEvent === ns.anchorEvent)
+        ? ns.startMeasure : ns.endMeasure;
+      let movEvent = (ns.endMeasure === ns.anchorMeasure && ns.endEvent === ns.anchorEvent)
+        ? ns.startEvent : ns.endEvent;
 
-      if (direction === "right" && movingEnd < voice.events.length - 1) {
-        movingEnd++;
-      } else if (direction === "left" && movingEnd > 0) {
-        movingEnd--;
+      const voice = part.measures[movMeasure]?.voices[ns.voiceIndex];
+      const eventCount = voice?.events.length ?? 0;
+
+      if (direction === "right") {
+        if (movEvent < eventCount - 1) {
+          movEvent++;
+        } else if (movMeasure < part.measures.length - 1) {
+          // Cross to next measure
+          movMeasure++;
+          movEvent = 0;
+        }
+      } else {
+        if (movEvent > 0) {
+          movEvent--;
+        } else if (movMeasure > 0) {
+          // Cross to previous measure
+          movMeasure--;
+          const prevVoice = part.measures[movMeasure]?.voices[ns.voiceIndex];
+          movEvent = Math.max(0, (prevVoice?.events.length ?? 1) - 1);
+        }
       }
+
+      // Determine start/end by comparing anchor vs moving position
+      const anchorPos = ns.anchorMeasure * 10000 + ns.anchorEvent;
+      const movPos = movMeasure * 10000 + movEvent;
+      const startFirst = anchorPos <= movPos;
 
       return {
         noteSelection: {
           ...ns,
-          anchorEvent: anchor,
-          startEvent: Math.min(anchor, movingEnd),
-          endEvent: Math.max(anchor, movingEnd),
+          anchorMeasure: ns.anchorMeasure,
+          anchorEvent: ns.anchorEvent,
+          startMeasure: startFirst ? ns.anchorMeasure : movMeasure,
+          startEvent: startFirst ? ns.anchorEvent : movEvent,
+          endMeasure: startFirst ? movMeasure : ns.anchorMeasure,
+          endEvent: startFirst ? movEvent : ns.anchorEvent,
         },
         inputState: {
           ...s.inputState,
-          cursor: { ...cursor, eventIndex: movingEnd },
+          cursor: { ...cursor, measureIndex: movMeasure, eventIndex: movEvent },
         },
         selection: null,
       };
@@ -716,11 +750,18 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const ns = state.noteSelection;
     if (!ns) return;
     const score = structuredClone(state.score);
-    const voice = score.parts[ns.partIndex]?.measures[ns.measureIndex]?.voices[ns.voiceIndex];
-    if (!voice) return;
-    voice.events.splice(ns.startEvent, ns.endEvent - ns.startEvent + 1);
+    // Delete selected events across measures (reverse order to preserve indices)
+    for (let mi = ns.endMeasure; mi >= ns.startMeasure; mi--) {
+      const voice = score.parts[ns.partIndex]?.measures[mi]?.voices[ns.voiceIndex];
+      if (!voice) continue;
+      const startIdx = mi === ns.startMeasure ? ns.startEvent : 0;
+      const endIdx = mi === ns.endMeasure ? ns.endEvent : voice.events.length - 1;
+      voice.events.splice(startIdx, endIdx - startIdx + 1);
+    }
     const input = structuredClone(state.inputState);
-    input.cursor.eventIndex = Math.min(ns.startEvent, voice.events.length);
+    input.cursor.measureIndex = ns.startMeasure;
+    const startVoice = score.parts[ns.partIndex]?.measures[ns.startMeasure]?.voices[ns.voiceIndex];
+    input.cursor.eventIndex = Math.min(ns.startEvent, startVoice?.events.length ?? 0);
     set({ score, inputState: input, noteSelection: null });
   },
 
@@ -1184,7 +1225,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   // Phase 4: Playback
 
-  play() {
+  async play() {
     const service = getGlobalPluginManager()?.getPlaybackService();
     if (!service) return;
     const state = get();
@@ -1200,7 +1241,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       },
     });
     service.setMetronome(state.metronomeOn);
-    service.play(state.score);
+    await service.play(state.score);
     set({ isPlaying: true });
   },
 

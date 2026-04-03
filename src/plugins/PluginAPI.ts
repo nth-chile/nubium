@@ -10,12 +10,18 @@ export interface Selection {
 
 export interface NoteSelection {
   partIndex: number;
-  measureIndex: number;
   voiceIndex: number;
+  /** Start of selection (inclusive) */
+  startMeasure: number;
   startEvent: number;
-  endEvent: number; // inclusive
-  /** The fixed end of the selection. Left/right move the other end. */
-  anchorEvent?: number;
+  /** End of selection (inclusive) */
+  endMeasure: number;
+  endEvent: number;
+  /** Anchor position — the fixed end. Left/right move the other end. */
+  anchorMeasure: number;
+  anchorEvent: number;
+  /** @deprecated single-measure compat — use startMeasure */
+  measureIndex?: number;
 }
 
 export interface PanelMenuItem {

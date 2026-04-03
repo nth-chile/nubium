@@ -94,31 +94,38 @@ export function ScoreCanvas() {
 
     const result = renderScore(ctx, canvas, score, inputState.cursor, playbackTick, viewConfig, width, noteSelection ? null : selection);
 
-    // Draw note-level selection highlights
-    if (noteSelection && noteSelection.startEvent !== noteSelection.endEvent) {
-      const voice = score.parts[noteSelection.partIndex]?.measures[noteSelection.measureIndex]?.voices[noteSelection.voiceIndex];
-      if (voice) {
+    // Draw note-level selection highlights (continuous band, supports cross-measure)
+    if (noteSelection && (noteSelection.startMeasure !== noteSelection.endMeasure || noteSelection.startEvent !== noteSelection.endEvent)) {
+      rawCtx.save();
+      rawCtx.fillStyle = "rgba(59, 130, 246, 0.12)";
+
+      // Group selected notes by system line (same Y = same system)
+      const bands = new Map<number, { minX: number; maxX: number; y: number; height: number }>();
+      for (let mi = noteSelection.startMeasure; mi <= noteSelection.endMeasure; mi++) {
+        const voice = score.parts[noteSelection.partIndex]?.measures[mi]?.voices[noteSelection.voiceIndex];
+        if (!voice) continue;
         const mp = result.measurePositions.find(
-          (p) => p.partIndex === noteSelection.partIndex && p.measureIndex === noteSelection.measureIndex
+          (p) => p.partIndex === noteSelection.partIndex && p.measureIndex === mi
         );
-        if (mp) {
-          // Find extent of selected notes for a continuous highlight
-          let minX = Infinity, maxX = -Infinity;
-          for (let i = noteSelection.startEvent; i <= noteSelection.endEvent && i < voice.events.length; i++) {
-            const box = result.noteBoxes.get(voice.events[i].id);
-            if (box) {
-              minX = Math.min(minX, box.headX - 3);
-              maxX = Math.max(maxX, box.headX + box.headWidth + 3);
-            }
-          }
-          if (minX < maxX) {
-            rawCtx.save();
-            rawCtx.fillStyle = "rgba(59, 130, 246, 0.12)";
-            rawCtx.fillRect(minX, mp.y, maxX - minX, mp.height);
-            rawCtx.restore();
+        if (!mp) continue;
+        const startIdx = mi === noteSelection.startMeasure ? noteSelection.startEvent : 0;
+        const endIdx = mi === noteSelection.endMeasure ? noteSelection.endEvent : voice.events.length - 1;
+        for (let i = startIdx; i <= endIdx && i < voice.events.length; i++) {
+          const box = result.noteBoxes.get(voice.events[i].id);
+          if (box) {
+            const band = bands.get(mp.y) ?? { minX: Infinity, maxX: -Infinity, y: mp.y, height: mp.height };
+            band.minX = Math.min(band.minX, box.headX - 3);
+            band.maxX = Math.max(band.maxX, box.headX + box.headWidth + 3);
+            bands.set(mp.y, band);
           }
         }
       }
+      for (const band of bands.values()) {
+        if (band.minX < band.maxX) {
+          rawCtx.fillRect(band.minX, band.y, band.maxX - band.minX, band.height);
+        }
+      }
+      rawCtx.restore();
     }
 
     setNoteBoxes(result.noteBoxes);

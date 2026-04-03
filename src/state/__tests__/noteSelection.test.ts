@@ -36,7 +36,7 @@ describe("Note-level selection", () => {
     expect(ns).not.toBeNull();
     expect(ns!.startEvent).toBe(0);
     expect(ns!.endEvent).toBe(0);
-    expect(ns!.measureIndex).toBe(0);
+    expect(ns!.startMeasure).toBe(0);
   });
 
   it("selectNoteAtCursor clears measure selection", () => {
@@ -49,14 +49,14 @@ describe("Note-level selection", () => {
   it("setNoteSelection clears measure selection", () => {
     useEditorStore.setState({ selection: { partIndex: 0, measureStart: 0, measureEnd: 1 } });
     useEditorStore.getState().setNoteSelection({
-      partIndex: 0, measureIndex: 0, voiceIndex: 0, startEvent: 0, endEvent: 2,
+      partIndex: 0, voiceIndex: 0, startMeasure: 0, startEvent: 0, endMeasure: 0, endEvent: 2, anchorMeasure: 0, anchorEvent: 0,
     });
     expect(useEditorStore.getState().selection).toBeNull();
   });
 
   it("setSelection clears note selection", () => {
     useEditorStore.getState().setNoteSelection({
-      partIndex: 0, measureIndex: 0, voiceIndex: 0, startEvent: 0, endEvent: 2,
+      partIndex: 0, voiceIndex: 0, startMeasure: 0, startEvent: 0, endMeasure: 0, endEvent: 2, anchorMeasure: 0, anchorEvent: 0,
     });
     useEditorStore.getState().setSelection({ partIndex: 0, measureStart: 0, measureEnd: 1 });
     expect(useEditorStore.getState().noteSelection).toBeNull();
@@ -89,19 +89,21 @@ describe("Note-level selection", () => {
     expect(ns.endEvent).toBe(0);
   });
 
-  it("extendNoteSelection does not go past last event", () => {
+  it("extendNoteSelection crosses to next measure", () => {
     useEditorStore.setState((s) => ({
       inputState: { ...s.inputState, cursor: { ...s.inputState.cursor, eventIndex: 3 } },
     }));
     useEditorStore.getState().selectNoteAtCursor();
     useEditorStore.getState().extendNoteSelection("right");
     const ns = useEditorStore.getState().noteSelection!;
-    expect(ns.endEvent).toBe(3);
+    // Should cross into measure 1
+    expect(ns.endMeasure).toBe(1);
+    expect(ns.endEvent).toBe(0);
   });
 
   it("deleteNoteSelection removes selected events", () => {
     useEditorStore.getState().setNoteSelection({
-      partIndex: 0, measureIndex: 0, voiceIndex: 0, startEvent: 1, endEvent: 2,
+      partIndex: 0, voiceIndex: 0, startMeasure: 0, startEvent: 1, endMeasure: 0, endEvent: 2, anchorMeasure: 0, anchorEvent: 1,
     });
     useEditorStore.getState().deleteNoteSelection();
 
@@ -115,7 +117,7 @@ describe("Note-level selection", () => {
 
   it("deleteNoteSelection adjusts cursor", () => {
     useEditorStore.getState().setNoteSelection({
-      partIndex: 0, measureIndex: 0, voiceIndex: 0, startEvent: 2, endEvent: 3,
+      partIndex: 0, voiceIndex: 0, startMeasure: 0, startEvent: 2, endMeasure: 0, endEvent: 3, anchorMeasure: 0, anchorEvent: 2,
     });
     useEditorStore.getState().deleteNoteSelection();
     expect(useEditorStore.getState().inputState.cursor.eventIndex).toBe(2);
@@ -123,7 +125,7 @@ describe("Note-level selection", () => {
 
   it("setDuration with noteSelection changes selected event durations", () => {
     useEditorStore.getState().setNoteSelection({
-      partIndex: 0, measureIndex: 0, voiceIndex: 0, startEvent: 0, endEvent: 1,
+      partIndex: 0, voiceIndex: 0, startMeasure: 0, startEvent: 0, endMeasure: 0, endEvent: 1, anchorMeasure: 0, anchorEvent: 0,
     });
     useEditorStore.getState().setDuration("half");
 
