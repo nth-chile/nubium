@@ -22,6 +22,7 @@ import { defaultInputState, type InputState, type CursorPosition } from "../inpu
 import { CommandHistory } from "../commands/CommandHistory";
 import type { Selection, NoteSelection } from "../plugins/PluginAPI";
 import { InsertNote } from "../commands/InsertNote";
+import { InsertModeNote } from "../commands/InsertModeNote";
 import { InsertRest } from "../commands/InsertRest";
 import { DeleteNote } from "../commands/DeleteNote";
 import { ChangePitch } from "../commands/ChangePitch";
@@ -90,6 +91,7 @@ interface EditorStore {
   toggleDot(): void;
   setAccidental(acc: Accidental): void;
   toggleStepEntry(): void;
+  toggleInsertMode(): void;
   moveCursor(direction: "left" | "right"): void;
   moveCursorToMeasure(direction: "next" | "prev"): void;
   changeOctave(direction: "up" | "down"): void;
@@ -321,6 +323,22 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       return;
     }
 
+    // Insert mode: push subsequent events forward
+    if (state.inputState.insertMode) {
+      const cmd = new InsertModeNote(
+        pitchClass,
+        octave,
+        state.inputState.accidental,
+        { ...state.inputState.duration },
+      );
+      const result = history.execute(cmd, {
+        score: state.score,
+        inputState: state.inputState,
+      });
+      set({ score: result.score, inputState: result.inputState });
+      return;
+    }
+
     // Step entry mode: overwrite existing events with input duration
     if (state.inputState.stepEntry && cursorOnExistingEvent(state.score, cursor)) {
       const cmd = new OverwriteNote(
@@ -376,6 +394,12 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   insertRest() {
     const state = get();
+    if (state.inputState.insertMode) {
+      const cmd = new InsertModeNote("C", 4, "natural", { ...state.inputState.duration }, true);
+      const result = history.execute(cmd, { score: state.score, inputState: state.inputState });
+      set({ score: result.score, inputState: result.inputState });
+      return;
+    }
     const cmd = new InsertRest({ ...state.inputState.duration });
     const result = history.execute(cmd, {
       score: state.score,
@@ -498,6 +522,19 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       inputState: {
         ...s.inputState,
         stepEntry: !s.inputState.stepEntry,
+        // Turning off step entry also turns off insert mode (it's a sub-mode)
+        insertMode: !s.inputState.stepEntry ? s.inputState.insertMode : false,
+      },
+    }));
+  },
+
+  toggleInsertMode() {
+    set((s) => ({
+      inputState: {
+        ...s.inputState,
+        insertMode: !s.inputState.insertMode,
+        // Insert mode implies step entry
+        stepEntry: !s.inputState.insertMode ? true : s.inputState.stepEntry,
       },
     }));
   },
@@ -1420,4 +1457,5 @@ function restoreUiPreferences(): void {
 
 restoreAutoSave();
 restoreUiPreferences();
+if (typeof window !== "undefined") (window as any).__editorStore = useEditorStore;
 

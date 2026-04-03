@@ -12,15 +12,16 @@ import type { Measure } from "../model";
 import { useEditorStore } from "../state/EditorState";
 
 /** Check if a measure contains only rests or empty voices (rendering-only check). */
-function isMeasureAllRests(m: Measure): boolean {
-  if (m.voices.length === 0) return true;
+function isMeasureAllRests(m: Measure | undefined): boolean {
+  if (!m || m.voices.length === 0) return true;
   return m.voices.every(v =>
     v.events.length === 0 || v.events.every(e => e.kind === "rest")
   );
 }
 
 /** Check if a measure has features that should break a multi-measure rest span. */
-function breaksRestSpan(m: Measure, prev?: Measure): boolean {
+function breaksRestSpan(m: Measure | undefined, prev?: Measure): boolean {
+  if (!m) return true;
   if (m.barlineEnd !== "single") return true;
   if (m.navigation?.segno || m.navigation?.coda || m.navigation?.volta) return true;
   if (m.navigation?.fine || m.navigation?.toCoda || m.navigation?.dsText || m.navigation?.dcText) return true;
@@ -433,67 +434,6 @@ export function renderScore(
     }
   }
 
-  // Draw global annotations from hidden parts above the first visible part
-  const hiddenParts = useEditorStore.getState().hiddenParts;
-  if (hiddenParts.size > 0 && measurePositions.length > 0) {
-    const firstVisiblePi = visiblePartIndices[0];
-    for (let pi = 0; pi < score.parts.length; pi++) {
-      if (!hiddenParts.has(pi)) continue;
-      const hiddenPart = score.parts[pi];
-      for (let mi = 0; mi < hiddenPart.measures.length; mi++) {
-        const globalAnns = hiddenPart.measures[mi].annotations.filter(a => GLOBAL_ANNOTATION_KINDS.has(a.kind));
-        if (globalAnns.length === 0) continue;
-        // Find the position of this measure on the first visible part
-        const mp = measurePositions.find(p => p.partIndex === firstVisiblePi && p.measureIndex === mi);
-        if (!mp) continue;
-        // Check if the first visible part already has these annotations
-        const visibleMeasure = filteredScore.parts[0]?.measures[mi];
-        let aboveY = mp.y - 6;
-        for (const ann of globalAnns) {
-          if (ann.kind === "rehearsal-mark") {
-            const already = visibleMeasure?.annotations.some(a => a.kind === "rehearsal-mark");
-            if (already) continue;
-            rawCtx.save();
-            rawCtx.font = "bold 14px sans-serif";
-            const tw = rawCtx.measureText(ann.text).width;
-            const pad = 4;
-            const boxH = 14 + pad * 2;
-            aboveY -= boxH + 2;
-            rawCtx.strokeStyle = "#000";
-            rawCtx.lineWidth = 1.5;
-            rawCtx.beginPath();
-            rawCtx.rect(mp.x + 2 - pad, aboveY, tw + pad * 2, boxH);
-            rawCtx.stroke();
-            rawCtx.fillStyle = "#000";
-            rawCtx.fillText(ann.text, mp.x + 2, aboveY + boxH - pad - 2);
-            rawCtx.restore();
-          } else if (ann.kind === "tempo-mark") {
-            const already = visibleMeasure?.annotations.some(a => a.kind === "tempo-mark");
-            if (already) continue;
-            rawCtx.save();
-            rawCtx.font = "bold 12px serif";
-            rawCtx.fillStyle = "#000";
-            const text = (ann as any).text
-              ? `${(ann as any).text} (\u2669 = ${(ann as any).bpm})`
-              : `\u2669 = ${(ann as any).bpm}`;
-            aboveY -= 16;
-            rawCtx.fillText(text, mp.x + 2, aboveY);
-            rawCtx.restore();
-          } else if (ann.kind === "chord-symbol") {
-            const already = visibleMeasure?.annotations.some(a => a.kind === "chord-symbol" && (a as any).text === (ann as any).text);
-            if (already) continue;
-            rawCtx.save();
-            rawCtx.font = "bold 12px sans-serif";
-            rawCtx.fillStyle = "#000";
-            aboveY -= 16;
-            rawCtx.fillText((ann as any).text, mp.x + 2, aboveY);
-            rawCtx.restore();
-          }
-        }
-      }
-    }
-  }
-
   // Draw cross-measure slurs and ties using VexFlow's partial StaveTie
   drawCrossSystemSlursAndTies(ctx, filteredScore, allNoteBoxes, allStaveNotes, measurePositions, systems);
 
@@ -768,20 +708,60 @@ function getVisiblePartIndices(score: Score, viewConfig?: ViewConfig): number[] 
 
 /**
  * Build a filtered score containing only the visible parts.
+ * Merges score-level data (annotations, navigation, barlines) from hidden parts
+ * onto the first visible part so they still render.
  */
-const GLOBAL_ANNOTATION_KINDS = new Set(["rehearsal-mark", "tempo-mark", "chord-symbol"]);
+const SCORE_LEVEL_ANNOTATION_KINDS = new Set(["rehearsal-mark", "tempo-mark", "chord-symbol"]);
 
 function filterScoreParts(score: Score, visiblePartIndices: number[]): Score {
   if (visiblePartIndices.length === score.parts.length) {
     return score;
   }
   const visibleSet = new Set(visiblePartIndices);
-  const filtered = {
+  // Deep clone the first visible part so we can safely merge onto it
+  const firstVisiblePart = structuredClone(score.parts[visiblePartIndices[0]]);
+  const otherVisibleParts = visiblePartIndices.slice(1).map((i) => score.parts[i]);
+
+  // Merge score-level data from hidden parts onto the first visible part
+  for (let pi = 0; pi < score.parts.length; pi++) {
+    if (visibleSet.has(pi)) continue;
+    const hiddenPart = score.parts[pi];
+    for (let mi = 0; mi < hiddenPart.measures.length && mi < firstVisiblePart.measures.length; mi++) {
+      const src = hiddenPart.measures[mi];
+      const dst = firstVisiblePart.measures[mi];
+
+      // Merge annotations (rehearsal marks, tempo marks, chord symbols)
+      for (const ann of src.annotations) {
+        if (!SCORE_LEVEL_ANNOTATION_KINDS.has(ann.kind)) continue;
+        const isDup = dst.annotations.some(a => a.kind === ann.kind &&
+          ("text" in a && "text" in ann ? (a as any).text === (ann as any).text : true));
+        if (!isDup) dst.annotations.push(ann);
+      }
+
+      // Merge navigation marks (volta, coda, segno, D.S., D.C., Fine)
+      if (src.navigation && !dst.navigation) {
+        dst.navigation = { ...src.navigation };
+      } else if (src.navigation && dst.navigation) {
+        if (src.navigation.volta && !dst.navigation.volta) dst.navigation.volta = src.navigation.volta;
+        if (src.navigation.coda && !dst.navigation.coda) dst.navigation.coda = true;
+        if (src.navigation.segno && !dst.navigation.segno) dst.navigation.segno = true;
+        if (src.navigation.toCoda && !dst.navigation.toCoda) dst.navigation.toCoda = true;
+        if (src.navigation.fine && !dst.navigation.fine) dst.navigation.fine = true;
+        if (src.navigation.dsText && !dst.navigation.dsText) dst.navigation.dsText = src.navigation.dsText;
+        if (src.navigation.dcText && !dst.navigation.dcText) dst.navigation.dcText = src.navigation.dcText;
+      }
+
+      // Merge barline type (prefer non-single)
+      if (src.barlineEnd !== "single" && dst.barlineEnd === "single") {
+        dst.barlineEnd = src.barlineEnd;
+      }
+    }
+  }
+
+  return {
     ...score,
-    parts: visiblePartIndices.map((i) => score.parts[i]),
+    parts: [firstVisiblePart, ...otherVisibleParts],
   };
-  // Transfer global annotations from hidden parts to the first visible part
-  return filtered;
 }
 
 /**

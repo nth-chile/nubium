@@ -369,6 +369,22 @@ export function renderMeasure(
     aboveStaveCtx.restore();
   }
 
+  // Chord symbols — rendered manually when no notes exist to attach them to
+  const hasEvents = m.voices.some(v => v && v.events.length > 0);
+  if (!hasEvents && aboveStaveCtx.save) {
+    const chordAnns = m.annotations.filter(a => a.kind === "chord-symbol");
+    if (chordAnns.length > 0) {
+      aboveStaveCtx.save();
+      aboveStaveCtx.font = `bold ${style.chordSymbolSize}px sans-serif`;
+      aboveStaveCtx.fillStyle = "#000";
+      for (const ann of chordAnns) {
+        aboveY -= style.chordSymbolSize + 4;
+        aboveStaveCtx.fillText((ann as any).text, x + 2, aboveY);
+      }
+      aboveStaveCtx.restore();
+    }
+  }
+
   // Navigation text (Fine, D.S., D.C., To Coda) — italic, right-aligned
   if (m.navigation && aboveStaveCtx.save) {
     const nav = m.navigation;
@@ -413,6 +429,8 @@ export function renderMeasure(
     let pendingGraceIds: NoteEventId[] = [];
     const graceNoteMap: { graceNotes: VexGraceNote[]; ids: NoteEventId[] }[] = [];
 
+    let currentBeatOffset = 0;
+    const renderedChordOffsets = new Set<number>();
     for (const event of modelVoice.events) {
       if (event.kind === "grace") {
         pendingGraceNotes.push(eventToGraceNote(event));
@@ -433,10 +451,11 @@ export function renderMeasure(
         // TOP: chord symbols (closest to staff), then tempo mark (above chords)
         // BOTTOM: dynamics first (closest to staff), then lyrics
         for (const ann of m.annotations) {
-          if (ann.kind === "chord-symbol" && ann.noteEventId === event.id) {
+          if (ann.kind === "chord-symbol" && (ann.noteEventId === event.id || ann.beatOffset === currentBeatOffset) && !renderedChordOffsets.has(ann.beatOffset)) {
             sn.addModifier(new VexAnnotation(ann.text)
               .setVerticalJustification(VexAnnotation.VerticalJustify.TOP)
               .setFont("sans-serif", style.chordSymbolSize, "bold"));
+            renderedChordOffsets.add(ann.beatOffset);
           }
         }
         // Tempo mark is rendered manually above stave (see above), not as VexFlow annotation
@@ -453,6 +472,7 @@ export function renderMeasure(
         staveNotes.push(sn);
         eventIds.push(event.id);
       }
+      currentBeatOffset += durationToTicksFn(event.duration, event.tuplet);
     }
 
     if (staveNotes.length > 0) {
@@ -956,6 +976,19 @@ export function renderMultiMeasureRest(
         : `\u2669 = ${tempoAnn.bpm}`;
       aboveY -= 16;
       rawCtx.fillText(text, x + 2, aboveY);
+      rawCtx.restore();
+    }
+
+    // Chord symbols
+    const chordAnns = m.annotations.filter((a) => a.kind === "chord-symbol");
+    if (chordAnns.length > 0) {
+      rawCtx.save();
+      rawCtx.font = `bold ${style.chordSymbolSize}px sans-serif`;
+      rawCtx.fillStyle = "#000";
+      for (const ann of chordAnns) {
+        aboveY -= style.chordSymbolSize + 4;
+        rawCtx.fillText((ann as any).text, x + 2, aboveY);
+      }
       rawCtx.restore();
     }
   }
