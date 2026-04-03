@@ -225,6 +225,9 @@ function parseMeasure(
   const voiceEvents = new Map<number, NoteEvent[]>();
   let currentTick = 0;
 
+  // Pending harmonies — assigned to notes as they're processed
+  let pendingHarmonies: ChordSymbol[] = [];
+
   // Track pending chord notes to merge
   let pendingChordHeads: NoteHead[] = [];
   let pendingChordDuration: Duration | null = null;
@@ -341,7 +344,7 @@ function parseMeasure(
 
       case "harmony": {
         const cs = parseHarmony(el, currentTick);
-        if (cs) annotations.push(cs);
+        if (cs) pendingHarmonies.push(cs);
         break;
       }
 
@@ -400,6 +403,13 @@ function parseMeasure(
             tuplet,
           };
           voiceEvents.get(voiceNum)!.push(rest);
+          // Assign one pending harmony to this beat position
+          if (pendingHarmonies.length > 0) {
+            const h = pendingHarmonies.shift()!;
+            h.beatOffset = currentTick;
+            h.noteEventId = rest.id;
+            annotations.push(h);
+          }
           currentTick += durationDivs;
         } else if (isGrace) {
           // Grace note — no duration consumed
@@ -446,6 +456,13 @@ function parseMeasure(
             pendingChordTuplet = tuplet;
             pendingVoiceNum = voiceNum;
             pendingArticulations = noteArticulations;
+            // Assign one pending harmony to this beat position
+            if (pendingHarmonies.length > 0) {
+              const h = pendingHarmonies.shift()!;
+              h.beatOffset = currentTick;
+              h.noteEventId = eventId;
+              annotations.push(h);
+            }
             currentTick += durationDivs;
           }
 
@@ -629,6 +646,13 @@ function parseMeasure(
 
   // Flush any remaining pending chord
   flushPendingChord();
+
+  // Flush any remaining pending harmonies
+  for (const h of pendingHarmonies) {
+    h.beatOffset = currentTick;
+    annotations.push(h);
+  }
+  pendingHarmonies = [];
 
   // Build voices
   const voices: Voice[] = [];

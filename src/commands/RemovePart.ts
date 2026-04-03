@@ -55,6 +55,14 @@ export class RemovePart implements Command {
         if (src.barlineEnd !== "single" && dst.barlineEnd === "single") {
           dst.barlineEnd = src.barlineEnd;
         }
+
+        // If target measure is empty but gets chord symbols, copy voice events
+        // so VexFlow can position chords on notes
+        const dstEmpty = !dst.voices.some(v => v && v.events.length > 0);
+        const hasChords = dst.annotations.some(a => a.kind === "chord-symbol");
+        if (dstEmpty && hasChords && src.voices.some(v => v && v.events.length > 0)) {
+          dst.voices = structuredClone(src.voices);
+        }
       }
     }
 

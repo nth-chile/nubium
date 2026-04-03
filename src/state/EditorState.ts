@@ -1022,7 +1022,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const measure = s.score.parts[partIndex]?.measures[measureIndex];
     const event = measure?.voices[voiceIndex]?.events[eventIndex];
     const existing = event && measure?.annotations.find(
-      (a) => a.kind === "lyric" && a.noteEventId === event.id && a.verseNumber === s.inputState.lyricVerse
+      (a) => a.kind === "lyric" && a.noteEventId === event.id && a.verseNumber === 1
     );
     set({
       inputState: {
@@ -1030,6 +1030,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         textInputMode: "lyric",
         textInputBuffer: "",
         textInputInitialValue: existing?.kind === "lyric" ? existing.text : "",
+        lyricVerse: 1,
       },
     });
   },

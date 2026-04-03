@@ -8,3 +8,4 @@ target/
 test-results/
 playwright-report/
 .playwright-mcp/
+*.musicxml
