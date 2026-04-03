@@ -511,8 +511,13 @@ function parseMeasure(
         if (!dirTypeEl) break;
 
         // Parse dynamics
+        // If there's already a pending chord, flush it first —
+        // this dynamic belongs to the NEXT note, not the pending one.
         const dynamicsEl = getDirectChild(dirTypeEl, "dynamics");
         if (dynamicsEl) {
+          if (pendingChordHeads.length > 0) {
+            flushPendingChord();
+          }
           for (let d = 0; d < dynamicsEl.childNodes.length; d++) {
             const dynChild = dynamicsEl.childNodes[d];
             if (dynChild.nodeType === 1 && DYNAMIC_LEVELS.has((dynChild as Element).tagName)) {

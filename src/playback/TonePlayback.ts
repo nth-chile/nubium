@@ -7,7 +7,8 @@ import * as Tone from "tone";
 import type { Score } from "../model/score";
 import { durationToTicks, TICKS_PER_QUARTER } from "../model/duration";
 import { pitchToMidi } from "../model/pitch";
-import type { TempoMark } from "../model/annotations";
+import type { TempoMark, DynamicLevel, DynamicMark, Hairpin } from "../model/annotations";
+import type { Articulation } from "../model/note";
 
 export type TransportState = "stopped" | "playing" | "paused";
 
@@ -17,7 +18,7 @@ export interface TransportOptions {
 }
 
 export interface NotePlayer {
-  play(midi: number, duration: number, time: number, instrumentId?: string): void;
+  play(midi: number, duration: number, time: number, instrumentId?: string, velocity?: number): void;
   stop(): void;
   resume?(): Promise<void>;
   preloadForScore?(instrumentIds: string[]): Promise<void>;
@@ -27,9 +28,19 @@ interface PlayEvent {
   tick: number;
   midi: number;
   durationTicks: number;
+  durationMultiplier: number;
+  velocity: number; // 0-127
   instrumentId: string;
   partIndex: number;
 }
+
+// --- Dynamics ---
+
+const DYNAMIC_VELOCITY: Record<DynamicLevel, number> = {
+  pp: 40, p: 55, mp: 70, mf: 85, f: 105, ff: 120, sfz: 127, fp: 127,
+};
+
+const DEFAULT_VELOCITY = 80;
 
 interface MetronomeBeat {
   tick: number;
@@ -136,6 +147,104 @@ function getBpmAtTick(tick: number): number {
   return getTempoForMeasure(currentScore, mi);
 }
 
+// --- Dynamics & Articulations ---
+
+function applyArticulations(
+  articulations: Articulation[] | undefined,
+  velocity: number,
+  durationMultiplier: number
+): { velocity: number; durationMultiplier: number } {
+  if (!articulations?.length) return { velocity, durationMultiplier };
+  for (const art of articulations) {
+    switch (art.kind) {
+      case "staccato": durationMultiplier *= 0.5; break;
+      case "staccatissimo": durationMultiplier *= 0.3; break;
+      case "accent": case "marcato": velocity = Math.min(127, velocity * 1.3); break;
+      case "tenuto": durationMultiplier = 1.0; break;
+      case "fermata": durationMultiplier *= 1.5; break;
+    }
+  }
+  return { velocity, durationMultiplier };
+}
+
+function buildDynamicMap(score: Score, lastMi: number): Map<string, number>[] {
+  const maps: Map<string, number>[] = [];
+  for (let pi = 0; pi < score.parts.length; pi++) {
+    const map = new Map<string, number>();
+    let currentVel = DEFAULT_VELOCITY;
+    for (let mi = 0; mi <= lastMi; mi++) {
+      const m = score.parts[pi]?.measures[mi];
+      if (!m) continue;
+      for (const ann of m.annotations) {
+        if (ann.kind !== "dynamic") continue;
+        const dyn = ann as DynamicMark;
+        if (dyn.level === "fp") {
+          map.set(dyn.noteEventId, DYNAMIC_VELOCITY.fp);
+          currentVel = DYNAMIC_VELOCITY.p;
+        } else if (dyn.level === "sfz") {
+          map.set(dyn.noteEventId, DYNAMIC_VELOCITY.sfz);
+        } else {
+          currentVel = DYNAMIC_VELOCITY[dyn.level];
+          map.set(dyn.noteEventId, currentVel);
+        }
+      }
+      for (const voice of m.voices) {
+        for (const evt of voice.events) {
+          if (!map.has(evt.id)) map.set(evt.id, currentVel);
+        }
+      }
+    }
+    maps.push(map);
+  }
+  return maps;
+}
+
+function buildHairpinMap(score: Score, lastMi: number, dynamicMaps: Map<string, number>[]): Map<string, number>[] {
+  const maps: Map<string, number>[] = [];
+  for (let pi = 0; pi < score.parts.length; pi++) {
+    const map = new Map<string, number>();
+    const dynMap = dynamicMaps[pi];
+    for (let mi = 0; mi <= lastMi; mi++) {
+      const m = score.parts[pi]?.measures[mi];
+      if (!m) continue;
+      for (const ann of m.annotations) {
+        if (ann.kind !== "hairpin") continue;
+        const hp = ann as Hairpin;
+        const startVel = dynMap.get(hp.startEventId) ?? DEFAULT_VELOCITY;
+        const endVel = hp.type === "crescendo" ? Math.min(127, startVel + 30) : Math.max(20, startVel - 30);
+        // Find dynamic at end if it exists
+        const endDyn = dynMap.get(hp.endEventId);
+        const targetVel = (endDyn !== undefined && endDyn !== startVel) ? endDyn : endVel;
+        const eventIds = collectEventIdsBetween(score, pi, mi, lastMi, hp.startEventId, hp.endEventId);
+        if (eventIds.length <= 1) continue;
+        for (let i = 0; i < eventIds.length; i++) {
+          const t = i / (eventIds.length - 1);
+          map.set(eventIds[i], Math.max(1, Math.min(127, Math.round(startVel + (targetVel - startVel) * t))));
+        }
+      }
+    }
+    maps.push(map);
+  }
+  return maps;
+}
+
+function collectEventIdsBetween(score: Score, pi: number, startMi: number, lastMi: number, startId: string, endId: string): string[] {
+  const ids: string[] = [];
+  let collecting = false;
+  for (let mi = startMi; mi <= lastMi; mi++) {
+    const m = score.parts[pi]?.measures[mi];
+    if (!m) continue;
+    for (const voice of m.voices) {
+      for (const evt of voice.events) {
+        if (evt.id === startId) collecting = true;
+        if (collecting && (evt.kind === "note" || evt.kind === "chord")) ids.push(evt.id);
+        if (evt.id === endId) return ids;
+      }
+    }
+  }
+  return ids;
+}
+
 // --- Build phase ---
 
 function buildEvents(score: Score): void {
@@ -144,6 +253,10 @@ function buildEvents(score: Score): void {
   measureBoundaries = [];
 
   const lastMi = findLastContentMeasure(score);
+  let dynamicMaps: Map<string, number>[] = [];
+  let hairpinMaps: Map<string, number>[] = [];
+  dynamicMaps = buildDynamicMap(score, lastMi);
+  hairpinMaps = buildHairpinMap(score, lastMi, dynamicMaps);
   let tick = 0;
 
   for (let mi = 0; mi <= lastMi; mi++) {
@@ -158,30 +271,42 @@ function buildEvents(score: Score): void {
       const m = part.measures[mi];
       if (!m) continue;
       const instId = part.instrumentId;
+      const dynMap = dynamicMaps[pi];
+      const hpMap = hairpinMaps[pi];
       for (const voice of m.voices) {
         let offset = 0;
-        const graceBuffer: { midi: number; instrumentId: string }[] = [];
+        const graceBuffer: { midi: number; instrumentId: string; velocity: number }[] = [];
         for (const evt of voice.events) {
           if (evt.kind === "grace") {
-            // Collect grace notes — they'll play as short ornaments before the next note
-            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch), instrumentId: instId });
+            const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
+            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch), instrumentId: instId, velocity: vel });
             continue;
           }
           const evtTicks = durationToTicks(evt.duration);
+
+          // Resolve velocity and articulations
+          let baseVel = hpMap?.get(evt.id) ?? dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
+          let durMult = 0.9;
+          if ((evt.kind === "note" || evt.kind === "chord") && evt.articulations?.length) {
+            const result = applyArticulations(evt.articulations, baseVel, durMult);
+            baseVel = result.velocity;
+            durMult = result.durationMultiplier;
+          }
+
           // Play buffered grace notes just before this event
           if (graceBuffer.length > 0) {
-            const graceDur = Math.min(60, evtTicks / (graceBuffer.length + 1)); // short ornamental duration in ticks
+            const graceDur = Math.min(60, evtTicks / (graceBuffer.length + 1));
             for (let gi = 0; gi < graceBuffer.length; gi++) {
               const graceOffset = offset - graceDur * (graceBuffer.length - gi);
-              events.push({ tick: tick + Math.max(0, graceOffset), midi: graceBuffer[gi].midi, durationTicks: graceDur, instrumentId: graceBuffer[gi].instrumentId, partIndex: pi });
+              events.push({ tick: tick + Math.max(0, graceOffset), midi: graceBuffer[gi].midi, durationTicks: graceDur, durationMultiplier: 0.9, velocity: graceBuffer[gi].velocity, instrumentId: graceBuffer[gi].instrumentId, partIndex: pi });
             }
             graceBuffer.length = 0;
           }
           if (evt.kind === "note") {
-            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch), durationTicks: evtTicks, instrumentId: instId, partIndex: pi });
+            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch), durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
           } else if (evt.kind === "chord") {
             for (const h of evt.heads) {
-              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch), durationTicks: evtTicks, instrumentId: instId, partIndex: pi });
+              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch), durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
             }
           }
           offset += evtTicks;
@@ -230,8 +355,8 @@ function schedulerTick(): void {
     const e = events[eventCursor];
     if (customPlayer && e.tick >= scheduledUpToTick && !(currentScore!.parts[e.partIndex]?.muted)) {
       const audioTime = tickToAudioTime(e.tick);
-      const dur = Math.max(ticksToSec(e.durationTicks, currentBpm) * 0.9, 0.05);
-      customPlayer.play(e.midi, dur, audioTime, e.instrumentId);
+      const dur = Math.max(ticksToSec(e.durationTicks, currentBpm) * e.durationMultiplier, 0.05);
+      customPlayer.play(e.midi, dur, audioTime, e.instrumentId, e.velocity);
     }
     eventCursor++;
   }

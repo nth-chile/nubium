@@ -86,13 +86,13 @@ class SmplrPlayer implements NotePlayer {
     }
   }
 
-  play(midi: number, duration: number, time: number, instrumentId?: string): void {
+  play(midi: number, duration: number, time: number, instrumentId?: string, velocity?: number): void {
     const gmName = resolveInstrument(instrumentId ?? "");
     const instrument = this.instruments.get(gmName) ?? this.instruments.values().next().value;
     if (!instrument) return;
     if (this.ctx.state !== "running") return;
 
-    instrument.start({ note: midi, duration, time });
+    instrument.start({ note: midi, duration, time, velocity: velocity ?? 100 });
   }
 
   stop(): void {
