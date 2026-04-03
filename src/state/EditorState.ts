@@ -156,6 +156,8 @@ interface EditorStore {
   reorderPart(partIndex: number, direction: "up" | "down"): void;
   toggleSolo(partIndex: number): void;
   toggleMute(partIndex: number): void;
+  togglePartVisibility(partIndex: number): void;
+  hiddenParts: Set<number>;
   moveCursorToPart(partIndex: number): void;
   moveCursorPart(direction: "up" | "down"): void;
 
@@ -233,9 +235,9 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   viewConfig: getDefaultViewConfig("full-score"),
   viewScrollPositions: {
     "full-score": 0,
-    "lead-sheet": 0,
     "tab": 0,
   },
+  hiddenParts: new Set<number>(),
   popover: null,
 
   setPopover(popover: EditorStore["popover"]) {
@@ -1179,9 +1181,16 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       score: state.score,
       inputState: state.inputState,
     });
+    // Clean up hiddenParts: remove the deleted index, shift higher indices down
+    const hidden = new Set<number>();
+    for (const i of state.hiddenParts) {
+      if (i < partIndex) hidden.add(i);
+      else if (i > partIndex) hidden.add(i - 1);
+    }
     set({
       score: result.score,
       inputState: result.inputState,
+      hiddenParts: hidden,
     });
   },
 
@@ -1217,6 +1226,21 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       // Update playback reference so mute takes effect during playback
       Transport.updateScore(score);
       return { score };
+    });
+  },
+
+  togglePartVisibility(partIndex: number) {
+    set((s) => {
+      const hidden = new Set(s.hiddenParts);
+      if (hidden.has(partIndex)) {
+        hidden.delete(partIndex);
+      } else {
+        // Don't hide the last visible part
+        const visibleCount = s.score.parts.length - hidden.size;
+        if (visibleCount <= 1) return s;
+        hidden.add(partIndex);
+      }
+      return { hiddenParts: hidden };
     });
   },
 
@@ -1396,3 +1420,4 @@ function restoreUiPreferences(): void {
 
 restoreAutoSave();
 restoreUiPreferences();
+

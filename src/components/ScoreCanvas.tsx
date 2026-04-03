@@ -22,6 +22,7 @@ export function ScoreCanvas() {
   const noteSelection = useEditorStore((s) => s.noteSelection);
   const editingTitle = useEditorStore((s) => s.editingTitle);
   const editingComposer = useEditorStore((s) => s.editingComposer);
+  const hiddenParts = useEditorStore((s) => s.hiddenParts);
   const measurePositions = useEditorStore((s) => s.measurePositions);
 
   // Auto-scroll to keep editing cursor visible (disabled during playback)
@@ -123,7 +124,7 @@ export function ScoreCanvas() {
     setNoteBoxes(result.noteBoxes);
     setAnnotationBoxes(result.annotationBoxes);
     setMeasurePositions(result.measurePositions);
-  }, [score, inputState.cursor, playbackTick, viewConfig, containerWidth, selection, noteSelection, editingTitle, editingComposer, setNoteBoxes, setAnnotationBoxes, setMeasurePositions]);
+  }, [score, inputState.cursor, playbackTick, viewConfig, containerWidth, selection, noteSelection, editingTitle, editingComposer, hiddenParts, setNoteBoxes, setAnnotationBoxes, setMeasurePositions]);
 
   return (
     <div

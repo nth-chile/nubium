@@ -1,4 +1,4 @@
-export type ViewModeType = "full-score" | "lead-sheet" | "tab";
+export type ViewModeType = "full-score" | "tab";
 
 export type AnnotationFilter = "chord-symbol" | "lyric" | "rehearsal-mark" | "tempo-mark" | "dynamic" | "hairpin" | "slur";
 
@@ -42,21 +42,6 @@ export function fullScoreConfig(): ViewConfig {
   };
 }
 
-/** Lead Sheet: single staff (melody, part 0), chord symbols, lyrics, compact */
-export function leadSheetConfig(): ViewConfig {
-  return {
-    type: "lead-sheet",
-    partsToShow: [0],
-    staffType: { 0: "standard" },
-    showAnnotations: ["chord-symbol", "lyric", "rehearsal-mark", "tempo-mark", "dynamic", "hairpin", "slur"],
-    layoutConfig: {
-      compact: true,
-      measuresPerLine: 4,
-      showPartNames: false,
-    },
-  };
-}
-
 /** Tab: tab staff for guitar parts, standard for others */
 export function tabConfig(guitarPartIndices: number[] = [0]): ViewConfig {
   const staffType: Record<number, "standard" | "tab"> = {};
@@ -80,8 +65,6 @@ export function getDefaultViewConfig(type: ViewModeType): ViewConfig {
   switch (type) {
     case "full-score":
       return fullScoreConfig();
-    case "lead-sheet":
-      return leadSheetConfig();
     case "tab":
       return tabConfig();
   }

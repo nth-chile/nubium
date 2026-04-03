@@ -2,7 +2,7 @@ import type { Score, NoteEventId } from "../model";
 import { TICKS_PER_QUARTER, durationToTicks } from "../model/duration";
 import { renderMeasure, renderMultiMeasureRest, renderSystemBarline, clearCanvas, type RenderContext, type NoteBox, type AnnotationBox } from "./vexBridge";
 import { renderTabMeasure } from "./TabRenderer";
-import { computeLayout, totalContentHeight, totalPageCount, partStaveCount, DEFAULT_LAYOUT, type LayoutConfig } from "./SystemLayout";
+import { computeLayout, totalContentHeight, totalPageCount, partStaveCount, DEFAULT_LAYOUT, type LayoutConfig, type SystemLine } from "./SystemLayout";
 import type { CursorPosition } from "../input/InputState";
 import type { ViewConfig, AnnotationFilter } from "../views/ViewMode";
 import type { Annotation } from "../model/annotations";
@@ -426,6 +426,61 @@ export function renderScore(
     }
   }
 
+  // Draw global annotations from hidden parts above the first visible part
+  const hiddenParts = useEditorStore.getState().hiddenParts;
+  if (hiddenParts.size > 0 && measurePositions.length > 0) {
+    const firstVisiblePi = visiblePartIndices[0];
+    for (let pi = 0; pi < score.parts.length; pi++) {
+      if (!hiddenParts.has(pi)) continue;
+      const hiddenPart = score.parts[pi];
+      for (let mi = 0; mi < hiddenPart.measures.length; mi++) {
+        const globalAnns = hiddenPart.measures[mi].annotations.filter(a => GLOBAL_ANNOTATION_KINDS.has(a.kind));
+        if (globalAnns.length === 0) continue;
+        // Find the position of this measure on the first visible part
+        const mp = measurePositions.find(p => p.partIndex === firstVisiblePi && p.measureIndex === mi);
+        if (!mp) continue;
+        // Check if the first visible part already has these annotations
+        const visibleMeasure = filteredScore.parts[0]?.measures[mi];
+        let aboveY = mp.y - 6;
+        for (const ann of globalAnns) {
+          if (ann.kind === "rehearsal-mark") {
+            const already = visibleMeasure?.annotations.some(a => a.kind === "rehearsal-mark");
+            if (already) continue;
+            rawCtx.save();
+            rawCtx.font = "bold 14px sans-serif";
+            const tw = rawCtx.measureText(ann.text).width;
+            const pad = 4;
+            const boxH = 14 + pad * 2;
+            aboveY -= boxH + 2;
+            rawCtx.strokeStyle = "#000";
+            rawCtx.lineWidth = 1.5;
+            rawCtx.beginPath();
+            rawCtx.rect(mp.x + 2 - pad, aboveY, tw + pad * 2, boxH);
+            rawCtx.stroke();
+            rawCtx.fillStyle = "#000";
+            rawCtx.fillText(ann.text, mp.x + 2, aboveY + boxH - pad - 2);
+            rawCtx.restore();
+          } else if (ann.kind === "tempo-mark") {
+            const already = visibleMeasure?.annotations.some(a => a.kind === "tempo-mark");
+            if (already) continue;
+            rawCtx.save();
+            rawCtx.font = "bold 12px serif";
+            rawCtx.fillStyle = "#000";
+            const text = (ann as any).text
+              ? `${(ann as any).text} (\u2669 = ${(ann as any).bpm})`
+              : `\u2669 = ${(ann as any).bpm}`;
+            aboveY -= 16;
+            rawCtx.fillText(text, mp.x + 2, aboveY);
+            rawCtx.restore();
+          }
+        }
+      }
+    }
+  }
+
+  // Draw cross-measure slurs and ties (post-render pass using global noteBoxes)
+  drawCrossSystemSlursAndTies(rawCtx, filteredScore, allNoteBoxes, measurePositions, systems);
+
   // Draw selection highlight
   if (selection) {
     drawSelection(rawCtx, selection, measurePositions, config);
@@ -685,23 +740,32 @@ function drawSelection(
  * Get the list of visible part indices based on view config.
  */
 function getVisiblePartIndices(score: Score, viewConfig?: ViewConfig): number[] {
+  const hiddenParts = useEditorStore.getState().hiddenParts;
+  let indices: number[];
   if (!viewConfig || viewConfig.partsToShow === "all") {
-    return score.parts.map((_, i) => i);
+    indices = score.parts.map((_, i) => i);
+  } else {
+    indices = viewConfig.partsToShow.filter((i) => i < score.parts.length);
   }
-  return viewConfig.partsToShow.filter((i) => i < score.parts.length);
+  return indices.filter((i) => !hiddenParts.has(i));
 }
 
 /**
  * Build a filtered score containing only the visible parts.
  */
+const GLOBAL_ANNOTATION_KINDS = new Set(["rehearsal-mark", "tempo-mark"]);
+
 function filterScoreParts(score: Score, visiblePartIndices: number[]): Score {
   if (visiblePartIndices.length === score.parts.length) {
     return score;
   }
-  return {
+  const visibleSet = new Set(visiblePartIndices);
+  const filtered = {
     ...score,
     parts: visiblePartIndices.map((i) => score.parts[i]),
   };
+  // Transfer global annotations from hidden parts to the first visible part
+  return filtered;
 }
 
 /**
@@ -712,6 +776,199 @@ function filterAnnotations(
   allowedKinds: AnnotationFilter[]
 ): Annotation[] {
   return annotations.filter((a) => allowedKinds.includes(a.kind as AnnotationFilter));
+}
+
+/**
+ * Draw cross-measure slurs and ties using global noteBox positions.
+ * For same-system spans: draw a bezier curve between the two notes.
+ * For cross-system spans: draw two half-curves (one ending at system edge, one starting at next).
+ */
+function drawCrossSystemSlursAndTies(
+  rawCtx: CanvasRenderingContext2D,
+  score: Score,
+  noteBoxes: Map<NoteEventId, NoteBox>,
+  measurePositions: ScoreRenderResult["measurePositions"],
+  systems: SystemLine[],
+): void {
+  if (!rawCtx.save) return;
+
+  // Helper: find which system a measure belongs to
+  function systemForMeasure(mi: number): SystemLine | undefined {
+    return systems.find((s) => mi >= s.startMeasure && mi < s.endMeasure);
+  }
+
+  // Helper: draw a slur/tie curve between two points
+  function drawCurve(x1: number, y1: number, x2: number, y2: number, direction: "above" | "below") {
+    const d = direction === "above" ? -1 : 1;
+    const cpHeight = 20 * d;
+    const midX = (x1 + x2) / 2;
+    rawCtx.beginPath();
+    rawCtx.moveTo(x1, y1);
+    rawCtx.bezierCurveTo(midX, y1 + cpHeight, midX, y2 + cpHeight, x2, y2);
+    rawCtx.stroke();
+  }
+
+  rawCtx.save();
+  rawCtx.strokeStyle = "#000";
+  rawCtx.lineWidth = 1.5;
+
+  // Collect all slur annotations from all measures in all parts
+  for (const part of score.parts) {
+    for (let mi = 0; mi < part.measures.length; mi++) {
+      const measure = part.measures[mi];
+      for (const ann of measure.annotations) {
+        if (ann.kind !== "slur") continue;
+
+        const startBox = noteBoxes.get(ann.startEventId);
+        const endBox = noteBoxes.get(ann.endEventId);
+        if (!startBox || !endBox) continue;
+
+        // Skip same-measure slurs — already rendered by vexBridge
+        if (startBox.measureIndex === endBox.measureIndex) continue;
+
+        const startSys = systemForMeasure(startBox.measureIndex);
+        const endSys = systemForMeasure(endBox.measureIndex);
+        if (!startSys || !endSys) continue;
+
+        const curveY = (box: NoteBox) => box.headY; // top of note head
+        const direction = "above"; // slurs default above
+
+        if (startSys.lineIndex === endSys.lineIndex) {
+          // Same system — direct curve
+          drawCurve(
+            startBox.headX + startBox.headWidth, curveY(startBox),
+            endBox.headX, curveY(endBox),
+            direction,
+          );
+        } else {
+          // Cross-system — two half curves
+          // First half: start note → right edge of start system
+          const startSysMPs = measurePositions.filter(
+            (mp) => mp.partIndex === startBox.partIndex && mp.measureIndex === startSys.endMeasure - 1
+          );
+          const rightEdgeX = startSysMPs.length > 0
+            ? startSysMPs[0].x + startSysMPs[0].width
+            : startBox.headX + 100;
+
+          drawCurve(
+            startBox.headX + startBox.headWidth, curveY(startBox),
+            rightEdgeX, curveY(startBox),
+            direction,
+          );
+
+          // Second half: left edge of end system → end note
+          const endSysMPs = measurePositions.filter(
+            (mp) => mp.partIndex === endBox.partIndex && mp.measureIndex === endSys.startMeasure
+          );
+          const leftEdgeX = endSysMPs.length > 0
+            ? endSysMPs[0].x
+            : endBox.headX - 100;
+
+          drawCurve(
+            leftEdgeX, curveY(endBox),
+            endBox.headX, curveY(endBox),
+            direction,
+          );
+        }
+      }
+
+      // Cross-measure ties: last event with tied flag → first event of next measure
+      for (const voice of measure.voices) {
+        const lastEvent = voice.events[voice.events.length - 1];
+        if (!lastEvent) continue;
+
+        const nextMeasure = part.measures[mi + 1];
+        if (!nextMeasure) continue;
+        const nextVoice = nextMeasure.voices[measure.voices.indexOf(voice)];
+        if (!nextVoice || nextVoice.events.length === 0) continue;
+        const nextEvent = nextVoice.events[0];
+
+        if (lastEvent.kind === "note" && lastEvent.head.tied) {
+          const startBox = noteBoxes.get(lastEvent.id);
+          const endBox = noteBoxes.get(nextEvent.id);
+          if (!startBox || !endBox) continue;
+
+          const startSys = systemForMeasure(mi);
+          const endSys = systemForMeasure(mi + 1);
+          if (!startSys || !endSys) continue;
+
+          const tieY = (box: NoteBox) => box.headY + box.headHeight / 2;
+
+          if (startSys.lineIndex === endSys.lineIndex) {
+            drawCurve(
+              startBox.headX + startBox.headWidth, tieY(startBox),
+              endBox.headX, tieY(endBox),
+              "above",
+            );
+          } else {
+            // Cross-system tie
+            const startSysMPs = measurePositions.filter(
+              (mp) => mp.partIndex === startBox.partIndex && mp.measureIndex === startSys.endMeasure - 1
+            );
+            const rightEdgeX = startSysMPs.length > 0
+              ? startSysMPs[0].x + startSysMPs[0].width
+              : startBox.headX + 50;
+
+            drawCurve(
+              startBox.headX + startBox.headWidth, tieY(startBox),
+              rightEdgeX, tieY(startBox),
+              "above",
+            );
+
+            const endSysMPs = measurePositions.filter(
+              (mp) => mp.partIndex === endBox.partIndex && mp.measureIndex === endSys.startMeasure
+            );
+            const leftEdgeX = endSysMPs.length > 0
+              ? endSysMPs[0].x
+              : endBox.headX - 50;
+
+            drawCurve(
+              leftEdgeX, tieY(endBox),
+              endBox.headX, tieY(endBox),
+              "above",
+            );
+          }
+        } else if (lastEvent.kind === "chord") {
+          // Chord ties: check each head
+          for (const head of lastEvent.heads) {
+            if (!head.tied) continue;
+            const startBox = noteBoxes.get(lastEvent.id);
+            const endBox = noteBoxes.get(nextEvent.id);
+            if (!startBox || !endBox) continue;
+
+            const startSys = systemForMeasure(mi);
+            const endSys = systemForMeasure(mi + 1);
+            if (!startSys || !endSys) continue;
+
+            const tieY = (box: NoteBox) => box.headY + box.headHeight / 2;
+
+            if (startSys.lineIndex === endSys.lineIndex) {
+              drawCurve(
+                startBox.headX + startBox.headWidth, tieY(startBox),
+                endBox.headX, tieY(endBox),
+                "above",
+              );
+            } else {
+              const rightEdgeX = startBox.headX + 50;
+              drawCurve(
+                startBox.headX + startBox.headWidth, tieY(startBox),
+                rightEdgeX, tieY(startBox),
+                "above",
+              );
+              const leftEdgeX = endBox.headX - 50;
+              drawCurve(
+                leftEdgeX, tieY(endBox),
+                endBox.headX, tieY(endBox),
+                "above",
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+
+  rawCtx.restore();
 }
 
 export { MEASURE_WIDTH, STAFF_HEIGHT, LEFT_MARGIN, TOP_MARGIN, MEASURES_PER_LINE };
