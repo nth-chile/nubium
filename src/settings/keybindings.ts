@@ -62,6 +62,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   { id: "select:right", label: "Extend selection right", category: "Selection", defaultBinding: { key: "arrowright", shift: true } },
   { id: "select-note:left", label: "Extend note selection left", category: "Selection", defaultBinding: { key: "arrowleft", shift: true, alt: true } },
   { id: "select-note:right", label: "Extend note selection right", category: "Selection", defaultBinding: { key: "arrowright", shift: true, alt: true } },
+  { id: "select:all", label: "Select all", category: "Selection", defaultBinding: { key: "a", ctrl: true } },
   { id: "escape", label: "Clear selection", category: "Selection", defaultBinding: { key: "escape" } },
   { id: "copy", label: "Copy", category: "Selection", defaultBinding: { key: "c", ctrl: true } },
   { id: "paste", label: "Paste", category: "Selection", defaultBinding: { key: "v", ctrl: true } },

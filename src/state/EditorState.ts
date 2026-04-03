@@ -530,18 +530,32 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   setAccidental(acc: Accidental) {
     const state = get();
     const { cursor } = state.inputState;
-    const newAcc = state.inputState.accidental === acc ? "natural" : acc;
 
-    // Apply to note at cursor if one exists
+    // When on an existing note, toggle based on the note's actual accidental
     if (cursorOnExistingEvent(state.score, cursor)) {
+      const voice = state.score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+      const event = voice?.events[cursor.eventIndex];
+      let noteAcc: Accidental = "natural";
+      if (event?.kind === "note" || event?.kind === "grace") {
+        noteAcc = event.head.pitch.accidental ?? "natural";
+      } else if (event?.kind === "chord" && event.heads.length > 0) {
+        noteAcc = event.heads[0].pitch.accidental ?? "natural";
+      }
+      const newAcc = noteAcc === acc ? "natural" : acc;
       const cmd = new SetAccidentalCmd(newAcc);
       const result = history.execute(cmd, {
         score: state.score,
         inputState: state.inputState,
       });
-      set({ score: result.score, inputState: result.inputState });
+      set({
+        score: result.score,
+        inputState: { ...result.inputState, accidental: newAcc },
+      });
+      return;
     }
 
+    // No note at cursor — just toggle input state
+    const newAcc = state.inputState.accidental === acc ? "natural" : acc;
     set((s) => ({
       inputState: {
         ...s.inputState,

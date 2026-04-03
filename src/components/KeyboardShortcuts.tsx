@@ -109,6 +109,17 @@ export function KeyboardShortcuts() {
       "select:right": () => extendSelection("right"),
       "select-note:left": () => extendNoteSelection("left"),
       "select-note:right": () => extendNoteSelection("right"),
+      "select:all": () => {
+        const s = useEditorStore.getState();
+        const part = s.score.parts[s.inputState.cursor.partIndex];
+        if (part) {
+          setSelection({
+            partIndex: s.inputState.cursor.partIndex,
+            measureStart: 0,
+            measureEnd: part.measures.length - 1,
+          });
+        }
+      },
       "escape": () => { setSelection(null); setNoteSelection(null); },
       "copy": () => { if (selection) copySelection(); },
       "paste": () => { if (clipboardMeasures) pasteAtCursor(); },
