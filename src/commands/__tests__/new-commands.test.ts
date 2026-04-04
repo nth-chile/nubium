@@ -212,17 +212,17 @@ describe("SetSlur", () => {
 });
 
 describe("DeleteNote", () => {
-  it("deletes the note before cursor (backspace)", () => {
+  it("deletes the note at cursor", () => {
     const m = factory.measure([
       factory.voice([
         factory.note("C", 4, factory.dur("quarter")),
         factory.note("D", 4, factory.dur("quarter")),
       ]),
     ]);
-    // Cursor at eventIndex 1 → deletes event 0 (C)
+    // Cursor at eventIndex 0 → deletes event 0 (C), D remains
     const snap = makeSnapshot({
       measures: [m, factory.measure([factory.voice([])])],
-      cursor: { eventIndex: 1 },
+      cursor: { eventIndex: 0 },
     });
     const cmd = new DeleteNote();
     const result = cmd.execute(snap);
@@ -234,14 +234,28 @@ describe("DeleteNote", () => {
     }
   });
 
-  it("does nothing when cursor is at index 0", () => {
+  it("deletes last event when cursor is at append position", () => {
     const m = factory.measure([
       factory.voice([factory.note("C", 4, factory.dur("quarter"))]),
     ]);
-    const snap = makeSnapshot({ measures: [m, factory.measure([factory.voice([])])] });
+    const snap = makeSnapshot({
+      measures: [m, factory.measure([factory.voice([])])],
+      cursor: { eventIndex: 1 },
+    });
     const cmd = new DeleteNote();
     const result = cmd.execute(snap);
-    // eventIndex 0 → nothing to delete before cursor
-    expect(result.score.parts[0].measures[0].voices[0].events).toHaveLength(1);
+    // eventIndex 1 is append position → deletes last event
+    expect(result.score.parts[0].measures[0].voices[0].events).toHaveLength(0);
+  });
+
+  it("does nothing when measure is empty", () => {
+    const m = factory.measure([factory.voice([])]);
+    const snap = makeSnapshot({
+      measures: [m, factory.measure([factory.voice([])])],
+      cursor: { eventIndex: 0 },
+    });
+    const cmd = new DeleteNote();
+    const result = cmd.execute(snap);
+    expect(result.score.parts[0].measures[0].voices[0].events).toHaveLength(0);
   });
 });

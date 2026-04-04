@@ -9,24 +9,17 @@ export class DeleteNote implements Command {
     const { partIndex, measureIndex, voiceIndex, eventIndex } = input.cursor;
 
     const voice = score.parts[partIndex]?.measures[measureIndex]?.voices[voiceIndex];
+    if (!voice) return state;
 
-    if (!voice || eventIndex <= 0) {
-      // Cross measure boundary: delete last event in previous measure
-      if (measureIndex > 0) {
-        const prevMeasure = score.parts[partIndex]?.measures[measureIndex - 1];
-        const prevVoice = prevMeasure?.voices[voiceIndex];
-        if (prevVoice && prevVoice.events.length > 0) {
-          prevVoice.events.splice(prevVoice.events.length - 1, 1);
-          input.cursor.measureIndex = measureIndex - 1;
-          input.cursor.eventIndex = prevVoice.events.length;
-          return { score, inputState: input };
-        }
-      }
-      return state;
-    }
+    // Delete the event at cursor, or the one before if at append position
+    const deleteIndex = eventIndex < voice.events.length
+      ? eventIndex
+      : voice.events.length - 1;
 
-    voice.events.splice(eventIndex - 1, 1);
-    input.cursor.eventIndex = Math.max(0, eventIndex - 1);
+    if (deleteIndex < 0) return state;
+
+    voice.events.splice(deleteIndex, 1);
+    input.cursor.eventIndex = Math.min(deleteIndex, voice.events.length);
     return { score, inputState: input };
   }
 
