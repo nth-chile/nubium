@@ -92,7 +92,7 @@ function detectRestRuns(
 export interface ScoreRenderResult {
   noteBoxes: Map<NoteEventId, NoteBox>;
   annotationBoxes: AnnotationBox[];
-  measurePositions: { partIndex: number; measureIndex: number; staveIndex: number; x: number; y: number; width: number; height: number }[];
+  measurePositions: { partIndex: number; measureIndex: number; staveIndex: number; x: number; y: number; width: number; height: number; noteStartX: number }[];
   contentHeight: number;
 }
 
@@ -330,6 +330,7 @@ export function renderScore(
                   y: layout.y,
                   width: combinedWidth,
                   height: config.staffHeight,
+                  noteStartX: layout.x + 60,
                 });
               }
             }
@@ -409,6 +410,7 @@ export function renderScore(
             y: layout.y,
             width: layout.width,
             height: config.staffHeight,
+            noteStartX: result.vexStave?.getNoteStartX() ?? (layout.x + 60),
           });
 
           for (const nb of result.noteBoxes) {
@@ -588,7 +590,7 @@ function drawCursor(
     // Append position: after the last note in the measure
     const voice = score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
     const eventCount = voice?.events.length ?? 0;
-    cursorX = mp.x + 60;
+    cursorX = mp.noteStartX + 10;
     if (noteBoxes && voice) {
       for (let i = eventCount - 1; i >= 0; i--) {
         const nb = noteBoxes.get(voice.events[i].id);
@@ -800,13 +802,14 @@ function drawPlaybackCursor(
       const t = range > 0 ? (tickInMeasure - lo.tick) / range : 0;
       cursorX = lo.x + t * (hi.x - lo.x);
     } else {
-      cursorX = tickXPairs[0]?.x ?? mp.x + 60;
+      cursorX = tickXPairs[0]?.x ?? mp.noteStartX;
     }
   } else {
     // Fallback to linear interpolation for empty measures
     const fraction = Math.min(tickInMeasure / measureTicks, 1);
-    const usableWidth = mp.width - 60;
-    cursorX = mp.x + 60 + fraction * usableWidth;
+    const noteOffset = mp.noteStartX - mp.x;
+    const usableWidth = mp.width - noteOffset;
+    cursorX = mp.noteStartX + fraction * usableWidth;
   }
 
   const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
