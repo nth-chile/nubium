@@ -136,6 +136,75 @@ describe("getBeamGroups", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]).toEqual([0, 1, 2, 3]);
   });
+
+  it("beams in half-note groups for 2/2 (cut time)", () => {
+    // Eight eighth notes filling 2/2
+    const events: NoteEvent[] = Array.from({ length: 8 }, () => makeNote("eighth"));
+    const timeSig: TimeSignature = { numerator: 2, denominator: 2 };
+    const groups = getBeamGroups(events, timeSig);
+    // Should get 2 groups of 4 (half-note beat = 960 ticks = 4 eighths)
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toEqual([0, 1, 2, 3]);
+    expect(groups[1]).toEqual([4, 5, 6, 7]);
+  });
+
+  it("beams 5/8 as 3+2", () => {
+    // Five eighth notes filling 5/8
+    const events: NoteEvent[] = Array.from({ length: 5 }, () => makeNote("eighth"));
+    const timeSig: TimeSignature = { numerator: 5, denominator: 8 };
+    const groups = getBeamGroups(events, timeSig);
+    // Should get 3+2 grouping
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toEqual([0, 1, 2]);
+    expect(groups[1]).toEqual([3, 4]);
+  });
+
+  it("beams 7/8 as 2+2+3", () => {
+    // Seven eighth notes filling 7/8
+    const events: NoteEvent[] = Array.from({ length: 7 }, () => makeNote("eighth"));
+    const timeSig: TimeSignature = { numerator: 7, denominator: 8 };
+    const groups = getBeamGroups(events, timeSig);
+    // Should get 2+2+3 grouping
+    expect(groups).toHaveLength(3);
+    expect(groups[0]).toEqual([0, 1]);
+    expect(groups[1]).toEqual([2, 3]);
+    expect(groups[2]).toEqual([4, 5, 6]);
+  });
+
+  it("beams mixed durations in same group (secondary beams handled by VexFlow)", () => {
+    // Eighth + two 16ths in one beat — should all be in one beam group
+    const events: NoteEvent[] = [
+      makeNote("eighth"), makeNote("16th"), makeNote("16th"),
+      makeNote("quarter"), makeNote("quarter"),
+    ];
+    const timeSig: TimeSignature = { numerator: 4, denominator: 4 };
+    const groups = getBeamGroups(events, timeSig);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toEqual([0, 1, 2]);
+  });
+
+  it("beams 12/8 in four groups of 3", () => {
+    const events: NoteEvent[] = Array.from({ length: 12 }, () => makeNote("eighth"));
+    const timeSig: TimeSignature = { numerator: 12, denominator: 8 };
+    const groups = getBeamGroups(events, timeSig);
+    expect(groups).toHaveLength(4);
+    expect(groups[0]).toEqual([0, 1, 2]);
+    expect(groups[1]).toEqual([3, 4, 5]);
+    expect(groups[2]).toEqual([6, 7, 8]);
+    expect(groups[3]).toEqual([9, 10, 11]);
+  });
+
+  it("beams 3/2 in half-note groups", () => {
+    // 12 eighth notes filling 3/2
+    const events: NoteEvent[] = Array.from({ length: 12 }, () => makeNote("eighth"));
+    const timeSig: TimeSignature = { numerator: 3, denominator: 2 };
+    const groups = getBeamGroups(events, timeSig);
+    // 3 groups of 4 eighths each (half-note beats)
+    expect(groups).toHaveLength(3);
+    expect(groups[0]).toEqual([0, 1, 2, 3]);
+    expect(groups[1]).toEqual([4, 5, 6, 7]);
+    expect(groups[2]).toEqual([8, 9, 10, 11]);
+  });
 });
 
 // ---- Measure width tests ----
