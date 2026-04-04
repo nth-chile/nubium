@@ -50,7 +50,9 @@
       "Bash(grep -n \"rehearsal\\\\|mark\\\\|label\" /Users/jared/work/notation/src/model/*.ts)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(lsof -ti:1420)"
+      "Bash(lsof -ti:1420)",
+      "Bash(xargs ls:*)",
+      "Bash(git diff:*)"
     ]
   }
 }

@@ -633,46 +633,46 @@ function drawCursor(
     const measure = score.parts[cursor.partIndex]?.measures[cursor.measureIndex];
     const clefType = measure?.clef?.type ?? "treble";
     const yPos = pitchToStaffY(pendingPitch.pitchClass, pendingPitch.octave, clefType, staffTop, config.staffHeight);
-
-    rawCtx.globalAlpha = 0.4;
-    rawCtx.fillStyle = cursorColor;
-    rawCtx.beginPath();
-    // Draw an elliptical notehead
-    rawCtx.ellipse(cursorX, yPos, 6, 4, -0.2, 0, Math.PI * 2);
-    rawCtx.fill();
-
-    // Draw accidental symbol if not natural
-    if (pendingPitch.accidental !== "natural") {
-      rawCtx.font = "14px serif";
-      rawCtx.textAlign = "right";
-      const accSymbol = pendingPitch.accidental === "sharp" ? "♯"
-        : pendingPitch.accidental === "flat" ? "♭"
-        : pendingPitch.accidental === "double-sharp" ? "𝄪"
-        : "𝄫";
-      rawCtx.fillText(accSymbol, cursorX - 8, yPos + 4);
+    // Draw ghost notehead via VexFlow's underlying context2D (has 4x DPR transform).
+    // Font size 80px matches VexFlow's actual notehead rendering at this scale.
+    const ctx2d = (rawCtx as any).context2D as CanvasRenderingContext2D | undefined;
+    if (ctx2d) {
+      ctx2d.save();
+      ctx2d.globalAlpha = 0.45;
+      ctx2d.fillStyle = "#3b82f6";  // same blue as cursor
+      ctx2d.font = "42px Bravura";
+      // SMuFL noteheadBlack = U+E0A4. Offset to center glyph on yPos.
+      ctx2d.fillText("\uE0A4", cursorX - 5, yPos);
+      ctx2d.restore();
     }
 
-    // Draw ledger lines if needed
-    const lineSpacing = config.staffHeight / 4;
-    rawCtx.strokeStyle = cursorColor;
-    rawCtx.lineWidth = 1;
-    if (canvasCtx) canvasCtx.lineWidth = 1 * (window.devicePixelRatio || 1);
-    // Above staff
-    for (let ly = staffTop - lineSpacing; ly >= yPos - 1; ly -= lineSpacing) {
-      rawCtx.beginPath();
-      rawCtx.moveTo(cursorX - 9, ly);
-      rawCtx.lineTo(cursorX + 9, ly);
-      rawCtx.stroke();
+    // Ledger lines if needed — draw through the notehead center
+    if (ctx2d) {
+      const VEX_SPACING = 10;
+      const VEX_HEAD = 4;
+      const topLine = staffTop + VEX_HEAD * VEX_SPACING;
+      const bottomLine = topLine + 4 * VEX_SPACING;
+      const ledgerHalfWidth = 10;
+      ctx2d.save();
+      ctx2d.globalAlpha = 0.45;
+      ctx2d.strokeStyle = cursorColor;
+      ctx2d.lineWidth = 1.2;
+      // Above staff
+      for (let ly = topLine - VEX_SPACING; ly >= yPos - 1; ly -= VEX_SPACING) {
+        ctx2d.beginPath();
+        ctx2d.moveTo(cursorX - ledgerHalfWidth + 1, ly);
+        ctx2d.lineTo(cursorX + ledgerHalfWidth + 1, ly);
+        ctx2d.stroke();
+      }
+      // Below staff
+      for (let ly = bottomLine + VEX_SPACING; ly <= yPos + 1; ly += VEX_SPACING) {
+        ctx2d.beginPath();
+        ctx2d.moveTo(cursorX - ledgerHalfWidth + 1, ly);
+        ctx2d.lineTo(cursorX + ledgerHalfWidth + 1, ly);
+        ctx2d.stroke();
+      }
+      ctx2d.restore();
     }
-    // Below staff
-    for (let ly = staffBottom + lineSpacing; ly <= yPos + 1; ly += lineSpacing) {
-      rawCtx.beginPath();
-      rawCtx.moveTo(cursorX - 9, ly);
-      rawCtx.lineTo(cursorX + 9, ly);
-      rawCtx.stroke();
-    }
-
-    rawCtx.globalAlpha = 1.0;
   }
 
   rawCtx.restore();
@@ -705,14 +705,17 @@ function pitchToStaffY(
   };
   const bottomStep = REF_BOTTOM[clefType] ?? REF_BOTTOM.treble;
 
-  // Each diatonic step = half a line spacing
-  const lineSpacing = staffHeight / 4;
-  const halfLine = lineSpacing / 2;
-  const staffBottom = staffTop + staffHeight;
+  // VexFlow stave: 4 line-spacings of headroom above, then 5 lines spanning 4 spacings.
+  // Line spacing = 10px (Tables.STAVE_LINE_DISTANCE). staffHeight includes headroom.
+  const VEX_LINE_SPACING = 10;
+  const VEX_HEADROOM = 4; // in line-spacings
+  const topLineY = staffTop + VEX_HEADROOM * VEX_LINE_SPACING; // line 0 (top)
+  const bottomLineY = topLineY + 4 * VEX_LINE_SPACING; // line 4 (bottom)
+  const halfLine = VEX_LINE_SPACING / 2; // each diatonic step = half a line spacing
 
-  // Steps above the bottom line → move up from staffBottom
+  // Steps above the bottom line → move up from bottomLineY
   const stepsAbove = totalSteps - bottomStep;
-  return staffBottom - stepsAbove * halfLine;
+  return bottomLineY - stepsAbove * halfLine;
 }
 
 function getActiveNoteIds(score: Score, playbackTick: number): Set<NoteEventId> {

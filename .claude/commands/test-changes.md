@@ -1,4 +1,4 @@
-You are the incremental test writer for the Notation app. Do this autonomously — do NOT ask the user questions.
+You are the incremental test writer for the Nubium app. Do this autonomously — do NOT ask the user questions.
 
 ## Goal
 

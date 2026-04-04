@@ -1,4 +1,4 @@
-import type { NotationPlugin, PluginAPI } from "../PluginAPI";
+import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
 import type { Score } from "../../model";
 import type { NoteEvent } from "../../model/note";
 import { pitchToMidi, midiToPitch } from "../../model/pitch";
@@ -45,24 +45,24 @@ function transposeScore(score: Score, semitones: number, selection: { partIndex:
   return result;
 }
 
-export const TransposePlugin: NotationPlugin = {
-  id: "notation.transpose",
+export const TransposePlugin: NubiumPlugin = {
+  id: "nubium.transpose",
   name: "Transpose",
   version: "1.0.0",
   description: "Transpose notes by various intervals",
 
   activate(api: PluginAPI) {
     const commands: Array<[string, string, number, string]> = [
-      ["notation.transpose-up", "Transpose Up (Half Step)", 1, "up by a half step"],
-      ["notation.transpose-down", "Transpose Down (Half Step)", -1, "down by a half step"],
-      ["notation.transpose-up-whole", "Transpose Up (Whole Step)", 2, "up by a whole step"],
-      ["notation.transpose-down-whole", "Transpose Down (Whole Step)", -2, "down by a whole step"],
-      ["notation.transpose-up-minor3", "Transpose Up (Minor 3rd)", 3, "up by a minor 3rd"],
-      ["notation.transpose-up-major3", "Transpose Up (Major 3rd)", 4, "up by a major 3rd"],
-      ["notation.transpose-up-perfect4", "Transpose Up (Perfect 4th)", 5, "up by a perfect 4th"],
-      ["notation.transpose-up-perfect5", "Transpose Up (Perfect 5th)", 7, "up by a perfect 5th"],
-      ["notation.transpose-up-octave", "Transpose Up (Octave)", 12, "up by an octave"],
-      ["notation.transpose-down-octave", "Transpose Down (Octave)", -12, "down by an octave"],
+      ["nubium.transpose-up", "Transpose Up (Half Step)", 1, "up by a half step"],
+      ["nubium.transpose-down", "Transpose Down (Half Step)", -1, "down by a half step"],
+      ["nubium.transpose-up-whole", "Transpose Up (Whole Step)", 2, "up by a whole step"],
+      ["nubium.transpose-down-whole", "Transpose Down (Whole Step)", -2, "down by a whole step"],
+      ["nubium.transpose-up-minor3", "Transpose Up (Minor 3rd)", 3, "up by a minor 3rd"],
+      ["nubium.transpose-up-major3", "Transpose Up (Major 3rd)", 4, "up by a major 3rd"],
+      ["nubium.transpose-up-perfect4", "Transpose Up (Perfect 4th)", 5, "up by a perfect 4th"],
+      ["nubium.transpose-up-perfect5", "Transpose Up (Perfect 5th)", 7, "up by a perfect 5th"],
+      ["nubium.transpose-up-octave", "Transpose Up (Octave)", 12, "up by an octave"],
+      ["nubium.transpose-down-octave", "Transpose Down (Octave)", -12, "down by an octave"],
     ];
 
     for (const [id, label, semitones, desc] of commands) {

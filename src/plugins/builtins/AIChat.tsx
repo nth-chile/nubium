@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import type { NotationPlugin, PluginAPI } from "../PluginAPI";
+import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
 import { useChatStore } from "../../state/ChatState";
 import { useEditorStore } from "../../state";
 import { AISettings } from "../../components/AISettings";
@@ -127,8 +127,8 @@ function formatMessageContent(content: string): React.ReactNode {
   });
 }
 
-export const AIChatPlugin: NotationPlugin = {
-  id: "notation.ai-chat",
+export const AIChatPlugin: NubiumPlugin = {
+  id: "nubium.ai-chat",
   name: "AI Chat",
   version: "1.0.0",
   description: "AI-powered chat sidebar for score editing assistance",
@@ -156,7 +156,7 @@ export const AIChatPlugin: NotationPlugin = {
       ],
     });
 
-    api.registerCommand("notation.toggle-chat", "Toggle AI Chat", () => {});
-    api.registerShortcut("Ctrl+Shift+A", "notation.toggle-chat");
+    api.registerCommand("nubium.toggle-chat", "Toggle AI Chat", () => {});
+    api.registerShortcut("Ctrl+Shift+A", "nubium.toggle-chat");
   },
 };

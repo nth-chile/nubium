@@ -487,7 +487,18 @@ function exportMeasure(
       xml += `            <per-minute>${ann.bpm}</per-minute>\n`;
       xml += `          </metronome>\n`;
       xml += `        </direction-type>\n`;
-      xml += `        <sound tempo="${ann.bpm}"/>\n`;
+      xml += `        <sound tempo="${ann.bpm}"`;
+      if (ann.swing && ann.swing.style !== "straight") {
+        // MusicXML swing: first/second = ratio, swing-type = eighth or 16th
+        const ratio = ann.swing.ratio ?? 2;
+        const first = Math.round(ratio / (ratio + 1) * 100);
+        const second = 100 - first;
+        const swingType = ann.swing.subdivision === "sixteenth" ? "16th" : "eighth";
+        xml += ` swing-type="${swingType}" swing-first="${first}" swing-second="${second}"`;
+      } else if (ann.swing?.style === "straight") {
+        xml += ` swing-type="eighth" swing-first="50" swing-second="50"`;
+      }
+      xml += `/>\n`;
       xml += `      </direction>\n`;
     }
   }

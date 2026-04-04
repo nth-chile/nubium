@@ -1,11 +1,11 @@
-import type { NotationPlugin, PluginAPI } from "../PluginAPI";
+import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
 import {
   tabConfig,
   fullScoreConfig,
 } from "../../views/ViewMode";
 
-export const ViewsPlugin: NotationPlugin = {
-  id: "notation.views",
+export const ViewsPlugin: NubiumPlugin = {
+  id: "nubium.views",
   name: "View Modes",
   version: "1.0.0",
   description: "Full Score and Tab view modes",

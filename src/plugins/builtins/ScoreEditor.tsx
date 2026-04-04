@@ -29,6 +29,7 @@ function NoteInputPanel() {
   const toggleStepEntry = useEditorStore((s) => s.toggleStepEntry);
   const toggleInsertMode = useEditorStore((s) => s.toggleInsertMode);
   const toggleGraceNoteMode = useEditorStore((s) => s.toggleGraceNoteMode);
+  const togglePitchBeforeDuration = useEditorStore((s) => s.togglePitchBeforeDuration);
   const hotkey = useHotkey();
 
   return (
@@ -63,6 +64,16 @@ function NoteInputPanel() {
           className="text-xs font-bold italic"
         >
           G
+        </TooltipButton>
+        <TooltipButton
+          variant={inputState.pitchBeforeDuration ? "default" : "ghost"}
+          size="icon"
+          onClick={togglePitchBeforeDuration}
+          tooltip={`Pitch before duration (${hotkey("toggle-pitch-before-duration")})`}
+          actionId="toggle-pitch-before-duration"
+          className="text-xs font-bold"
+        >
+          K
         </TooltipButton>
         <span className="text-[11px] text-muted-foreground uppercase tracking-wider mr-1">Duration</span>
         {DURATIONS.map((d) => (
@@ -123,11 +134,11 @@ function NoteInputPanel() {
 export function registerCoreEditor(pm: PluginManager): void {
   pm.registerCorePanel("score-editor.note-input", { title: "Note Input", location: "toolbar", component: () => <NoteInputPanel />, defaultEnabled: true });
 
-  pm.registerCoreCommand("notation.file-history", "File History", () => {
+  pm.registerCoreCommand("nubium.file-history", "File History", () => {
     import("../../components/HistoryModal").then((m) => m.showHistoryModal());
   });
 
-  pm.registerCoreCommand("notation.go-to-measure", "Go to measure...", () => {
+  pm.registerCoreCommand("nubium.go-to-measure", "Go to measure...", () => {
     const store = useEditorStore.getState();
     store.setPopover(store.popover === "go-to-measure" ? null : "go-to-measure");
   });
@@ -152,76 +163,88 @@ export function registerCoreEditor(pm: PluginManager): void {
   }
 
   // Views
-  pm.registerCoreCommand("notation.view-full-score", "View: Full Score", () => {
+  pm.registerCoreCommand("nubium.view-full-score", "View: Full Score", () => {
     useEditorStore.getState().setViewMode("full-score");
   });
-  pm.registerCoreCommand("notation.view-tab", "View: Tab", () => {
+  pm.registerCoreCommand("nubium.view-tab", "View: Tab", () => {
     useEditorStore.getState().setViewMode("tab");
   });
 
   // Pickup measure
-  pm.registerCoreCommand("notation.toggle-pickup", "Toggle pickup measure", () => {
+  pm.registerCoreCommand("nubium.toggle-pickup", "Toggle pickup measure", () => {
     useEditorStore.getState().togglePickup();
   });
 
   // Editing
-  pm.registerCoreCommand("notation.insert-rest", "Insert rest", () => {
+  pm.registerCoreCommand("nubium.insert-rest", "Insert rest", () => {
     useEditorStore.getState().insertRest();
   });
-  pm.registerCoreCommand("notation.delete", "Delete note", () => {
+  pm.registerCoreCommand("nubium.delete", "Delete note", () => {
     useEditorStore.getState().deleteNote();
   });
-  pm.registerCoreCommand("notation.insert-measure", "Insert measure", () => {
+  pm.registerCoreCommand("nubium.insert-measure", "Insert measure", () => {
     useEditorStore.getState().insertMeasure();
   });
-  pm.registerCoreCommand("notation.delete-measure", "Delete measure", () => {
+  pm.registerCoreCommand("nubium.delete-measure", "Delete measure", () => {
     useEditorStore.getState().deleteMeasure();
   });
-  pm.registerCoreCommand("notation.undo", "Undo", () => {
+  pm.registerCoreCommand("nubium.undo", "Undo", () => {
     useEditorStore.getState().undo();
   });
-  pm.registerCoreCommand("notation.redo", "Redo", () => {
+  pm.registerCoreCommand("nubium.redo", "Redo", () => {
     useEditorStore.getState().redo();
   });
 
   // Annotation modes
-  pm.registerCoreCommand("notation.chord-mode", "Enter chord input", () => {
+  pm.registerCoreCommand("nubium.chord-mode", "Enter chord input", () => {
     useEditorStore.getState().enterChordMode();
   });
-  pm.registerCoreCommand("notation.toggle-slur", "Toggle slur", () => {
+  pm.registerCoreCommand("nubium.toggle-slur", "Toggle slur", () => {
     useEditorStore.getState().toggleSlur();
   });
-  pm.registerCoreCommand("notation.toggle-step-entry", "Toggle step entry", () => {
+  pm.registerCoreCommand("nubium.toggle-step-entry", "Toggle step entry", () => {
     useEditorStore.getState().toggleStepEntry();
   });
-  pm.registerCoreCommand("notation.toggle-grace-note", "Toggle grace note mode", () => {
+  pm.registerCoreCommand("nubium.toggle-grace-note", "Toggle grace note mode", () => {
     useEditorStore.getState().toggleGraceNoteMode();
   });
 
   // Popovers
-  pm.registerCoreCommand("notation.dynamics", "Dynamics...", () => {
+  pm.registerCoreCommand("nubium.dynamics", "Dynamics...", () => {
     useEditorStore.getState().setPopover("dynamics");
   });
-  pm.registerCoreCommand("notation.tempo", "Tempo...", () => {
+  pm.registerCoreCommand("nubium.tempo", "Tempo...", () => {
     useEditorStore.getState().setPopover("tempo");
   });
-  pm.registerCoreCommand("notation.time-signature", "Time signature...", () => {
+  pm.registerCoreCommand("nubium.time-signature", "Time signature...", () => {
     useEditorStore.getState().setPopover("time-sig");
   });
-  pm.registerCoreCommand("notation.key-signature", "Key signature...", () => {
+  pm.registerCoreCommand("nubium.key-signature", "Key signature...", () => {
     useEditorStore.getState().setPopover("key-sig");
   });
-  pm.registerCoreCommand("notation.rehearsal-mark", "Rehearsal mark...", () => {
+  pm.registerCoreCommand("nubium.rehearsal-mark", "Rehearsal mark...", () => {
     useEditorStore.getState().setPopover("rehearsal");
   });
-  pm.registerCoreCommand("notation.barline", "Barline...", () => {
+  pm.registerCoreCommand("nubium.barline", "Barline...", () => {
     useEditorStore.getState().setPopover("barline");
   });
-  pm.registerCoreCommand("notation.toggle-metronome", "Toggle metronome", () => {
+  pm.registerCoreCommand("nubium.toggle-metronome", "Toggle metronome", () => {
     useEditorStore.getState().toggleMetronome();
   });
+  pm.registerCoreCommand("nubium.swing-straight", "Swing: Straight", () => {
+    useEditorStore.getState().setSwing({ style: "straight" });
+  });
+  pm.registerCoreCommand("nubium.swing-swing", "Swing: Triplet swing", () => {
+    useEditorStore.getState().setSwing({ style: "swing", ratio: 2 });
+  });
+  pm.registerCoreCommand("nubium.swing-hard", "Swing: Hard swing", () => {
+    useEditorStore.getState().setSwing({ style: "swing", ratio: 3 });
+  });
+  pm.registerCoreCommand("nubium.swing-shuffle", "Swing: Shuffle", () => {
+    useEditorStore.getState().setSwing({ style: "shuffle", ratio: 3, backbeatAccent: 25 });
+  });
 
-  pm.registerCoreCommand("notation.export-musicxml", "Export as MusicXML", () => {
+  pm.registerCoreCommand("nubium.export-musicxml", "Export as MusicXML", () => {
     const score = useEditorStore.getState().score;
     const content = exportToMusicXML(score);
     const blob = new Blob([content], { type: "application/vnd.recordare.musicxml+xml" });

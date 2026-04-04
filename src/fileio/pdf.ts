@@ -120,7 +120,7 @@ export async function exportPDF(score: Score, viewConfig?: ViewConfig, options?:
   pdf.setProperties({
     title: score.title || "Untitled",
     author: score.composer || undefined,
-    creator: "Notation",
+    creator: "Nubium",
   });
 
   for (let p = 0; p < pages; p++) {

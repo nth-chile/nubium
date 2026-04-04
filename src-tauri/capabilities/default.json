@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capability for Notation",
+  "description": "Default capability for Nubium",
   "windows": ["main"],
   "permissions": [
     "core:default",

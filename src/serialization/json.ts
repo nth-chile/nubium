@@ -125,6 +125,7 @@ function annotationToJson(a: Annotation): Record<string, unknown> {
     case "tempo-mark": {
       const obj: Record<string, unknown> = { type: "tempo", bpm: a.bpm, beatUnit: a.beatUnit };
       if (a.text) obj.text = a.text;
+      if (a.swing) obj.swing = a.swing;
       return obj;
     }
     case "dynamic":
@@ -345,12 +346,22 @@ function parseAnnotation(a: Record<string, unknown>): Annotation | null {
     };
   }
   if (type === "tempo") {
-    return {
+    const tempo: Annotation = {
       kind: "tempo-mark",
       bpm: (a.bpm as number) ?? 120,
       beatUnit: (a.beatUnit as DurationType) || "quarter",
       text: a.text as string | undefined,
     };
+    if (a.swing && typeof a.swing === "object") {
+      const s = a.swing as Record<string, unknown>;
+      (tempo as import("../model/annotations").TempoMark).swing = {
+        style: (s.style as string as import("../model/annotations").SwingStyle) || "swing",
+        ...(typeof s.ratio === "number" ? { ratio: s.ratio } : {}),
+        ...(s.subdivision === "sixteenth" ? { subdivision: "sixteenth" as const } : {}),
+        ...(typeof s.backbeatAccent === "number" ? { backbeatAccent: s.backbeatAccent } : {}),
+      };
+    }
+    return tempo;
   }
   if (type === "dynamic") {
     return {

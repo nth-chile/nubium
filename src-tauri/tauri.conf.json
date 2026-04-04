@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicholasxjy/tauri-v2-schema/main/tauri.conf.json",
-  "productName": "Notation",
+  "productName": "Nubium",
   "version": "0.1.0",
-  "identifier": "com.notation.app",
+  "identifier": "com.nubium.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Notation",
+        "title": "Nubium",
         "width": 1280,
         "height": 800,
         "resizable": true,

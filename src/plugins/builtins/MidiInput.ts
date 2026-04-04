@@ -1,4 +1,4 @@
-import type { NotationPlugin, PluginAPI } from "../PluginAPI";
+import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
 import { midiToPitch } from "../../model/pitch";
 import type { PitchClass, Octave } from "../../model/pitch";
 import { useEditorStore } from "../../state/EditorState";
@@ -46,8 +46,8 @@ function connectInputs(access: MIDIAccess) {
   }
 }
 
-export const MidiInputPlugin: NotationPlugin = {
-  id: "notation.midi-input",
+export const MidiInputPlugin: NubiumPlugin = {
+  id: "nubium.midi-input",
   name: "MIDI Input",
   version: "1.0.0",
   description: "MIDI keyboard input for step-entry note entry",

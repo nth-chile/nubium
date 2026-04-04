@@ -1,5 +1,5 @@
 export type {
-  NotationPlugin,
+  NubiumPlugin,
   PluginAPI,
   PlaybackService,
   Selection,

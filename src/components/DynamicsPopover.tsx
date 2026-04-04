@@ -65,9 +65,18 @@ function DynamicsContent() {
   );
 }
 
+const SWING_OPTIONS = [
+  { label: "Straight", value: "straight" },
+  { label: "Swing", value: "swing" },
+  { label: "Hard swing", value: "hard" },
+  { label: "Shuffle", value: "shuffle" },
+] as const;
+
 function TempoContent() {
   const setTempoMark = useEditorStore((s) => s.setTempoMark);
+  const setSwing = useEditorStore((s) => s.setSwing);
   const [value, setValue] = useState("120");
+  const [swing, setSwingLocal] = useState("straight");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -77,18 +86,40 @@ function TempoContent() {
     if (bpm > 0 && bpm <= 400) setTempoMark(bpm);
   };
 
+  const handleSwingChange = (val: string) => {
+    setSwingLocal(val);
+    if (val === "straight") setSwing({ style: "straight" });
+    else if (val === "swing") setSwing({ style: "swing", ratio: 2 });
+    else if (val === "hard") setSwing({ style: "swing", ratio: 3 });
+    else if (val === "shuffle") setSwing({ style: "shuffle", ratio: 3, backbeatAccent: 25 });
+  };
+
   return (
-    <div className="flex items-center gap-1">
-      <span className="text-sm text-muted-foreground">♩ =</span>
-      <input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-        className="w-16 px-2 py-1 text-sm bg-background border rounded outline-none"
-        placeholder="120"
-      />
-      <button onClick={submit} className="px-2 py-1 text-sm hover:bg-accent rounded">Set</button>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-1">
+        <span className="text-sm text-muted-foreground">♩ =</span>
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          className="w-16 px-2 py-1 text-sm bg-background border rounded outline-none"
+          placeholder="120"
+        />
+        <button onClick={submit} className="px-2 py-1 text-sm hover:bg-accent rounded">Set</button>
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="text-sm text-muted-foreground">Feel</span>
+        {SWING_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => handleSwingChange(opt.value)}
+            className={`px-2 py-1 text-sm rounded ${swing === opt.value ? "bg-accent font-medium" : "hover:bg-accent/50"}`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

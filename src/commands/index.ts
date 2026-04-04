@@ -24,3 +24,4 @@ export type { NavigationMarkType } from "./SetNavigationMark";
 export { ToggleCrossStaff } from "./ToggleCrossStaff";
 export { NudgePitch } from "./NudgePitch";
 export type { NudgeMode } from "./NudgePitch";
+export { SetSwing } from "./SetSwing";

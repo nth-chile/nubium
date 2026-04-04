@@ -39,6 +39,7 @@ import { SetChordSymbol } from "../commands/SetChordSymbol";
 import { SetLyric } from "../commands/SetLyric";
 import { SetRehearsalMark } from "../commands/SetRehearsalMark";
 import { SetTempo } from "../commands/SetTempo";
+import { SetSwing } from "../commands/SetSwing";
 import { AddPart } from "../commands/AddPart";
 import { RemovePart } from "../commands/RemovePart";
 import { ReorderParts } from "../commands/ReorderParts";
@@ -162,6 +163,7 @@ interface EditorStore {
   pause(): void;
   stopPlayback(): void;
   setTempo(bpm: number): void;
+  setSwing(swing: import("../model/annotations").SwingSettings | undefined): void;
   setPlaybackTick(tick: number | null): void;
   toggleMetronome(): void;
 
@@ -254,6 +256,7 @@ function smartOctave(score: Score, cursor: CursorPosition, pitchClass: PitchClas
   if (voice) {
     for (let i = cursor.eventIndex - 1; i >= 0; i--) {
       const evt = voice.events[i];
+      if (!evt) continue;
       if (evt.kind === "note") { prevPitch = evt.head.pitch; break; }
       if (evt.kind === "chord" && evt.heads.length > 0) { prevPitch = evt.heads[0].pitch; break; }
       if (evt.kind === "grace") { prevPitch = evt.head.pitch; break; }
@@ -268,6 +271,7 @@ function smartOctave(score: Score, cursor: CursorPosition, pitchClass: PitchClas
         if (!v) continue;
         for (let i = v.events.length - 1; i >= 0; i--) {
           const evt = v.events[i];
+          if (!evt) continue;
           if (evt.kind === "note") { prevPitch = evt.head.pitch; break; }
           if (evt.kind === "chord" && evt.heads.length > 0) { prevPitch = evt.heads[0].pitch; break; }
           if (evt.kind === "grace") { prevPitch = evt.head.pitch; break; }
@@ -407,7 +411,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const octave = smartOctave(state.score, cursor, pitchClass);
 
     // Pitch-before-duration: set pending pitch, don't insert yet
-    if (state.inputState.pitchBeforeDuration && !cursorOnExistingEvent(state.score, cursor)) {
+    if (state.inputState.pitchBeforeDuration) {
       set({
         inputState: {
           ...state.inputState,
@@ -541,21 +545,39 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     if (state.inputState.pendingPitch) {
       const pending = state.inputState.pendingPitch;
       const cursor = state.inputState.cursor;
-      const cmd = new InsertNote(
-        pending.pitchClass,
-        pending.octave,
-        pending.accidental,
-        { type, dots: 0 },
-      );
-      const result = history.execute(cmd, {
-        score: state.score,
-        inputState: state.inputState,
-      });
-      set({
-        score: result.score,
-        inputState: { ...result.inputState, duration: { type, dots: 0 }, pendingPitch: null },
-        lastEnteredPosition: { ...cursor },
-      });
+      if (cursorOnExistingEvent(state.score, cursor)) {
+        // Re-pitch existing note + change duration
+        const cmd = new ChangePitch(pending.pitchClass, pending.octave, pending.accidental);
+        const result = history.execute(cmd, { score: state.score, inputState: state.inputState });
+        // Also change duration
+        const score2 = structuredClone(result.score);
+        const voice = score2.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+        if (voice && cursor.eventIndex < voice.events.length) {
+          voice.events[cursor.eventIndex] = { ...voice.events[cursor.eventIndex], duration: { type, dots: 0 } };
+        }
+        set({
+          score: score2,
+          inputState: { ...result.inputState, duration: { type, dots: 0 }, pendingPitch: null },
+          lastEnteredPosition: { ...cursor },
+        });
+      } else {
+        // Insert new note
+        const cmd = new InsertNote(
+          pending.pitchClass,
+          pending.octave,
+          pending.accidental,
+          { type, dots: 0 },
+        );
+        const result = history.execute(cmd, {
+          score: state.score,
+          inputState: state.inputState,
+        });
+        set({
+          score: result.score,
+          inputState: { ...result.inputState, duration: { type, dots: 0 }, pendingPitch: null },
+          lastEnteredPosition: { ...cursor },
+        });
+      }
       return;
     }
     // Note-level selection: change duration of selected events
@@ -768,13 +790,17 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   togglePitchBeforeDuration() {
-    set((s) => ({
-      inputState: {
-        ...s.inputState,
-        pitchBeforeDuration: !s.inputState.pitchBeforeDuration,
-        pendingPitch: null, // clear any pending pitch on toggle
-      },
-    }));
+    set((s) => {
+      const newVal = !s.inputState.pitchBeforeDuration;
+      updateSettings({ pitchBeforeDuration: newVal });
+      return {
+        inputState: {
+          ...s.inputState,
+          pitchBeforeDuration: newVal,
+          pendingPitch: null,
+        },
+      };
+    });
   },
 
   commitPendingPitch() {
@@ -1734,6 +1760,16 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       const score = { ...s.score, tempo: bpm };
       return { score, tempo: bpm };
     });
+  },
+
+  setSwing(swing: import("../model/annotations").SwingSettings | undefined) {
+    const state = get();
+    const cmd = new SetSwing(swing);
+    const result = history.execute(cmd, {
+      score: state.score,
+      inputState: state.inputState,
+    });
+    set({ score: result.score, inputState: result.inputState });
   },
 
   setPlaybackTick(tick: number | null) {

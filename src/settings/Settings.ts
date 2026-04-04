@@ -20,9 +20,10 @@ export interface AppSettings {
   keyBindings: Record<string, KeyBinding>;
   viewMode: string;
   display: DisplaySettings;
+  pitchBeforeDuration: boolean;
 }
 
-const STORAGE_KEY = "notation-settings";
+const STORAGE_KEY = "nubium-settings";
 const CONFIG_FILENAME = "settings.json";
 
 // Set VITE_CLEAN_SETTINGS=1 to simulate a fresh install without touching your real config
@@ -50,6 +51,7 @@ function defaultSettings(): AppSettings {
     keyBindings: defaultKeyBindings(),
     viewMode: "full-score",
     display: defaultDisplaySettings(),
+    pitchBeforeDuration: false,
   };
 }
 

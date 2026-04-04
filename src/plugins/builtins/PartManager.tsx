@@ -99,5 +99,5 @@ function PartsPanel() {
 /** Register core part management panel and commands. Not a plugin — always active. */
 export function registerCorePartManager(pm: PluginManager): void {
   pm.registerCorePanel("parts.panel", { title: "Parts", location: "sidebar-left", component: () => <PartsPanel />, defaultEnabled: true });
-  pm.registerCoreCommand("notation.add-part", "Add Part", () => { useEditorStore.getState().addPart("piano"); });
+  pm.registerCoreCommand("nubium.add-part", "Add Part", () => { useEditorStore.getState().addPart("piano"); });
 }

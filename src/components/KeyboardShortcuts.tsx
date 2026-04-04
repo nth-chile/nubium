@@ -94,7 +94,7 @@ export function KeyboardShortcuts() {
       "toggle-grace-note": () => toggleGraceNoteMode(),
       "toggle-slur": () => toggleSlur(),
       "toggle-cross-staff": () => toggleCrossStaff(),
-      "go-to-measure": () => getGlobalPluginManager()?.executeCommand("notation.go-to-measure"),
+      "go-to-measure": () => getGlobalPluginManager()?.executeCommand("nubium.go-to-measure"),
 
       // Accidentals
       "accidental:sharp": () => setAccidental("sharp"),
@@ -129,7 +129,7 @@ export function KeyboardShortcuts() {
           });
         }
       },
-      "escape": () => { setSelection(null); setNoteSelection(null); },
+      "escape": () => { setSelection(null); setNoteSelection(null); useEditorStore.setState((s) => ({ inputState: { ...s.inputState, pendingPitch: null } })); },
       "copy": () => { if (selection) copySelection(); },
       "paste": () => { if (clipboardMeasures) pasteAtCursor(); },
       "cut": () => { if (selection) { copySelection(); deleteSelectedMeasures(); } },

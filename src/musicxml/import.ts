@@ -583,11 +583,31 @@ function parseMeasure(
           if (bpm > 0) {
             // Check for text label (e.g. "Allegro") in <words> element
             const wordsEl = getDirectChild(dirTypeEl, "words");
+            // Parse swing from <sound> attributes
+            let swing: import("../model/annotations").SwingSettings | undefined;
+            if (soundEl) {
+              const swingType = soundEl.getAttribute("swing-type");
+              const swingFirst = parseInt(soundEl.getAttribute("swing-first") ?? "", 10);
+              const swingSecond = parseInt(soundEl.getAttribute("swing-second") ?? "", 10);
+              if (swingType && swingFirst && swingSecond) {
+                if (swingFirst === 50 && swingSecond === 50) {
+                  swing = { style: "straight" };
+                } else {
+                  const ratio = swingFirst / swingSecond;
+                  swing = {
+                    style: "swing",
+                    ratio: Math.round(ratio * 10) / 10,
+                    ...(swingType === "16th" ? { subdivision: "sixteenth" as const } : {}),
+                  };
+                }
+              }
+            }
             annotations.push({
               kind: "tempo-mark",
               bpm,
               beatUnit,
               ...(wordsEl?.textContent?.trim() ? { text: wordsEl.textContent.trim() } : {}),
+              ...(swing ? { swing } : {}),
             });
           }
         }

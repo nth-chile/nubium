@@ -70,7 +70,7 @@ export interface PlaybackService {
   }): void;
 }
 
-export interface NotationPlugin {
+export interface NubiumPlugin {
   id: string;
   name: string;
   version: string;

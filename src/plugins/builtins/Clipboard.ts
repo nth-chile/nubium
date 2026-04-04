@@ -1,4 +1,4 @@
-import type { NotationPlugin, PluginAPI } from "../PluginAPI";
+import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
 import type { Score, Measure, Voice } from "../../model/score";
 import type { NoteEvent } from "../../model/note";
 import type { Pitch } from "../../model/pitch";
@@ -300,8 +300,8 @@ export { scoreToAbc, scoreToLily, parseAbcToScore, detectFormat, pitchToAbc, pit
 
 // --- Plugin ---
 
-export const ClipboardPlugin: NotationPlugin = {
-  id: "notation.clipboard",
+export const ClipboardPlugin: NubiumPlugin = {
+  id: "nubium.clipboard",
   name: "Clipboard Interop",
   version: "1.0.0",
   description: "Copy score as ABC/LilyPond/MusicXML text, paste notation from clipboard",
@@ -322,22 +322,22 @@ export const ClipboardPlugin: NotationPlugin = {
       };
     }
 
-    api.registerCommand("notation.copy-abc", "Copy as ABC Notation", async () => {
+    api.registerCommand("nubium.copy-abc", "Copy as ABC Notation", async () => {
       const abc = scoreToAbc(getScoreOrSelection());
       await navigator.clipboard.writeText(abc);
     });
 
-    api.registerCommand("notation.copy-lilypond", "Copy as LilyPond", async () => {
+    api.registerCommand("nubium.copy-lilypond", "Copy as LilyPond", async () => {
       const lily = scoreToLily(getScoreOrSelection());
       await navigator.clipboard.writeText(lily);
     });
 
-    api.registerCommand("notation.copy-musicxml", "Copy as MusicXML", async () => {
+    api.registerCommand("nubium.copy-musicxml", "Copy as MusicXML", async () => {
       const xml = exportToMusicXML(getScoreOrSelection());
       await navigator.clipboard.writeText(xml);
     });
 
-    api.registerCommand("notation.paste-notation", "Paste Notation", async () => {
+    api.registerCommand("nubium.paste-notation", "Paste Notation", async () => {
       const text = await navigator.clipboard.readText();
       if (!text.trim()) return;
 

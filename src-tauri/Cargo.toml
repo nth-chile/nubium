@@ -1,12 +1,12 @@
 [package]
-name = "notation"
+name = "nubium"
 version = "0.1.0"
 description = "AI-native music notation editor"
-authors = ["Notation Contributors"]
+authors = ["Nubium Contributors"]
 edition = "2021"
 
 [lib]
-name = "notation_lib"
+name = "nubium_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]

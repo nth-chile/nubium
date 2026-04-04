@@ -1,4 +1,4 @@
-You are running the test matrix generator for the Notation app. Do this autonomously — do NOT ask the user questions.
+You are running the test matrix generator for the Nubium app. Do this autonomously — do NOT ask the user questions.
 
 ## Step 1: Feature Inventory
 

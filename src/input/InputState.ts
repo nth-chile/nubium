@@ -1,4 +1,5 @@
 import type { Duration, Accidental, PitchClass, Octave } from "../model";
+import { getSettings } from "../settings";
 
 export interface CursorPosition {
   partIndex: number;
@@ -45,7 +46,7 @@ export function defaultInputState(): InputState {
     textInputBuffer: "",
     textInputInitialValue: "",
     lyricVerse: 1,
-    pitchBeforeDuration: false,
+    pitchBeforeDuration: getSettings().pitchBeforeDuration,
     pendingPitch: null,
   };
 }

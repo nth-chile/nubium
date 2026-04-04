@@ -1,7 +1,7 @@
 import type { Score } from "../model";
 import type { CursorPosition } from "../input/InputState";
 import type {
-  NotationPlugin,
+  NubiumPlugin,
   PluginAPI,
   PlaybackService,
   Selection,
@@ -49,7 +49,7 @@ export interface ExporterEntry {
 }
 
 export interface PluginEntry {
-  plugin: NotationPlugin;
+  plugin: NubiumPlugin;
   enabled: boolean;
   commands: PluginCommand[];
   shortcuts: PluginShortcut[];
@@ -66,7 +66,7 @@ type CursorGetter = () => CursorPosition;
 type SelectionGetter = () => Selection | null;
 type NotificationShower = (message: string, type?: "info" | "error" | "success") => void;
 
-const STORAGE_KEY = "notation-plugin-states";
+const STORAGE_KEY = "nubium-plugin-states";
 
 function loadPluginStates(): Record<string, boolean> {
   try {
@@ -87,7 +87,7 @@ function savePluginStates(states: Record<string, boolean>): void {
 }
 
 function pluginStorageKey(pluginId: string): string {
-  return `notation-plugin-data:${pluginId}`;
+  return `nubium-plugin-data:${pluginId}`;
 }
 
 function loadPluginData(pluginId: string): Record<string, unknown> {
@@ -222,7 +222,7 @@ export class PluginManager {
     };
   }
 
-  register(plugin: NotationPlugin): void {
+  register(plugin: NubiumPlugin): void {
     if (this.plugins.has(plugin.id)) {
       console.warn(`Plugin "${plugin.id}" is already registered.`);
       return;
@@ -332,7 +332,7 @@ export class PluginManager {
   /** Register and activate a plugin, respecting persisted enable/disable state.
    *  If defaultEnabled is true and there's no persisted state, it will be activated.
    */
-  registerAndActivate(plugin: NotationPlugin, defaultEnabled: boolean = true): void {
+  registerAndActivate(plugin: NubiumPlugin, defaultEnabled: boolean = true): void {
     this.register(plugin);
     const states = loadPluginStates();
     const shouldEnable = states[plugin.id] !== undefined ? states[plugin.id] : defaultEnabled;
@@ -438,6 +438,6 @@ export function getGlobalPluginManager(): PluginManager | null {
 export function getCommandLabels(): string[] {
   if (!_instance) return [];
   return _instance.getCommands()
-    .filter((c) => !c.id.startsWith("notation.toggle-") && !c.id.startsWith("notation.play") && !c.id.startsWith("notation.pause") && !c.id.startsWith("notation.stop"))
+    .filter((c) => !c.id.startsWith("nubium.toggle-") && !c.id.startsWith("nubium.play") && !c.id.startsWith("nubium.pause") && !c.id.startsWith("nubium.stop"))
     .map((c) => c.label);
 }

@@ -4,20 +4,20 @@ import { getSettings, matchesBinding, SHORTCUT_ACTIONS, getBindingParts } from "
 
 // Map command IDs to keybinding action IDs where they differ
 const COMMAND_TO_ACTION: Record<string, string> = {
-  "notation.dynamics": "dynamics-popover",
-  "notation.tempo": "tempo-popover",
-  "notation.time-signature": "time-sig-popover",
-  "notation.key-signature": "key-sig-popover",
-  "notation.rehearsal-mark": "rehearsal-popover",
-  "notation.barline": "barline-popover",
-  "notation.view-full-score": "view:full-score",
-  "notation.view-tab": "view:tab",
-  "notation.play": "play-pause",
-  "notation.toggle-chat": "toggle-right-sidebar",
+  "nubium.dynamics": "dynamics-popover",
+  "nubium.tempo": "tempo-popover",
+  "nubium.time-signature": "time-sig-popover",
+  "nubium.key-signature": "key-sig-popover",
+  "nubium.rehearsal-mark": "rehearsal-popover",
+  "nubium.barline": "barline-popover",
+  "nubium.view-full-score": "view:full-score",
+  "nubium.view-tab": "view:tab",
+  "nubium.play": "play-pause",
+  "nubium.toggle-chat": "toggle-right-sidebar",
 };
 
 function getShortcutParts(commandId: string): string[] | null {
-  const actionId = COMMAND_TO_ACTION[commandId] ?? commandId.replace("notation.", "");
+  const actionId = COMMAND_TO_ACTION[commandId] ?? commandId.replace("nubium.", "");
   const action = SHORTCUT_ACTIONS.find((a) => a.id === actionId);
   if (!action) return null;
   const custom = getSettings().keyBindings[actionId];

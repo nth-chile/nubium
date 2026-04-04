@@ -1,4 +1,4 @@
-You are fixing GitHub issues for the Notation app. Do this autonomously — do NOT ask the user questions, EXCEPT when picking a group and confirming issue closure.
+You are fixing GitHub issues for the Nubium app. Do this autonomously — do NOT ask the user questions, EXCEPT when picking a group and confirming issue closure.
 
 ## Step 1: Triage
 

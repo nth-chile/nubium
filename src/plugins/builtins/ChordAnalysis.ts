@@ -1,4 +1,4 @@
-import type { NotationPlugin, PluginAPI } from "../PluginAPI";
+import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
 import type { Score } from "../../model";
 import type { NoteEvent } from "../../model/note";
 import type { ChordSymbol } from "../../model/annotations";
@@ -62,14 +62,14 @@ function getMidiFromEvents(events: NoteEvent[]): number[] {
   return midis;
 }
 
-export const ChordAnalysisPlugin: NotationPlugin = {
-  id: "notation.chord-analysis",
+export const ChordAnalysisPlugin: NubiumPlugin = {
+  id: "nubium.chord-analysis",
   name: "Chord Analysis",
   version: "1.0.0",
   description: "Analyze note groups and add chord symbols",
 
   activate(api: PluginAPI) {
-    api.registerCommand("notation.analyze-chords", "Analyze Chords", () => {
+    api.registerCommand("nubium.analyze-chords", "Analyze Chords", () => {
       const score = api.getScore();
       const selection = api.getSelection();
       let chordsAdded = 0;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSettings, updateSettings, subscribeSettings, type AppSettings, type DisplaySettings, SHORTCUT_ACTIONS, formatBinding, eventToBinding, defaultKeyBindings, type KeyBinding } from "../settings";
 import type { ClefType } from "../model";
+import { useEditorStore } from "../state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -102,9 +103,9 @@ export function SettingsPanel({ visible, onClose }: SettingsPanelProps) {
                       }
                     } catch {
                       // Fallback to mailto if fetch fails
-                      const subject = encodeURIComponent("Notation Feedback");
+                      const subject = encodeURIComponent("Nubium Feedback");
                       const body = encodeURIComponent(feedbackText);
-                      window.open(`mailto:feedback@notation.app?subject=${subject}&body=${body}`, "_blank");
+                      window.open(`mailto:feedback@nubium.app?subject=${subject}&body=${body}`, "_blank");
                       setFeedbackText("");
                       setFeedbackSent(true);
                     }
@@ -185,6 +186,20 @@ export function SettingsPanel({ visible, onClose }: SettingsPanelProps) {
                   type="checkbox"
                   checked={settings.autoBeam}
                   onChange={(e) => update("autoBeam", e.target.checked)}
+                  className="accent-primary"
+                />
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Pitch before duration</span>
+                <input
+                  type="checkbox"
+                  checked={settings.pitchBeforeDuration}
+                  onChange={(e) => {
+                    update("pitchBeforeDuration", e.target.checked);
+                    useEditorStore.setState((s) => ({
+                      inputState: { ...s.inputState, pitchBeforeDuration: e.target.checked, pendingPitch: null },
+                    }));
+                  }}
                   className="accent-primary"
                 />
               </div>

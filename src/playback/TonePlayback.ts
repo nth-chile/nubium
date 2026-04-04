@@ -7,7 +7,7 @@ import * as Tone from "tone";
 import type { Score } from "../model/score";
 import { durationToTicks, TICKS_PER_QUARTER } from "../model/duration";
 import { pitchToMidi } from "../model/pitch";
-import type { TempoMark, DynamicLevel, DynamicMark, Hairpin } from "../model/annotations";
+import type { TempoMark, DynamicLevel, DynamicMark, Hairpin, SwingSettings } from "../model/annotations";
 import { computePlaybackOrder } from "./PlaybackOrder";
 import type { Articulation } from "../model/note";
 
@@ -51,6 +51,9 @@ interface MetronomeBeat {
 interface MeasureBoundary {
   tick: number;
   measureIndex: number;
+  swing?: SwingSettings;
+  /** Ticks per beat for swing subdivision detection */
+  beatTicks: number;
 }
 
 const LOOKAHEAD_SEC = 0.1;
@@ -275,13 +278,23 @@ function buildEvents(score: Score): void {
 
   // Use playback order to follow repeats, D.S., D.C., voltas, etc.
   const measureOrder = computePlaybackOrder(score, 0);
+  let currentSwing: SwingSettings | undefined;
 
   for (const mi of measureOrder) {
     const m0 = score.parts[0]?.measures[mi];
     if (!m0) continue;
 
+    // Check for swing changes on tempo marks in this measure
+    for (const ann of m0.annotations) {
+      if (ann.kind === "tempo-mark") {
+        const tm = ann as TempoMark;
+        if (tm.swing) currentSwing = tm.swing;
+      }
+    }
+
     const mTicks = (TICKS_PER_QUARTER * 4 * m0.timeSignature.numerator) / m0.timeSignature.denominator;
-    measureBoundaries.push({ tick, measureIndex: mi });
+    const beatTicks = (TICKS_PER_QUARTER * 4) / m0.timeSignature.denominator;
+    measureBoundaries.push({ tick, measureIndex: mi, swing: currentSwing, beatTicks });
 
     for (let pi = 0; pi < score.parts.length; pi++) {
       const part = score.parts[pi];
@@ -332,7 +345,6 @@ function buildEvents(score: Score): void {
     }
 
     const beats = m0.timeSignature.numerator;
-    const beatTicks = (TICKS_PER_QUARTER * 4) / m0.timeSignature.denominator;
     for (let b = 0; b < beats; b++) {
       metronomeBeats.push({ tick: tick + b * beatTicks, isDownbeat: b === 0 });
     }
@@ -348,6 +360,68 @@ function buildEvents(score: Score): void {
 
 function tickToAudioTime(tick: number): number {
   return anchorAudioTime + ticksToSec(tick - anchorTick, currentBpm);
+}
+
+/**
+ * Calculate swing offset for a tick position within a measure.
+ * Swing delays offbeat subdivisions within each beat.
+ * For triplet swing (ratio=2): offbeat eighths shift from 50% to 66% of the beat.
+ */
+export function calculateSwingTick(
+  tickInMeasure: number,
+  swing: SwingSettings,
+  beatTicks: number,
+): number {
+  if (swing.style === "straight") return tickInMeasure;
+
+  const ratio = swing.ratio ?? 2;
+  const subdivision = swing.subdivision ?? "eighth";
+  // Swing unit: half a beat for eighths, quarter beat for sixteenths
+  const swingUnit = subdivision === "sixteenth" ? beatTicks / 4 : beatTicks / 2;
+  const pairTicks = swingUnit * 2;
+
+  const posInPair = tickInMeasure % pairTicks;
+
+  // Only offset notes on the second half of a swing pair (the offbeat)
+  if (posInPair < swingUnit) return tickInMeasure;
+
+  const offbeatOffset = posInPair - swingUnit;
+  // New offbeat start: ratio/(ratio+1) of the pair
+  const swungOffbeatStart = pairTicks * ratio / (ratio + 1);
+  const swungOffbeatLength = pairTicks - swungOffbeatStart;
+  // Scale the position proportionally within the offbeat
+  const scaledOffset = (offbeatOffset / swingUnit) * swungOffbeatLength;
+
+  const pairStart = tickInMeasure - posInPair;
+  return pairStart + swungOffbeatStart + scaledOffset;
+}
+
+function applySwing(tick: number): number {
+  const boundary = getMeasureBoundary(tick);
+  if (!boundary?.swing || boundary.swing.style === "straight") return tick;
+  const tickInMeasure = tick - boundary.tick;
+  const swungTick = calculateSwingTick(tickInMeasure, boundary.swing, boundary.beatTicks);
+  return boundary.tick + swungTick;
+}
+
+function getMeasureBoundary(tick: number): MeasureBoundary | undefined {
+  for (let i = measureBoundaries.length - 1; i >= 0; i--) {
+    if (tick >= measureBoundaries[i].tick) return measureBoundaries[i];
+  }
+  return measureBoundaries[0];
+}
+
+/** Boost velocity on beats 2 and 4 for shuffle feel. */
+function applyBackbeatAccent(tick: number, velocity: number): number {
+  const boundary = getMeasureBoundary(tick);
+  if (!boundary?.swing?.backbeatAccent) return velocity;
+  const tickInMeasure = tick - boundary.tick;
+  const beatIndex = Math.floor(tickInMeasure / boundary.beatTicks);
+  // Beats 2 and 4 (0-indexed: 1 and 3)
+  if (beatIndex % 2 === 1) {
+    return Math.min(127, velocity + boundary.swing.backbeatAccent);
+  }
+  return velocity;
 }
 
 function schedulerTick(): void {
@@ -371,9 +445,11 @@ function schedulerTick(): void {
   while (eventCursor < events.length && events[eventCursor].tick < lookaheadTick) {
     const e = events[eventCursor];
     if (customPlayer && e.tick >= scheduledUpToTick && !(currentScore!.parts[e.partIndex]?.muted)) {
-      const audioTime = tickToAudioTime(e.tick);
+      const swungTick = applySwing(e.tick);
+      const audioTime = tickToAudioTime(swungTick);
       const dur = Math.max(ticksToSec(e.durationTicks, currentBpm) * e.durationMultiplier, 0.05);
-      customPlayer.play(e.midi, dur, audioTime, e.instrumentId, e.velocity);
+      const vel = applyBackbeatAccent(e.tick, e.velocity);
+      customPlayer.play(e.midi, dur, audioTime, e.instrumentId, vel);
     }
     eventCursor++;
   }

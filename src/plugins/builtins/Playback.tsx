@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { NotationPlugin, PluginAPI } from "../PluginAPI";
+import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
 import type { PluginManager } from "../PluginManager";
 import { useEditorStore } from "../../state";
 import { useHotkey } from "../../hooks/useHotkey";
@@ -247,17 +247,17 @@ function formatPosition(
 /** Register core transport panel and playback commands. Not a plugin — always active. */
 export function registerCoreTransport(pm: PluginManager): void {
   pm.registerCorePanel("playback.transport", { title: "Transport", location: "toolbar", component: () => <TransportPanel />, defaultEnabled: true });
-  pm.registerCoreCommand("notation.play", "Play", () => { useEditorStore.getState().play(); });
-  pm.registerCoreCommand("notation.pause", "Pause", () => { useEditorStore.getState().pause(); });
-  pm.registerCoreCommand("notation.stop", "Stop Playback", () => { useEditorStore.getState().stopPlayback(); });
+  pm.registerCoreCommand("nubium.play", "Play", () => { useEditorStore.getState().play(); });
+  pm.registerCoreCommand("nubium.pause", "Pause", () => { useEditorStore.getState().pause(); });
+  pm.registerCoreCommand("nubium.stop", "Stop Playback", () => { useEditorStore.getState().stopPlayback(); });
 }
 
 // --- Built-in Instruments plugin ---
 
 let player: SmplrPlayer | null = null;
 
-export const BuiltinInstrumentsPlugin: NotationPlugin = {
-  id: "notation.builtin-instruments",
+export const BuiltinInstrumentsPlugin: NubiumPlugin = {
+  id: "nubium.builtin-instruments",
   name: "Built-in Instruments",
   version: "1.0.0",
   description: "General MIDI instrument sounds via SoundFont",

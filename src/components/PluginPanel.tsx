@@ -13,7 +13,7 @@ interface PluginPanelProps {
 const CATEGORY_ORDER: Record<string, number> = { Feature: 0, Transform: 1 };
 
 function categorize(pluginId: string): string {
-  const featureIds = ["notation.views", "notation.builtin-instruments", "notation.ai-chat", "notation.export"];
+  const featureIds = ["nubium.views", "nubium.builtin-instruments", "nubium.ai-chat", "nubium.export"];
   return featureIds.includes(pluginId) ? "Feature" : "Transform";
 }
 

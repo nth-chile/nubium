@@ -1,4 +1,4 @@
-# Notation
+# Nubium
 
 AI-native music notation editor. Tauri v2 + React + TypeScript + VexFlow 5.
 
@@ -14,7 +14,7 @@ AI-native music notation editor. Tauri v2 + React + TypeScript + VexFlow 5.
 - **Playback** (`src/playback/`): Web Audio oscillator synth, lookahead scheduler, transport, metronome, PlaybackOrder (follows repeats/D.S./D.C.).
 - **Plugins** (`src/plugins/`): Plugin API with sandboxed instances. Core features (ScoreEditor, PartManager, Transport) register via `registerCoreCommand`/`registerCorePanel` — always active, not in plugin panel. Real plugins (toggleable): Built-in Instruments, Views, PDF Export, Transpose, ChordAnalysis, Clipboard, AIChat, MidiInput. Command palette (Ctrl+Shift+P).
 - **MusicXML** (`src/musicxml/`): Full import/export for interop with MuseScore, Dorico, Sibelius, etc.
-- **Settings** (`src/settings/`): AppSettings + keybindings persisted to Tauri config file (`~/Library/Application Support/com.notation.app/settings.json` on macOS) with localStorage fallback in browser. Display settings (show/hide lyrics, chord symbols, rehearsal marks, tempo marks, dynamics) are app-level, not per-score.
+- **Settings** (`src/settings/`): AppSettings + keybindings persisted to Tauri config file (`~/Library/Application Support/com.nubium.app/settings.json` on macOS) with localStorage fallback in browser. Display settings (show/hide lyrics, chord symbols, rehearsal marks, tempo marks, dynamics) are app-level, not per-score.
 - **File I/O** (`src/fileio/`): Tauri native dialogs with browser fallback. Import: .musicxml, .mxl, .xml. Export: .musicxml, .pdf.
 - **Tauri** (`src-tauri/`): Minimal Rust — file I/O commands.
 
