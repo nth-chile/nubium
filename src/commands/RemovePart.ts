@@ -1,7 +1,7 @@
 import type { Command, EditorSnapshot } from "./Command";
 
 // Score-level annotations that should transfer when a part is deleted
-const SCORE_LEVEL_ANNOTATION_KINDS = new Set(["rehearsal-mark", "tempo-mark", "chord-symbol"]);
+const SCORE_LEVEL_ANNOTATION_KINDS = new Set(["rehearsal-mark", "tempo-mark"]);
 
 export class RemovePart implements Command {
   description = "Remove part";
@@ -56,13 +56,6 @@ export class RemovePart implements Command {
           dst.barlineEnd = src.barlineEnd;
         }
 
-        // If target measure is empty but gets chord symbols, copy voice events
-        // so VexFlow can position chords on notes
-        const dstEmpty = !dst.voices.some(v => v && v.events.length > 0);
-        const hasChords = dst.annotations.some(a => a.kind === "chord-symbol");
-        if (dstEmpty && hasChords && src.voices.some(v => v && v.events.length > 0)) {
-          dst.voices = structuredClone(src.voices);
-        }
       }
     }
 
