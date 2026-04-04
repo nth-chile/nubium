@@ -356,6 +356,7 @@ export function renderMeasure(
   activeNoteIds?: Set<NoteEventId>,
   prevMeasure?: Measure,
   voiceFilter?: number[],
+  staveIndex = 0,
 ): MeasureRenderResult {
   const style = resolveStylesheet(stylesheet);
 
@@ -377,8 +378,8 @@ export function renderMeasure(
   // Set barline types
   applyBarline(stave, m.barlineEnd);
 
-  // Detect if this is a secondary (bass) stave for a grand staff instrument
-  const isSecondaryStaveLocal = voiceFilter && voiceFilter.length > 0 && voiceFilter.every(i => (m.voices[i]?.staff ?? 0) > 0);
+  // Secondary stave = any stave after the first in a grand staff instrument
+  const isSecondaryStaveLocal = voiceFilter != null && staveIndex > 0;
 
   // Add volta bracket if present (treble only)
   if (m.navigation?.volta && !isSecondaryStaveLocal) {
@@ -391,33 +392,71 @@ export function renderMeasure(
     }
   }
 
-  // Add repetition signs for segno/coda (treble only)
+  // Segno — VexFlow Repetition, shifted up past chord symbols
+  const hasChords = !isSecondaryStaveLocal && m.annotations.some((a) => a.kind === "chord-symbol");
   if (m.navigation?.segno && !isSecondaryStaveLocal) {
-    try {
-      stave.addModifier(new Repetition(Repetition.type.SEGNO_LEFT, x, 0));
-    } catch {
-      // Fallback handled via text rendering below
-    }
+    const segnoShift = hasChords ? -(style.chordSymbolSize + 8) : 0;
+    try { stave.addModifier(new Repetition(Repetition.type.SEGNO_LEFT, x - 15, segnoShift)); } catch { /* skip */ }
   }
-  if (m.navigation?.coda && !isSecondaryStaveLocal) {
-    try {
-      stave.addModifier(new Repetition(Repetition.type.CODA_LEFT, x, 0));
-    } catch {
-      // Fallback handled via text rendering below
-    }
-  }
+  // Coda drawn manually after stave.draw() to avoid VexFlow's "Coda" text label
 
   // Tempo mark — rendered as Annotation on first note (not setTempo) so it stacks with chord symbols
   const tempoAnn = m.annotations.find((a) => a.kind === "tempo-mark") as TempoMark | undefined;
 
   stave.setContext(ctx.context).draw();
 
+  const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
+  const hasChordSymbols = !isSecondaryStaveLocal && m.annotations.some((a) => a.kind === "chord-symbol");
+
+  // Coda — draw manually using VexFlow's music font (no "Coda" text label)
+  if (m.navigation?.coda && !isSecondaryStaveLocal && rawCtx.save) {
+    rawCtx.save();
+    rawCtx.font = "28px Bravura, Petaluma, serif";
+    rawCtx.fillStyle = "#000";
+    const codaShift = hasChordSymbols ? style.chordSymbolSize + 8 : 0;
+    rawCtx.fillText("\uE048", x - 10, y - 28 - codaShift);
+    rawCtx.restore();
+  }
+
   // Draw stave-level annotations manually with coordinated Y tracking.
-  // Reuse isSecondaryStaveLocal for above-stave annotations
-  const aboveStaveCtx = ctx.context as unknown as CanvasRenderingContext2D;
+  // Stacking order from staff upward (Dorico convention):
+  //   chord symbols → volta → segno/coda + D.S./Fine → tempo → rehearsal marks (highest)
+  const aboveStaveCtx = rawCtx;
   let aboveY = y - 6; // just above stave top
-  if (m.navigation?.volta) aboveY -= 22; // volta bracket takes ~22px
-  if (m.navigation?.segno || m.navigation?.coda) aboveY -= 20; // segno/coda glyph
+
+  // Chord symbols closest to staff
+  const chordSymbolY = hasChordSymbols ? (aboveY -= style.chordSymbolSize + 2, aboveY + style.chordSymbolSize) : 0;
+
+  if (m.navigation?.volta) aboveY -= 22;
+
+  // Segno/coda above chords and volta
+  if (m.navigation?.segno || m.navigation?.coda) aboveY -= 35;
+
+  // Navigation text (Fine, D.S., D.C., To Coda) — italic, right-aligned, same level as segno
+  if (m.navigation && aboveStaveCtx.save && !isSecondaryStaveLocal) {
+    const nav = m.navigation;
+    const textItems: string[] = [];
+    if (nav.fine) textItems.push("Fine");
+    if (nav.toCoda) textItems.push("To Coda");
+    if (nav.dsText) textItems.push(nav.dsText);
+    if (nav.dcText) textItems.push(nav.dcText);
+    if (textItems.length > 0) {
+      const navBaseY = aboveY; // same level as segno
+      aboveStaveCtx.save();
+      aboveStaveCtx.font = "italic bold 11px serif";
+      aboveStaveCtx.fillStyle = "#000";
+      let navY = navBaseY;
+      for (const text of textItems) {
+        navY -= 14;
+        const tw = aboveStaveCtx.measureText(text).width;
+        const navX = x + width - tw - 8;
+        aboveStaveCtx.fillText(text, navX, navY + 12);
+      }
+      aboveStaveCtx.restore();
+      // Only push aboveY if nav text went higher than segno already did
+      if (navY < aboveY) aboveY = navY;
+    }
+  }
 
   // Tempo marks (skip on secondary staves)
   if (tempoAnn && aboveStaveCtx.save && !isSecondaryStaveLocal) {
@@ -427,56 +466,32 @@ export function renderMeasure(
     const tempoText = tempoAnn.text
       ? `${tempoAnn.text} (\u2669 = ${tempoAnn.bpm})`
       : `\u2669 = ${tempoAnn.bpm}`;
-    aboveY -= 16;
-    aboveStaveCtx.fillText(tempoText, x + 2, aboveY);
+    aboveY -= 22;
+    const tempoX = stave.getNoteStartX() + 10;
+    aboveStaveCtx.fillText(tempoText, tempoX, aboveY + 14);
     aboveStaveCtx.restore();
   }
 
   // Rehearsal marks — highest, boxed text (Dorico/MuseScore style)
-  // Only render on primary stave (treble) for grand staff instruments
   for (const ann of m.annotations) {
     if (ann.kind !== "rehearsal-mark") continue;
     if (isSecondaryStaveLocal) continue;
     if (!aboveStaveCtx.save) continue;
     aboveStaveCtx.save();
-    aboveStaveCtx.font = "bold 14px sans-serif";
+    aboveStaveCtx.font = "bold 20px sans-serif";
     const tw = aboveStaveCtx.measureText(ann.text).width;
-    const pad = 4;
-    const boxH = 14 + pad * 2;
-    aboveY -= boxH + 2;
+    const pad = 6;
+    const boxSize = Math.max(tw + pad * 2, 20 + pad * 2);
+    aboveY -= boxSize + 2;
     aboveStaveCtx.strokeStyle = "#000";
-    aboveStaveCtx.lineWidth = 1.5;
+    aboveStaveCtx.lineWidth = 2;
     aboveStaveCtx.beginPath();
-    aboveStaveCtx.rect(x + 2 - pad, aboveY, tw + pad * 2, boxH);
+    const rehX = stave.getNoteStartX() + 10;
+    aboveStaveCtx.rect(rehX - pad, aboveY, boxSize, boxSize);
     aboveStaveCtx.stroke();
     aboveStaveCtx.fillStyle = "#000";
-    aboveStaveCtx.fillText(ann.text, x + 2, aboveY + boxH - pad - 2);
+    aboveStaveCtx.fillText(ann.text, rehX + (boxSize - pad * 2 - tw) / 2, aboveY + boxSize / 2 + 7);
     aboveStaveCtx.restore();
-  }
-
-  // Navigation text (Fine, D.S., D.C., To Coda) — italic, right-aligned
-  if (m.navigation && aboveStaveCtx.save && !isSecondaryStaveLocal) {
-    const nav = m.navigation;
-    const textItems: string[] = [];
-    if (nav.fine) textItems.push("Fine");
-    if (nav.toCoda) textItems.push("To Coda");
-    if (nav.dsText) textItems.push(nav.dsText);
-    if (nav.dcText) textItems.push(nav.dcText);
-    if (textItems.length > 0) {
-      aboveStaveCtx.save();
-      aboveStaveCtx.font = "italic bold 11px serif";
-      aboveStaveCtx.fillStyle = "#000";
-      let navY = y - 6;
-      if (m.navigation?.volta) navY -= 22;
-      for (const text of textItems) {
-        navY -= 14;
-        // Measure text width and position so the right edge stays within the measure
-        const tw = aboveStaveCtx.measureText(text).width;
-        const navX = x + width - tw - 8;
-        aboveStaveCtx.fillText(text, navX, navY + 12);
-      }
-      aboveStaveCtx.restore();
-    }
   }
 
   const noteBoxes: NoteBox[] = [];
@@ -502,7 +517,6 @@ export function renderMeasure(
     const graceNoteMap: { graceNotes: VexGraceNote[]; ids: NoteEventId[] }[] = [];
 
     let currentBeatOffset = 0;
-    const renderedChordOffsets = new Set<number>();
     for (const event of modelVoice.events) {
       if (event.kind === "grace") {
         pendingGraceNotes.push(eventToGraceNote(event));
@@ -522,15 +536,8 @@ export function renderMeasure(
         // Attach annotations as VexFlow modifiers — order matters for stacking.
         // TOP: chord symbols (closest to staff), then tempo mark (above chords)
         // BOTTOM: dynamics first (closest to staff), then lyrics
-        for (const ann of m.annotations) {
-          const isSecondaryStave = voiceFilter && voiceFilter.length > 0 && voiceFilter.every(i => (m.voices[i]?.staff ?? 0) > 0);
-          if (ann.kind === "chord-symbol" && !isSecondaryStave && (ann.noteEventId === event.id || ann.beatOffset === currentBeatOffset) && !renderedChordOffsets.has(ann.beatOffset)) {
-            sn.addModifier(new VexAnnotation(ann.text)
-              .setVerticalJustification(VexAnnotation.VerticalJustify.TOP)
-              .setFont("sans-serif", style.chordSymbolSize, "bold"));
-            renderedChordOffsets.add(ann.beatOffset);
-          }
-        }
+        // Chord symbols are rendered manually below (after noteBoxes are populated)
+        // to maintain a fixed Y position above the stave.
         // Tempo mark is rendered manually above stave (see above), not as VexFlow annotation
         // Dynamics as VexFlow Annotation (note-relative Y is correct for dynamics)
         for (const ann of m.annotations) {
@@ -827,7 +834,27 @@ export function renderMeasure(
     }
   }
 
-  // All annotations are now rendered by VexFlow — no manual canvas drawing.
+  // Chord symbols — rendered manually at a fixed Y above the stave (not note-relative).
+  // Y was reserved during the aboveY stacking phase above.
+  if (hasChordSymbols) {
+    const csCtx = ctx.context as unknown as CanvasRenderingContext2D;
+    const renderedChordIds = new Set<string>();
+    if (csCtx.save) {
+      csCtx.save();
+      csCtx.font = `bold ${style.chordSymbolSize}px sans-serif`;
+      csCtx.fillStyle = "#000";
+      for (const ann of m.annotations) {
+        if (ann.kind !== "chord-symbol") continue;
+        if (ann.noteEventId && renderedChordIds.has(ann.noteEventId)) continue;
+        const box = ann.noteEventId ? noteBoxes.find((nb) => nb.id === ann.noteEventId) : undefined;
+        const chordX = box ? box.x : x + 4;
+        csCtx.fillText(ann.text, chordX, chordSymbolY);
+        if (ann.noteEventId) renderedChordIds.add(ann.noteEventId);
+      }
+      csCtx.restore();
+    }
+  }
+
   // Collect annotation boxes for interactive editing (chord symbols, lyrics).
   const annotationBoxes: AnnotationBox[] = [];
   for (const annotation of m.annotations) {
@@ -836,7 +863,7 @@ export function renderMeasure(
       if (box) {
         annotationBoxes.push({
           kind: "chord-symbol",
-          x: box.x, y: box.y - style.chordSymbolSize - 4,
+          x: box.x, y: chordSymbolY - 4,
           width: box.width, height: style.chordSymbolSize + 4,
           partIndex, measureIndex,
           noteEventId: annotation.noteEventId, text: annotation.text,

@@ -27,11 +27,10 @@ export function computePlaybackOrder(
     const nav = m.navigation;
     const barline = m.barlineEnd;
 
-    // When we arrive at a measure whose PREVIOUS measure has a repeat-start barline,
-    // update the repeat section start (but only on first entry, i.e., pass 1).
-    if (i > 0 && repeatPass === 1) {
-      const prevBarline = measures[i - 1].barlineEnd;
-      if (prevBarline === "repeat-start" || prevBarline === "repeat-both") {
+    // Update repeat section start when we encounter a repeat-start barline
+    const curBarline = measures[i].barlineEnd;
+    if (repeatPass === 1) {
+      if (curBarline === "repeat-start" || curBarline === "repeat-both") {
         repeatStartIdx = i;
       }
     }
@@ -91,18 +90,39 @@ export function computePlaybackOrder(
 
     // Handle repeat-end barlines
     if (barline === "repeat-end" || barline === "repeat-both") {
-      if (repeatPass === 1) {
-        // First time through: jump back for the repeat
-        repeatPass = 2;
-        i = repeatStartIdx;
-        continue;
-      } else {
-        // Second time through: continue forward, reset for next section
-        repeatPass = 1;
-        if (barline === "repeat-both") {
-          // This measure's end is both repeat-end and repeat-start
-          // The next measure starts a new repeat section
-          repeatStartIdx = i + 1;
+      // Check if volta brackets follow — defer repeat logic to volta handling
+      const nextHasVolta = i + 1 < measures.length && measures[i + 1].navigation?.volta;
+      if (!nextHasVolta) {
+        if (repeatPass === 1) {
+          repeatPass = 2;
+          i = repeatStartIdx;
+          continue;
+        } else {
+          repeatPass = 1;
+          if (barline === "repeat-both") {
+            repeatStartIdx = i + 1;
+          }
+        }
+      }
+      // If voltas follow, just continue — they handle the repeat logic
+    }
+
+    // After playing a volta measure, check if the NEXT measure's volta
+    // also matches the current pass. If not, this was the last for this pass.
+    if (nav?.volta && nav.volta.endings.includes(repeatPass)) {
+      const nextVolta = (i + 1 < measures.length) ? measures[i + 1].navigation?.volta : undefined;
+      const nextMatchesPass = nextVolta?.endings.includes(repeatPass);
+
+      if (!nextMatchesPass) {
+        // Last volta measure for this pass
+        if (repeatPass === 1) {
+          // Jump back for pass 2
+          repeatPass = 2;
+          i = repeatStartIdx;
+          continue;
+        } else {
+          // Done with repeats, reset
+          repeatPass = 1;
         }
       }
     }

@@ -8,6 +8,7 @@ import type { Score } from "../model/score";
 import { durationToTicks, TICKS_PER_QUARTER } from "../model/duration";
 import { pitchToMidi } from "../model/pitch";
 import type { TempoMark, DynamicLevel, DynamicMark, Hairpin } from "../model/annotations";
+import { computePlaybackOrder } from "./PlaybackOrder";
 import type { Articulation } from "../model/note";
 
 export type TransportState = "stopped" | "playing" | "paused";
@@ -121,11 +122,13 @@ function getTempoForMeasure(score: Score, mi: number, fallbackBpm?: number): num
   return fallbackBpm ?? globalBpm;
 }
 
-function getMeasureIndexForTick(tick: number): number {
+export function getMeasureIndexForTick(tick: number): { measureIndex: number; tickInMeasure: number } {
   for (let i = measureBoundaries.length - 1; i >= 0; i--) {
-    if (tick >= measureBoundaries[i].tick) return measureBoundaries[i].measureIndex;
+    if (tick >= measureBoundaries[i].tick) {
+      return { measureIndex: measureBoundaries[i].measureIndex, tickInMeasure: tick - measureBoundaries[i].tick };
+    }
   }
-  return 0;
+  return { measureIndex: 0, tickInMeasure: 0 };
 }
 
 function findLastContentMeasure(score: Score): number {
@@ -143,8 +146,8 @@ function findLastContentMeasure(score: Score): number {
 
 function getBpmAtTick(tick: number): number {
   if (!currentScore) return globalBpm;
-  const mi = getMeasureIndexForTick(tick);
-  return getTempoForMeasure(currentScore, mi);
+  const { measureIndex } = getMeasureIndexForTick(tick);
+  return getTempoForMeasure(currentScore, measureIndex);
 }
 
 // --- Dynamics & Articulations ---
@@ -270,7 +273,10 @@ function buildEvents(score: Score): void {
   hairpinMaps = buildHairpinMap(score, lastMi, dynamicMaps);
   let tick = 0;
 
-  for (let mi = 0; mi <= lastMi; mi++) {
+  // Use playback order to follow repeats, D.S., D.C., voltas, etc.
+  const measureOrder = computePlaybackOrder(score, 0);
+
+  for (const mi of measureOrder) {
     const m0 = score.parts[0]?.measures[mi];
     if (!m0) continue;
 

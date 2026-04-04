@@ -34,16 +34,16 @@ describe("computePlaybackOrder", () => {
 
   it("handles repeat-start and repeat-end", () => {
     // m0: normal, m1: repeat-start, m2: repeat-end, m3: normal
-    // The repeat-start on m1 sets the jump-back point.
-    // On repeat-end at m2, jump back to after m1 (which has repeat-start).
-    // Expected: 0, 1, 2, 2, 3
+    // The repeat-start on m1 means the repeat section starts AT m1.
+    // On repeat-end at m2, jump back to m1.
+    // Expected: 0, 1, 2, 1, 2, 3
     const s = makeScore([
       makeMeasure(),
       makeMeasure("repeat-start"),
       makeMeasure("repeat-end"),
       makeMeasure(),
     ]);
-    expect(computePlaybackOrder(s, 0)).toEqual([0, 1, 2, 2, 3]);
+    expect(computePlaybackOrder(s, 0)).toEqual([0, 1, 2, 1, 2, 3]);
   });
 
   it("handles volta brackets", () => {

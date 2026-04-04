@@ -2,6 +2,7 @@ import type { Score, NoteEventId } from "../model";
 import { TICKS_PER_QUARTER, durationToTicks } from "../model/duration";
 import { StaveTie, type StaveNote } from "vexflow";
 import { renderMeasure, renderMultiMeasureRest, renderSystemBarline, renderBrace, clearCanvas, type RenderContext, type NoteBox, type AnnotationBox } from "./vexBridge";
+import { getMeasureIndexForTick } from "../playback/TonePlayback";
 import { renderTabMeasure } from "./TabRenderer";
 import { computeLayout, totalContentHeight, totalPageCount, partStaveCount, DEFAULT_LAYOUT, type LayoutConfig, type SystemLine } from "./SystemLayout";
 import type { CursorPosition } from "../input/InputState";
@@ -90,7 +91,7 @@ const MEASURES_PER_LINE = DEFAULT_LAYOUT.measuresPerLine;
 function titleHeight(score: Score): number {
   const state = useEditorStore.getState();
   const hasComposer = !!score.composer || state.editingComposer;
-  return 48 + (hasComposer ? 22 : 0) + 16;
+  return 48 + (hasComposer ? 22 : 0) + 30;
 }
 
 export function calculateContentHeight(score: Score, viewConfig?: ViewConfig, availableWidth?: number): number {
@@ -360,6 +361,7 @@ export function renderScore(
               activeNoteIds,
               mi > 0 ? part.measures[mi - 1] : undefined,
               voiceIndicesForStave(m, si, staveCount),
+              si,
             );
           }
 
@@ -590,29 +592,24 @@ function drawCursor(
 
 function getActiveNoteIds(score: Score, playbackTick: number): Set<NoteEventId> {
   const active = new Set<NoteEventId>();
-  let accumulated = 0;
+  const { measureIndex, tickInMeasure } = getMeasureIndexForTick(playbackTick);
 
   for (const part of score.parts) {
     if (part.muted) continue;
-    accumulated = 0;
-    for (const measure of part.measures) {
-      const ts = measure.timeSignature;
-      const measureTicks = (TICKS_PER_QUARTER * 4 * ts.numerator) / ts.denominator;
-      if (accumulated > playbackTick) break;
+    const measure = part.measures[measureIndex];
+    if (!measure) continue;
 
-      for (const voice of measure.voices) {
-        let offset = accumulated;
-        for (const evt of voice.events) {
-          const evtTicks = durationToTicks(evt.duration);
-          if (offset <= playbackTick && playbackTick < offset + evtTicks) {
-            if (evt.kind === "note" || evt.kind === "chord") {
-              active.add(evt.id);
-            }
+    for (const voice of measure.voices) {
+      let offset = 0;
+      for (const evt of voice.events) {
+        const evtTicks = durationToTicks(evt.duration);
+        if (offset <= tickInMeasure && tickInMeasure < offset + evtTicks) {
+          if (evt.kind === "note" || evt.kind === "chord") {
+            active.add(evt.id);
           }
-          offset += evtTicks;
         }
+        offset += evtTicks;
       }
-      accumulated += measureTicks;
     }
   }
   return active;
@@ -629,25 +626,7 @@ function drawPlaybackCursor(
   const part = score.parts[0];
   if (!part) return;
 
-  let accumulated = 0;
-  let targetMeasureIndex = 0;
-  let tickInMeasure = 0;
-
-  for (let mi = 0; mi < part.measures.length; mi++) {
-    const ts = part.measures[mi].timeSignature;
-    const measureTicks =
-      (TICKS_PER_QUARTER * 4 * ts.numerator) / ts.denominator;
-    if (accumulated + measureTicks > playbackTick) {
-      targetMeasureIndex = mi;
-      tickInMeasure = playbackTick - accumulated;
-      break;
-    }
-    accumulated += measureTicks;
-    if (mi === part.measures.length - 1) {
-      targetMeasureIndex = mi;
-      tickInMeasure = measureTicks;
-    }
-  }
+  const { measureIndex: targetMeasureIndex, tickInMeasure } = getMeasureIndexForTick(playbackTick);
 
   const mp = measurePositions.find(
     (p) => p.partIndex === 0 && p.measureIndex === targetMeasureIndex && p.staveIndex === 0

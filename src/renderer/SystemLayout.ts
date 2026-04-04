@@ -315,14 +315,11 @@ export function totalContentHeight(
     return totalPages * config.pageHeight;
   }
 
-  const lineCount = systems.length;
-  const sysHeight = systemHeight(score, config);
-  return (
-    config.topMargin +
-    lineCount * sysHeight +
-    (lineCount > 0 ? (lineCount - 1) * config.staffSpacing : 0) +
-    config.bottomMargin
-  );
+  if (systems.length === 0) return config.topMargin + config.bottomMargin;
+
+  // Use actual system positions from computeLayout for accurate height
+  const lastSystem = systems[systems.length - 1];
+  return lastSystem.y + lastSystem.height + config.staffSpacing + config.bottomMargin;
 }
 
 /**

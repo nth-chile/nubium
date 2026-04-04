@@ -175,21 +175,23 @@ function parseLyric(noteEl: Element, eventId: NoteEventId): Lyric[] {
 
 function parseBarline(measureEl: Element): { barlineEnd: BarlineType; volta?: Volta } {
   const barlineEls = getDirectChildren(measureEl, "barline");
+  let hasRepeatStart = false;
+  let hasRepeatEnd = false;
   let barlineEnd: BarlineType = "single";
   let volta: Volta | undefined = undefined;
 
   for (const barlineEl of barlineEls) {
+    const location = barlineEl.getAttribute("location") ?? "right";
     const barStyle = getTextContent(barlineEl, "bar-style");
     const repeatEl = getDirectChild(barlineEl, "repeat");
 
     if (repeatEl) {
       const direction = repeatEl.getAttribute("direction");
-      if (direction === "forward") barlineEnd = "repeat-start";
-      if (direction === "backward") barlineEnd = "repeat-end";
-    } else if (barStyle === "light-light") {
-      barlineEnd = "double";
-    } else if (barStyle === "light-heavy") {
-      barlineEnd = "final";
+      if (direction === "forward") hasRepeatStart = true;
+      if (direction === "backward") hasRepeatEnd = true;
+    } else if (location === "right") {
+      if (barStyle === "light-light") barlineEnd = "double";
+      else if (barStyle === "light-heavy") barlineEnd = "final";
     }
 
     // Parse volta (ending) brackets
@@ -204,6 +206,11 @@ function parseBarline(measureEl: Element): { barlineEnd: BarlineType; volta?: Vo
       }
     }
   }
+
+  // Determine final barline type
+  if (hasRepeatStart && hasRepeatEnd) barlineEnd = "repeat-both";
+  else if (hasRepeatEnd) barlineEnd = "repeat-end";
+  else if (hasRepeatStart) barlineEnd = "repeat-start";
 
   return { barlineEnd, volta };
 }
