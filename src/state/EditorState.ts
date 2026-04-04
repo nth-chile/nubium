@@ -30,6 +30,7 @@ import { ChangePitch } from "../commands/ChangePitch";
 import { ChangeDuration } from "../commands/ChangeDuration";
 import { InsertMeasure } from "../commands/InsertMeasure";
 import { DeleteMeasure } from "../commands/DeleteMeasure";
+import { DeleteSelectedMeasures } from "../commands/DeleteSelectedMeasures";
 import { ChangeTimeSig } from "../commands/ChangeTimeSig";
 import { ChangeKeySig } from "../commands/ChangeKeySig";
 import { ChangeClef } from "../commands/ChangeClef";
@@ -832,29 +833,15 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   deleteSelectedMeasures() {
     const state = get();
     if (!state.selection) return;
-    const { partIndex, measureStart, measureEnd } = state.selection;
-    const score = structuredClone(state.score);
-    const part = score.parts[partIndex];
-    if (!part) return;
-
-    const count = measureEnd - measureStart + 1;
-    part.measures.splice(measureStart, count);
-
-    // Ensure at least one measure remains
-    if (part.measures.length === 0) {
-      part.measures.push(factory.measure([factory.voice([])]));
-    }
-
-    const newCursor = {
-      ...state.inputState.cursor,
-      measureIndex: Math.min(measureStart, part.measures.length - 1),
-      eventIndex: 0,
-    };
-
+    const cmd = new DeleteSelectedMeasures(state.selection);
+    const result = history.execute(cmd, {
+      score: state.score,
+      inputState: state.inputState,
+    });
     set({
-      score,
+      score: result.score,
+      inputState: result.inputState,
       selection: null,
-      inputState: { ...state.inputState, cursor: newCursor },
     });
   },
 

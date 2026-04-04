@@ -1102,6 +1102,54 @@ describe("MusicXML Round-trip", () => {
     expect(reimported.parts[0].measures[1].navigation?.dsText).toBe("D.S. al Fine");
   });
 
+  it("should export tie stops for consecutive tied notes", () => {
+    const n1 = factory.note("C", 4, factory.dur("quarter"));
+    n1.head.tied = true;
+    const n2 = factory.note("C", 4, factory.dur("quarter"));
+    const v = factory.voice([n1, n2]);
+    const m = factory.measure([v]);
+    const score = factory.score("Tie Test", "", [factory.part("Piano", "Pno", [m])]);
+    const xml = exportToMusicXML(score);
+
+    expect(xml).toContain('<tie type="start"/>');
+    expect(xml).toContain('<tie type="stop"/>');
+    expect(xml).toContain('<tied type="start"/>');
+    expect(xml).toContain('<tied type="stop"/>');
+  });
+
+  it("should export chord symbol kinds correctly instead of other", () => {
+    const n = factory.note("C", 4, factory.dur("whole"));
+    const m = factory.measure([factory.voice([n])], {
+      annotations: [
+        { kind: "chord-symbol", text: "Cm7", beatOffset: 0, noteEventId: n.id },
+      ],
+    });
+    const score = factory.score("Test", "", [factory.part("Piano", "Pno", [m])]);
+    const xml = exportToMusicXML(score);
+
+    expect(xml).toContain(">minor-seventh<");
+    expect(xml).not.toContain(">other<");
+  });
+
+  it("should round-trip chord symbol kinds through export/import", () => {
+    const n = factory.note("D", 4, factory.dur("whole"));
+    const m = factory.measure([factory.voice([n])], {
+      annotations: [
+        { kind: "chord-symbol", text: "Ddim7", beatOffset: 0, noteEventId: n.id },
+      ],
+    });
+    const score = factory.score("Test", "", [factory.part("Piano", "Pno", [m])]);
+    const xml = exportToMusicXML(score);
+    expect(xml).toContain(">diminished-seventh<");
+
+    const reimported = importFromMusicXML(xml);
+    const chords = reimported.parts[0].measures[0].annotations.filter(
+      (a: any) => a.kind === "chord-symbol"
+    );
+    expect(chords.length).toBe(1);
+    expect(chords[0].text).toContain("D");
+  });
+
   it("should round-trip volta brackets", () => {
     const m1 = factory.measure([factory.voice([factory.note("C", 4, factory.dur("whole"))])]);
     m1.navigation = { volta: { endings: [1], label: "1." } };
