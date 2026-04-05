@@ -82,6 +82,8 @@ let metronomeCursor = 0;
 let anchorAudioTime = 0;
 let anchorTick = 0;
 let currentBpm = 120;
+let stopAtTick: number | null = null; // For play-selection: loop back at this tick
+let loopStartTick: number | null = null; // For play-selection: loop back to this tick
 let scheduledUpToTick = 0;
 
 // --- Helpers ---
@@ -356,6 +358,90 @@ function buildEvents(score: Score): void {
   totalTicks = tick;
 }
 
+/** Build events for a specific measure range (sequential, no repeats). Used for selection playback. */
+function buildEventsForRange(score: Score, startMeasure: number, endMeasure: number): void {
+  events = [];
+  metronomeBeats = [];
+  measureBoundaries = [];
+
+  const lastMi = findLastContentMeasure(score);
+  const dynamicMaps = buildDynamicMap(score, lastMi);
+  const hairpinMaps = buildHairpinMap(score, lastMi, dynamicMaps);
+  let tick = 0;
+  let currentSwing: SwingSettings | undefined;
+
+  for (let mi = startMeasure; mi <= endMeasure; mi++) {
+    const m0 = score.parts[0]?.measures[mi];
+    if (!m0) continue;
+
+    for (const ann of m0.annotations) {
+      if (ann.kind === "tempo-mark") {
+        currentSwing = (ann as TempoMark).swing;
+      }
+    }
+
+    const mTicks = (TICKS_PER_QUARTER * 4 * m0.timeSignature.numerator) / m0.timeSignature.denominator;
+    const beatTicks = (TICKS_PER_QUARTER * 4) / m0.timeSignature.denominator;
+    measureBoundaries.push({ tick, measureIndex: mi, swing: currentSwing, beatTicks });
+
+    for (let pi = 0; pi < score.parts.length; pi++) {
+      const part = score.parts[pi];
+      const m = part.measures[mi];
+      if (!m) continue;
+      const instId = part.instrumentId;
+      const dynMap = dynamicMaps[pi];
+      const hpMap = hairpinMaps[pi];
+      for (const voice of m.voices) {
+        let offset = 0;
+        const graceBuffer: { midi: number; instrumentId: string; velocity: number }[] = [];
+        for (const evt of voice.events) {
+          if (evt.kind === "grace") {
+            const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
+            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch), instrumentId: instId, velocity: vel });
+            continue;
+          }
+          const evtTicks = durationToTicks(evt.duration);
+
+          let baseVel = hpMap?.get(evt.id) ?? dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
+          let durMult = 0.9;
+          if ((evt.kind === "note" || evt.kind === "chord") && evt.articulations?.length) {
+            const result = applyArticulations(evt.articulations, baseVel, durMult);
+            baseVel = result.velocity;
+            durMult = result.durationMultiplier;
+          }
+
+          if (graceBuffer.length > 0) {
+            const graceDur = Math.min(60, evtTicks / (graceBuffer.length + 1));
+            for (let gi = 0; gi < graceBuffer.length; gi++) {
+              const graceOffset = offset - graceDur * (graceBuffer.length - gi);
+              events.push({ tick: tick + Math.max(0, graceOffset), midi: graceBuffer[gi].midi, durationTicks: graceDur, durationMultiplier: 0.9, velocity: graceBuffer[gi].velocity, instrumentId: graceBuffer[gi].instrumentId, partIndex: pi });
+            }
+            graceBuffer.length = 0;
+          }
+          if (evt.kind === "note") {
+            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch), durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
+          } else if (evt.kind === "chord") {
+            for (const h of evt.heads) {
+              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch), durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
+            }
+          }
+          offset += evtTicks;
+        }
+      }
+    }
+
+    const beats = m0.timeSignature.numerator;
+    for (let b = 0; b < beats; b++) {
+      metronomeBeats.push({ tick: tick + b * beatTicks, isDownbeat: b === 0 });
+    }
+
+    tick += mTicks;
+  }
+
+  events.sort((a, b) => a.tick - b.tick);
+  totalTicks = tick;
+}
+
 // --- Scheduler ---
 
 function tickToAudioTime(tick: number): number {
@@ -439,7 +525,8 @@ function schedulerTick(): void {
     currentBpm = newBpm;
   }
 
-  const lookaheadTick = currentTick + secToTicks(LOOKAHEAD_SEC, currentBpm);
+  const endAt = stopAtTick ?? totalTicks;
+  const lookaheadTick = Math.min(currentTick + secToTicks(LOOKAHEAD_SEC, currentBpm), endAt);
 
   // Schedule notes (skip muted parts at play time so mute toggles take effect immediately)
   while (eventCursor < events.length && events[eventCursor].tick < lookaheadTick) {
@@ -471,8 +558,17 @@ function schedulerTick(): void {
 
   scheduledUpToTick = lookaheadTick;
 
-  if (currentTick >= totalTicks) {
-    stop();
+  if (currentTick >= endAt) {
+    if (loopStartTick != null) {
+      // Loop back to selection start
+      anchorTick = loopStartTick;
+      anchorAudioTime = Tone.now();
+      currentBpm = getBpmAtTick(loopStartTick);
+      resetCursorsToTick(loopStartTick);
+      scheduledUpToTick = loopStartTick;
+    } else {
+      stop();
+    }
   }
 }
 
@@ -480,10 +576,11 @@ function updateCursor(): void {
   if (state !== "playing") return;
   const elapsed = Tone.now() - anchorAudioTime;
   const currentTick = anchorTick + secToTicks(elapsed, currentBpm);
-  onTickCallback?.(currentTick);
-  if (currentTick < totalTicks) {
-    animationFrame = requestAnimationFrame(updateCursor);
-  }
+  const endAt = stopAtTick ?? totalTicks;
+  // Clamp tick to selection end so cursor/highlight don't overshoot
+  onTickCallback?.(Math.min(currentTick, endAt));
+  // Keep animation running — loop resets anchor in schedulerTick
+  animationFrame = requestAnimationFrame(updateCursor);
 }
 
 function resetCursorsToTick(tick: number): void {
@@ -501,7 +598,7 @@ export function setCallbacks(opts: TransportOptions): void {
   onStateChangeCallback = opts.onStateChange;
 }
 
-export async function play(score: Score, startTick = 0): Promise<void> {
+export async function play(score: Score, startTick = 0, measureRange?: { start: number; end: number }): Promise<void> {
   if (state === "playing") return;
   await Tone.start();
 
@@ -518,7 +615,18 @@ export async function play(score: Score, startTick = 0): Promise<void> {
 
   if (events.length === 0 && metronomeBeats.length === 0) return;
 
-  // Always start from the requested position (cursor position)
+  // For selection playback, rebuild events for just the selected measures sequentially
+  if (measureRange) {
+    buildEventsForRange(score, measureRange.start, measureRange.end);
+    startTick = 0;
+    stopAtTick = totalTicks;
+    loopStartTick = 0;
+  } else {
+    stopAtTick = null;
+    loopStartTick = null;
+  }
+
+  // Start from resolved position
   anchorTick = startTick;
   anchorAudioTime = Tone.now();
   currentBpm = getBpmAtTick(startTick);
@@ -569,6 +677,8 @@ export function stop(): void {
 
   currentScore = null;
   anchorTick = 0;
+  stopAtTick = null;
+  loopStartTick = null;
   onTickCallback?.(0);
   setState("stopped");
 }

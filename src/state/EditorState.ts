@@ -1841,16 +1841,25 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     });
     service.setMetronome(state.metronomeOn);
 
-    // Compute start tick from cursor position
+    // If there's a selection, play only the selected measures (looping)
+    const sel = state.selection;
+    const noteSel = state.noteSelection;
     const { cursor } = state.inputState;
     const part = state.score.parts[cursor.partIndex];
+
     let startTick = 0;
-    if (part) {
+    let measureRange: { start: number; end: number } | undefined;
+
+    if (sel) {
+      measureRange = { start: sel.measureStart, end: sel.measureEnd };
+    } else if (noteSel) {
+      measureRange = { start: noteSel.startMeasure, end: noteSel.endMeasure };
+    } else if (part) {
+      // Play from cursor position
       for (let mi = 0; mi < cursor.measureIndex && mi < part.measures.length; mi++) {
         const ts = part.measures[mi].timeSignature;
         startTick += (TICKS_PER_QUARTER * 4 * ts.numerator) / ts.denominator;
       }
-      // Add ticks for events before cursor within the measure
       const voice = part.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
       if (voice) {
         for (let ei = 0; ei < cursor.eventIndex && ei < voice.events.length; ei++) {
@@ -1859,7 +1868,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       }
     }
 
-    await service.play(state.score, startTick);
+    await service.play(state.score, startTick, measureRange);
     set({ isPlaying: true });
   },
 

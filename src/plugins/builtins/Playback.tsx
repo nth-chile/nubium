@@ -264,7 +264,7 @@ export const BuiltinInstrumentsPlugin: NubiumPlugin = {
     Transport.setNotePlayer(player);
 
     api.registerPlaybackService({
-      play: (s, startTick) => Transport.play(s, startTick),
+      play: (s, startTick, measureRange) => Transport.play(s, startTick, measureRange),
       pause: () => Transport.pause(),
       stop: () => Transport.stop(),
       setTempo: (bpm) => Transport.setTempo(bpm),
