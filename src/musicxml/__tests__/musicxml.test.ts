@@ -1019,9 +1019,13 @@ describe("MusicXML Round-trip", () => {
     n1.articulations = [{ kind: "staccato" }, { kind: "accent" }];
     const n2 = factory.note("D", 4, factory.dur("quarter"));
     n2.articulations = [{ kind: "fermata" }];
-    const n3 = factory.note("E", 4, factory.dur("half"));
+    const n3 = factory.note("E", 4, factory.dur("eighth"));
     n3.articulations = [{ kind: "trill" }];
-    const m = factory.measure([factory.voice([n1, n2, n3])]);
+    const n4 = factory.note("F", 4, factory.dur("eighth"));
+    n4.articulations = [{ kind: "mordent" }];
+    const n5 = factory.note("G", 4, factory.dur("quarter"));
+    n5.articulations = [{ kind: "turn" }];
+    const m = factory.measure([factory.voice([n1, n2, n3, n4, n5])]);
     const s = factory.score("Test", "", [factory.part("Piano", "Pno", [m])]);
 
     const xml = exportToMusicXML(s);
@@ -1029,6 +1033,8 @@ describe("MusicXML Round-trip", () => {
     expect(xml).toContain("<accent/>");
     expect(xml).toContain("<fermata/>");
     expect(xml).toContain("<trill-mark/>");
+    expect(xml).toContain("<mordent/>");
+    expect(xml).toContain("<turn/>");
 
     const reimported = importFromMusicXML(xml);
     const events = reimported.parts[0].measures[0].voices[0].events;
@@ -1040,6 +1046,12 @@ describe("MusicXML Round-trip", () => {
     );
     expect(events[2].kind === "note" && events[2].articulations).toEqual(
       expect.arrayContaining([expect.objectContaining({ kind: "trill" })])
+    );
+    expect(events[3].kind === "note" && events[3].articulations).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "mordent" })])
+    );
+    expect(events[4].kind === "note" && events[4].articulations).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "turn" })])
     );
   });
 
