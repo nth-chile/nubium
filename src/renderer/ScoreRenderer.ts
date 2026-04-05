@@ -272,7 +272,7 @@ export function renderScore(
           const isFirstInLine = posInLine === 0;
           const prevMeasure = mi > 0 ? part.measures[mi - 1] : undefined;
           const { timeSigChanged, keySigChanged } = sigChanges(m, mi, prevMeasure, isFirstInLine);
-          const stave = createVexStave(ctx, bassMeasure, layout.x, layout.y, layout.width, isFirstInLine, timeSigChanged, keySigChanged);
+          const stave = createVexStave(ctx, bassMeasure, layout.x, layout.y, layout.width, isFirstInLine, timeSigChanged, keySigChanged, prevMeasure?.keySignature.fifths);
           grandStaffStaves.set(`${mi}:1`, stave);
         }
       }
@@ -307,6 +307,7 @@ export function renderScore(
               measureToRender = { ...measureToRender, clef: { type: "bass" as const } };
             }
 
+            const prevM = mi > 0 ? part.measures[mi - 1] : undefined;
             renderMultiMeasureRest(
               ctx,
               measureToRender,
@@ -316,6 +317,7 @@ export function renderScore(
               restRunLength,
               isFirstInLine,
               isFirstInLine,
+              prevM?.keySignature.fifths,
             );
 
             // Add measure positions for all measures in the run (for cursor/selection)

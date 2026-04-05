@@ -4,7 +4,8 @@ import type { NoteEvent, NoteHead, TupletRatio, Articulation } from "../model/no
 import type { Pitch } from "../model/pitch";
 import type { Duration } from "../model/duration";
 import type { Annotation, ChordSymbol, Lyric, DynamicMark, Hairpin, Slur } from "../model/annotations";
-import { durationToTicks } from "../model/duration";
+import { durationToTicks, type DurationType } from "../model/duration";
+import { getBeamGroups } from "../renderer/beaming";
 import {
   DURATION_TYPE_TO_XML,
   DURATION_DIVISIONS,
@@ -65,6 +66,23 @@ function durationXml(d: Duration, tuplet?: TupletRatio): string {
     xml += `          <actual-notes>${tuplet.actual}</actual-notes>\n`;
     xml += `          <normal-notes>${tuplet.normal}</normal-notes>\n`;
     xml += `        </time-modification>\n`;
+  }
+  return xml;
+}
+
+/** Beam depth for a given duration type (number of beams). */
+const BEAM_LEVELS: Partial<Record<DurationType, number>> = {
+  "eighth": 1, "16th": 2, "32nd": 3, "64th": 4,
+};
+
+type BeamState = "begin" | "continue" | "end";
+
+function beamXml(beamState: BeamState | undefined, durationType: DurationType): string {
+  if (!beamState) return "";
+  const levels = BEAM_LEVELS[durationType] ?? 0;
+  let xml = "";
+  for (let l = 1; l <= levels; l++) {
+    xml += `        <beam number="${l}">${beamState}</beam>\n`;
   }
   return xml;
 }
@@ -254,6 +272,7 @@ function exportNoteEvent(
   tupletPosition?: "start" | "stop",
   prevTied?: boolean,
   staffNumber?: number,
+  beamState?: BeamState,
 ): string {
   let xml = "";
   const staffXml = staffNumber != null ? `        <staff>${staffNumber}</staff>\n` : "";
@@ -313,6 +332,7 @@ function exportNoteEvent(
     xml += durationXml(event.duration, tuplet);
     xml += tieXml(head.tied, prevTied, false);
     xml += `        <voice>${voiceNumber}</voice>\n${staffXml}`;
+    xml += beamXml(beamState, event.duration.type);
     xml += accidentalXml(head.pitch);
     xml += notationsXml(head.tied, tupletPosition, slurPositions, arts, prevTied);
     const lyrics = findLyricForEvent(annotations, event.id);
@@ -330,6 +350,7 @@ function exportNoteEvent(
       xml += durationXml(event.duration, tuplet);
       xml += tieXml(head.tied, i === 0 ? prevTied : undefined, i > 0);
       xml += `        <voice>${voiceNumber}</voice>\n${staffXml}`;
+      xml += beamXml(beamState, event.duration.type);
       xml += accidentalXml(head.pitch);
       xml += notationsXml(head.tied, i === 0 ? tupletPosition : undefined, i === 0 ? slurPositions : undefined, i === 0 ? arts : undefined, i === 0 ? prevTied : undefined);
       if (i === 0) {
@@ -382,6 +403,9 @@ function exportMeasure(
       prevMeasure.keySignature.fifths !== measure.keySignature.fifths
     ) {
       xml += `        <key>\n`;
+      if (prevMeasure && prevMeasure.keySignature.fifths !== measure.keySignature.fifths) {
+        xml += `          <cancel>${prevMeasure.keySignature.fifths}</cancel>\n`;
+      }
       xml += `          <fifths>${measure.keySignature.fifths}</fifths>\n`;
       if (measure.keySignature.mode) {
         xml += `          <mode>${measure.keySignature.mode}</mode>\n`;
@@ -532,8 +556,20 @@ function exportMeasure(
       }
     }
 
-    // Determine tuplet start/stop positions for notation elements
+    // Compute beam groups for this voice
     const events = voice.events;
+    const beamGroups = getBeamGroups(events, measure.timeSignature);
+    const beamStateMap = new Map<number, BeamState>();
+    for (const group of beamGroups) {
+      for (let gi = 0; gi < group.length; gi++) {
+        const idx = group[gi];
+        if (gi === 0) beamStateMap.set(idx, "begin");
+        else if (gi === group.length - 1) beamStateMap.set(idx, "end");
+        else beamStateMap.set(idx, "continue");
+      }
+    }
+
+    // Determine tuplet start/stop positions for notation elements
     for (let ei = 0; ei < events.length; ei++) {
       const event = events[ei];
       const prevTuplet = ei > 0 ? events[ei - 1].tuplet : undefined;
@@ -569,7 +605,7 @@ function exportMeasure(
         else if (prev.kind === "chord") prevWasTied = prev.heads.some(h => h.tied);
       }
       const staffNum = staveCount >= 2 ? (voice.staff ?? 0) + 1 : undefined;
-      xml += exportNoteEvent(event, voiceNumber, measure.annotations, tupletPos, prevWasTied, staffNum);
+      xml += exportNoteEvent(event, voiceNumber, measure.annotations, tupletPos, prevWasTied, staffNum, beamStateMap.get(ei));
 
     }
   }

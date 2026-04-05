@@ -181,6 +181,60 @@ describe("MusicXML Export", () => {
     expect(xml).toContain("<mode>major</mode>");
   });
 
+  it("should export beam groups for eighth notes", () => {
+    const e1 = factory.note("C", 4, factory.dur("eighth"));
+    const e2 = factory.note("D", 4, factory.dur("eighth"));
+    const e3 = factory.note("E", 4, factory.dur("quarter"));
+    const e4 = factory.note("F", 4, factory.dur("eighth"));
+    const e5 = factory.note("G", 4, factory.dur("eighth"));
+    const v = factory.voice([e1, e2, e3, e4, e5]);
+    const m = factory.measure([v]);
+    const s = factory.score("Beam Test", "", [factory.part("Piano", "Pno", [m])]);
+    const xml = exportToMusicXML(s);
+
+    // First group: begin, end
+    expect(xml).toContain('<beam number="1">begin</beam>');
+    expect(xml).toContain('<beam number="1">end</beam>');
+
+    // Count beam elements — should have 4 (2 groups of 2)
+    const beamMatches = xml.match(/<beam number="1">/g);
+    expect(beamMatches).toHaveLength(4);
+  });
+
+  it("should export nested beams for 16th notes", () => {
+    const e1 = factory.note("C", 4, factory.dur("16th"));
+    const e2 = factory.note("D", 4, factory.dur("16th"));
+    const e3 = factory.note("E", 4, factory.dur("16th"));
+    const e4 = factory.note("F", 4, factory.dur("16th"));
+    const v = factory.voice([e1, e2, e3, e4]);
+    const m = factory.measure([v]);
+    const s = factory.score("Beam Test", "", [factory.part("Piano", "Pno", [m])]);
+    const xml = exportToMusicXML(s);
+
+    // Should have both level 1 and level 2 beams
+    expect(xml).toContain('<beam number="1">begin</beam>');
+    expect(xml).toContain('<beam number="2">begin</beam>');
+    expect(xml).toContain('<beam number="1">end</beam>');
+    expect(xml).toContain('<beam number="2">end</beam>');
+  });
+
+  it("should export cancel element on key signature changes", () => {
+    const v1 = factory.voice([factory.rest(factory.dur("whole"))]);
+    const m1 = factory.measure([v1], { keySignature: { fifths: 2 } });
+    const v2 = factory.voice([factory.rest(factory.dur("whole"))]);
+    const m2 = factory.measure([v2], { keySignature: { fifths: -1 } });
+    const p = factory.part("Test", "T", [m1, m2]);
+    const score = factory.score("Cancel Test", "", [p]);
+    const xml = exportToMusicXML(score);
+
+    expect(xml).toContain("<cancel>2</cancel>");
+    expect(xml).toContain("<fifths>-1</fifths>");
+
+    // Round-trip: cancel element should be parsed without error
+    const reimported = importFromMusicXML(xml);
+    expect(reimported.parts[0].measures[1].keySignature.fifths).toBe(-1);
+  });
+
   it("should export time signatures", () => {
     const v = factory.voice([factory.rest(factory.dur("whole"))]);
     const m = factory.measure([v], {

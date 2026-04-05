@@ -353,12 +353,16 @@ export function createVexStave(
   showClef: boolean,
   showTimeSig: boolean,
   showKeySig: boolean,
+  prevKeySigFifths?: number,
 ): Stave {
   const stave = new Stave(x, y, width);
   if (showClef) stave.addClef(CLEF_VEX[m.clef.type] || "treble");
   if (showKeySig) {
     const keySig = KEY_SIG_MAP[m.keySignature.fifths] ?? "C";
-    stave.addKeySignature(keySig);
+    const cancelKey = prevKeySigFifths !== undefined && prevKeySigFifths !== m.keySignature.fifths
+      ? KEY_SIG_MAP[prevKeySigFifths] ?? "C"
+      : undefined;
+    stave.addKeySignature(keySig, cancelKey);
   }
   if (showTimeSig) {
     stave.addTimeSignature(`${m.timeSignature.numerator}/${m.timeSignature.denominator}`);
@@ -400,7 +404,7 @@ export function renderMeasure(
   const courtesyShown = new Set<string>(); // track which pitches already got a courtesy this measure
   const measureAltered = new Set<string>(); // track pitches altered so far within this measure
 
-  const stave = createVexStave(ctx, m, x, y, width, showClef, showTimeSig, showKeySig);
+  const stave = createVexStave(ctx, m, x, y, width, showClef, showTimeSig, showKeySig, prevMeasure?.keySignature.fifths);
 
   // Set barline types
   applyBarline(stave, m.barlineEnd);
@@ -1104,12 +1108,16 @@ export function renderMultiMeasureRest(
   numberOfMeasures: number,
   showClef: boolean,
   showKeySig: boolean,
+  prevKeySigFifths?: number,
 ): MeasureRenderResult {
   const stave = new Stave(x, y, width);
   if (showClef) stave.addClef(CLEF_VEX[m.clef.type] || "treble");
   if (showKeySig) {
     const keySig = KEY_SIG_MAP[m.keySignature.fifths] ?? "C";
-    stave.addKeySignature(keySig);
+    const cancelKey = prevKeySigFifths !== undefined && prevKeySigFifths !== m.keySignature.fifths
+      ? KEY_SIG_MAP[prevKeySigFifths] ?? "C"
+      : undefined;
+    stave.addKeySignature(keySig, cancelKey);
   }
   stave.setContext(ctx.context).draw();
 
