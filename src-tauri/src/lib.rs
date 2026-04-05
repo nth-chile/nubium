@@ -1,4 +1,5 @@
 mod commands;
+mod midi;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -8,6 +9,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::save_file,
             commands::load_file,
+            midi::midi_list_inputs,
+            midi::midi_connect,
+            midi::midi_disconnect,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
