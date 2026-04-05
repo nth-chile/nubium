@@ -77,6 +77,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   { id: "undo", label: "Undo", category: "Editing", defaultBinding: { key: "z", ctrl: true } },
   { id: "redo", label: "Redo", category: "Editing", defaultBinding: { key: "z", ctrl: true, shift: true } },
   { id: "insert-measure", label: "Insert measure", category: "Editing", defaultBinding: { key: "m", ctrl: true } },
+  { id: "delete-measure", label: "Delete measure", category: "Editing", defaultBinding: { key: "backspace", ctrl: true } },
 
   // Voices
   { id: "voice:1", label: "Voice 1", category: "Voices", defaultBinding: { key: "1", ctrl: true } },

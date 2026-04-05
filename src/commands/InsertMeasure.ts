@@ -8,25 +8,22 @@ export class InsertMeasure implements Command {
   execute(state: EditorSnapshot): EditorSnapshot {
     const score = structuredClone(state.score);
     const input = structuredClone(state.inputState);
-    const { partIndex, measureIndex } = input.cursor;
+    const { measureIndex } = input.cursor;
 
-    const part = score.parts[partIndex];
-    if (!part) return state;
-
-    // Copy time sig, clef, key sig from current measure
-    const currentMeasure = part.measures[measureIndex];
-    const newMeasure: Measure = {
-      id: newId<MeasureId>("msr"),
-      clef: { ...currentMeasure.clef },
-      timeSignature: { ...currentMeasure.timeSignature },
-      keySignature: { ...currentMeasure.keySignature },
-      barlineEnd: "single",
-      annotations: [],
-      voices: currentMeasure.voices.map(() => ({ id: newId<VoiceId>("vce"), events: [] })),
-    };
-
-    // Insert after current measure
-    part.measures.splice(measureIndex + 1, 0, newMeasure);
+    // Insert a new measure after the current one in all parts
+    for (const part of score.parts) {
+      const currentMeasure = part.measures[Math.min(measureIndex, part.measures.length - 1)];
+      const newMeasure: Measure = {
+        id: newId<MeasureId>("msr"),
+        clef: { ...currentMeasure.clef },
+        timeSignature: { ...currentMeasure.timeSignature },
+        keySignature: { ...currentMeasure.keySignature },
+        barlineEnd: "single",
+        annotations: [],
+        voices: currentMeasure.voices.map((v) => ({ id: newId<VoiceId>("vce"), events: [], staff: v.staff })),
+      };
+      part.measures.splice(measureIndex + 1, 0, newMeasure);
+    }
 
     // Move cursor to the new measure
     input.cursor.measureIndex = measureIndex + 1;

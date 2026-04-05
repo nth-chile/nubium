@@ -29,6 +29,7 @@ export function KeyboardShortcuts() {
   const redo = useEditorStore((s) => s.redo);
   const setVoice = useEditorStore((s) => s.setVoice);
   const insertMeasure = useEditorStore((s) => s.insertMeasure);
+  const deleteMeasure = useEditorStore((s) => s.deleteMeasure);
   const enterChordMode = useEditorStore((s) => s.enterChordMode);
   const enterLyricMode = useEditorStore((s) => s.enterLyricMode);
   const textInputMode = useEditorStore((s) => s.inputState.textInputMode);
@@ -138,6 +139,7 @@ export function KeyboardShortcuts() {
       "undo": () => undo(),
       "redo": () => redo(),
       "insert-measure": () => insertMeasure(),
+      "delete-measure": () => deleteMeasure(),
 
       // Voices
       "voice:1": () => setVoice(0),
@@ -176,6 +178,7 @@ export function KeyboardShortcuts() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (textInputMode) return;
 
+
       const bindings = getSettings().keyBindings;
 
       for (const [actionId, binding] of Object.entries(bindings)) {
@@ -195,7 +198,7 @@ export function KeyboardShortcuts() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     insertNote, insertRest, deleteNote, setDuration, toggleDot, setAccidental,
-    moveCursor, changeOctave, nudgePitch, undo, redo, setVoice, insertMeasure,
+    moveCursor, changeOctave, nudgePitch, undo, redo, setVoice, insertMeasure, deleteMeasure,
     enterChordMode, enterLyricMode, textInputMode, isPlaying, play,
     pause, stopPlayback, toggleMetronome, moveCursorPart, setViewMode, selection,
     copySelection, pasteAtCursor, clipboardMeasures, clipboardEvents, deleteSelectedMeasures,

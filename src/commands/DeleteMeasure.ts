@@ -7,19 +7,26 @@ export class DeleteMeasure implements Command {
   execute(state: EditorSnapshot): EditorSnapshot {
     const score = structuredClone(state.score);
     const input = structuredClone(state.inputState);
-    const { partIndex, measureIndex } = input.cursor;
-
-    const part = score.parts[partIndex];
-    if (!part) return state;
+    const { measureIndex } = input.cursor;
 
     // Don't delete the last measure
-    if (part.measures.length <= 1) return state;
+    const maxMeasures = Math.max(...score.parts.map((p) => p.measures.length));
+    if (maxMeasures <= 1) return state;
 
-    part.measures.splice(measureIndex, 1);
+    // Delete from all parts
+    for (const part of score.parts) {
+      if (measureIndex < part.measures.length) {
+        part.measures.splice(measureIndex, 1);
+      }
+      if (part.measures.length === 0) {
+        part.measures.push(factory.measure([factory.voice([])]));
+      }
+    }
 
     // Adjust cursor
-    if (input.cursor.measureIndex >= part.measures.length) {
-      input.cursor.measureIndex = part.measures.length - 1;
+    const cursorPart = score.parts[input.cursor.partIndex];
+    if (cursorPart && input.cursor.measureIndex >= cursorPart.measures.length) {
+      input.cursor.measureIndex = cursorPart.measures.length - 1;
     }
     input.cursor.eventIndex = 0;
 
