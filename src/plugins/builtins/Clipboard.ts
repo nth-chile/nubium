@@ -284,6 +284,211 @@ function parseAbcToScore(abc: string): Score {
   return score;
 }
 
+// --- LilyPond Parsing (import) ---
+
+const LILY_DUR_MAP: Record<string, DurationType> = {
+  "1": "whole",
+  "2": "half",
+  "4": "quarter",
+  "8": "eighth",
+  "16": "16th",
+  "32": "32nd",
+  "64": "64th",
+};
+
+function lilyPitchToModel(token: string): { pitch: Pitch; rest: string } {
+  let i = 0;
+  const letter = token[i];
+  if (!letter || !/[a-g]/.test(letter)) {
+    return { pitch: { pitchClass: "C", accidental: "natural", octave: 4 }, rest: token };
+  }
+  const pitchClass = letter.toUpperCase() as Pitch["pitchClass"];
+  i++;
+
+  // Accidentals: isis, is, eses, es
+  let accidental: Pitch["accidental"] = "natural";
+  const remaining = token.slice(i);
+  if (remaining.startsWith("isis")) { accidental = "double-sharp"; i += 4; }
+  else if (remaining.startsWith("is")) { accidental = "sharp"; i += 2; }
+  else if (remaining.startsWith("eses")) { accidental = "double-flat"; i += 4; }
+  else if (remaining.startsWith("es")) { accidental = "flat"; i += 2; }
+
+  // Octave marks: ' = up from 4, , = down from 4
+  let octave = 4;
+  while (i < token.length && token[i] === "'") { octave++; i++; }
+  while (i < token.length && token[i] === ",") { octave--; i++; }
+
+  return {
+    pitch: { pitchClass, accidental, octave: Math.max(0, Math.min(9, octave)) as Pitch["octave"] },
+    rest: token.slice(i),
+  };
+}
+
+function parseLilyDuration(s: string): Duration {
+  const dots = (s.match(/\.+$/)?.[0]?.length ?? 0) as Duration["dots"];
+  const clean = s.replace(/\.+$/, "");
+  const type = LILY_DUR_MAP[clean] ?? "quarter";
+  return { type, dots };
+}
+
+function parseLilyToScore(lily: string): Score {
+  const score = factory.emptyScore();
+
+  // Extract title from \header { title = "..." }
+  const titleMatch = lily.match(/\\header\s*\{[^}]*title\s*=\s*"([^"]*)"/);
+  if (titleMatch) score.title = titleMatch[1];
+
+  // Extract tempo from \tempo 4 = 120
+  const tempoMatch = lily.match(/\\tempo\s+\d+\s*=\s*(\d+)/);
+  if (tempoMatch) score.tempo = parseInt(tempoMatch[1]);
+
+  // Extract staff blocks
+  const staffBlocks: string[] = [];
+  // Match \new Staff { ... } handling nested braces
+  let searchFrom = 0;
+  while (true) {
+    const staffIdx = lily.indexOf("\\new Staff", searchFrom);
+    if (staffIdx === -1) break;
+    const braceStart = lily.indexOf("{", staffIdx);
+    if (braceStart === -1) break;
+    let depth = 1;
+    let j = braceStart + 1;
+    while (j < lily.length && depth > 0) {
+      if (lily[j] === "{") depth++;
+      else if (lily[j] === "}") depth--;
+      j++;
+    }
+    staffBlocks.push(lily.slice(braceStart + 1, j - 1));
+    searchFrom = j;
+  }
+
+  // If no \new Staff found, treat the whole thing as one staff
+  if (staffBlocks.length === 0) {
+    // Strip common wrappers
+    let music = lily
+      .replace(/\\version\s*"[^"]*"\s*/g, "")
+      .replace(/\\header\s*\{[^}]*\}\s*/g, "")
+      .replace(/\\tempo\s+\d+\s*=\s*\d+\s*/g, "")
+      .replace(/\\relative\s+[a-g][',]*\s*\{/g, "")
+      .replace(/\{|\}/g, "")
+      .trim();
+    staffBlocks.push(music);
+  }
+
+  score.parts = staffBlocks.map((block, idx) => {
+    // Extract time signature
+    let timeNum = 4, timeDen = 4;
+    const tsMatch = block.match(/\\time\s+(\d+)\/(\d+)/);
+    if (tsMatch) {
+      timeNum = parseInt(tsMatch[1]);
+      timeDen = parseInt(tsMatch[2]);
+    }
+
+    // Strip LilyPond commands we don't parse
+    const music = block
+      .replace(/\\time\s+\d+\/\d+/g, "")
+      .replace(/\\clef\s+\S+/g, "")
+      .replace(/\\key\s+\S+\s+\\\S+/g, "")
+      .replace(/\\relative\s+[a-g][',]*/g, "")
+      .trim();
+
+    // Split by bar lines
+    const bars = music.split(/\|/).filter((b) => b.trim());
+    const measures: Measure[] = [];
+
+    for (const bar of bars) {
+      const measure = factory.measure([factory.voice([])]);
+      if (measures.length === 0) {
+        measure.timeSignature = { numerator: timeNum, denominator: timeDen as any };
+      }
+      const voice = measure.voices[0];
+      voice.events = [];
+
+      // Tokenize: split on whitespace, but keep <...> chords together
+      const tokens: string[] = [];
+      let current = "";
+      let inChord = false;
+      for (const ch of bar.trim()) {
+        if (ch === "<" && bar.trim()[bar.trim().indexOf(ch) + 1] !== "<") {
+          inChord = true;
+          current += ch;
+        } else if (ch === ">" && inChord) {
+          inChord = false;
+          current += ch;
+        } else if (/\s/.test(ch) && !inChord) {
+          if (current) tokens.push(current);
+          current = "";
+        } else {
+          current += ch;
+        }
+      }
+      if (current) tokens.push(current);
+
+      for (const token of tokens) {
+        if (!token || token.startsWith("\\")) continue;
+
+        if (token.startsWith("r") || token.startsWith("R") || token.startsWith("s")) {
+          // Rest or spacer
+          const durStr = token.slice(1);
+          voice.events.push({
+            kind: "rest",
+            id: newId("evt"),
+            duration: parseLilyDuration(durStr),
+          });
+        } else if (token.startsWith("<")) {
+          // Chord: <c e g>4
+          const closeIdx = token.indexOf(">");
+          if (closeIdx === -1) continue;
+          const inner = token.slice(1, closeIdx);
+          const durStr = token.slice(closeIdx + 1);
+          const pitchTokens = inner.trim().split(/\s+/);
+          const heads: { pitch: Pitch; tied?: boolean }[] = [];
+          for (const pt of pitchTokens) {
+            if (/[a-g]/.test(pt[0])) {
+              const result = lilyPitchToModel(pt);
+              heads.push({ pitch: result.pitch });
+            }
+          }
+          if (heads.length > 0) {
+            voice.events.push({
+              kind: "chord",
+              id: newId("evt"),
+              duration: parseLilyDuration(durStr),
+              heads,
+            });
+          }
+        } else if (/[a-g]/.test(token[0])) {
+          // Note
+          const result = lilyPitchToModel(token);
+          const durStr = result.rest;
+          voice.events.push({
+            kind: "note",
+            id: newId("evt"),
+            duration: parseLilyDuration(durStr),
+            head: { pitch: result.pitch },
+          });
+        }
+      }
+
+      if (voice.events.length > 0) {
+        measures.push(measure);
+      }
+    }
+
+    if (measures.length === 0) {
+      measures.push(factory.measure([factory.voice([])]));
+    }
+
+    return factory.part(
+      idx === 0 ? "Part 1" : `Part ${idx + 1}`,
+      `P${idx + 1}`,
+      measures,
+    );
+  });
+
+  return score;
+}
+
 // --- Format Detection ---
 
 function detectFormat(text: string): "abc" | "lilypond" | "musicxml" | null {
@@ -296,7 +501,7 @@ function detectFormat(text: string): "abc" | "lilypond" | "musicxml" | null {
 
 // --- Exports for testing ---
 
-export { scoreToAbc, scoreToLily, parseAbcToScore, detectFormat, pitchToAbc, pitchToLily, eventToAbc, eventToLily };
+export { scoreToAbc, scoreToLily, parseAbcToScore, parseLilyToScore, detectFormat, pitchToAbc, pitchToLily, eventToAbc, eventToLily };
 
 // --- Plugin ---
 
@@ -349,8 +554,7 @@ export const ClipboardPlugin: NubiumPlugin = {
       } else if (format === "abc") {
         score = parseAbcToScore(text);
       } else if (format === "lilypond") {
-        // LilyPond parsing is very complex — not supported for paste yet
-        return;
+        score = parseLilyToScore(text);
       }
 
       if (score) {

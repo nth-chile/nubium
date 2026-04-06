@@ -3,6 +3,7 @@ import {
   scoreToAbc,
   scoreToLily,
   parseAbcToScore,
+  parseLilyToScore,
   detectFormat,
   pitchToAbc,
   pitchToLily,
@@ -502,5 +503,433 @@ describe("round-trip: score -> ABC -> parse", () => {
       expect(events[0].heads[1].pitch.pitchClass).toBe("E");
       expect(events[0].heads[2].pitch.pitchClass).toBe("G");
     }
+  });
+
+  it("preserves flats through round-trip", () => {
+    const original = makeScore([
+      makeNote("B", 4, "quarter", "flat"),
+      makeNote("E", 5, "quarter", "flat"),
+    ]);
+    const abc = scoreToAbc(original);
+    const parsed = parseAbcToScore(abc);
+    const events = parsed.parts[0].measures[0].voices[0].events;
+
+    expect(events[0].kind).toBe("note");
+    if (events[0].kind === "note") {
+      expect(events[0].head.pitch.pitchClass).toBe("B");
+      expect(events[0].head.pitch.accidental).toBe("flat");
+    }
+    if (events[1].kind === "note") {
+      expect(events[1].head.pitch.pitchClass).toBe("E");
+      expect(events[1].head.pitch.accidental).toBe("flat");
+      expect(events[1].head.pitch.octave).toBe(5);
+    }
+  });
+
+  it("preserves durations through round-trip", () => {
+    const original = makeScore([
+      makeNote("C", 4, "half"),
+      makeNote("D", 4, "eighth"),
+      makeNote("E", 4, "whole"),
+      makeNote("F", 4, "16th"),
+    ]);
+    const abc = scoreToAbc(original);
+    const parsed = parseAbcToScore(abc);
+    const events = parsed.parts[0].measures[0].voices[0].events;
+
+    expect(events).toHaveLength(4);
+    expect(events[0].duration.type).toBe("half");
+    expect(events[1].duration.type).toBe("eighth");
+    expect(events[2].duration.type).toBe("whole");
+    expect(events[3].duration.type).toBe("16th");
+  });
+
+  it("preserves multiple measures through round-trip", () => {
+    const score = factory.score(
+      "Multi Measure",
+      "Composer",
+      [
+        factory.part("Piano", "Pno.", [
+          factory.measure([factory.voice([makeNote("C", 4), makeNote("D", 4)])]),
+          factory.measure([factory.voice([makeNote("E", 4), makeNote("F", 4)])]),
+        ]),
+      ],
+      120
+    );
+    const abc = scoreToAbc(score);
+    const parsed = parseAbcToScore(abc);
+
+    expect(parsed.parts[0].measures).toHaveLength(2);
+    const m1events = parsed.parts[0].measures[0].voices[0].events;
+    const m2events = parsed.parts[0].measures[1].voices[0].events;
+    expect(m1events).toHaveLength(2);
+    expect(m2events).toHaveLength(2);
+    if (m1events[0].kind === "note") expect(m1events[0].head.pitch.pitchClass).toBe("C");
+    if (m2events[0].kind === "note") expect(m2events[0].head.pitch.pitchClass).toBe("E");
+  });
+
+  it("preserves rests through round-trip", () => {
+    const original = makeScore([
+      makeNote("C", 4),
+      makeRest("half"),
+      makeNote("G", 4),
+    ]);
+    const abc = scoreToAbc(original);
+    const parsed = parseAbcToScore(abc);
+    const events = parsed.parts[0].measures[0].voices[0].events;
+
+    expect(events).toHaveLength(3);
+    expect(events[0].kind).toBe("note");
+    expect(events[1].kind).toBe("rest");
+    expect(events[1].duration.type).toBe("half");
+    expect(events[2].kind).toBe("note");
+  });
+});
+
+// --- LilyPond export: complex scores ---
+
+describe("scoreToLily: complex scores", () => {
+  it("exports multiple parts as separate staves", () => {
+    const score = factory.score(
+      "Duet",
+      "Composer",
+      [
+        factory.part("Flute", "Fl.", [factory.measure([factory.voice([makeNote("C", 5)])])]),
+        factory.part("Cello", "Vc.", [factory.measure([factory.voice([makeNote("C", 3)])])]),
+      ],
+      100
+    );
+    const lily = scoreToLily(score);
+    const staffMatches = lily.match(/\\new Staff \{/g);
+    expect(staffMatches).toHaveLength(2);
+    expect(lily).toContain("c'4"); // C5
+    expect(lily).toContain("c,4"); // C3
+  });
+
+  it("exports various durations", () => {
+    const events: NoteEvent[] = [
+      makeNote("C", 4, "whole"),
+      makeNote("D", 4, "half"),
+      makeNote("E", 4, "quarter"),
+      makeNote("F", 4, "eighth"),
+      makeNote("G", 4, "16th"),
+      makeNote("A", 4, "32nd"),
+    ];
+    const lily = scoreToLily(makeScore(events));
+    expect(lily).toContain("c1");
+    expect(lily).toContain("d2");
+    expect(lily).toContain("e4");
+    expect(lily).toContain("f8");
+    expect(lily).toContain("g16");
+    expect(lily).toContain("a32");
+  });
+
+  it("exports accidentals correctly", () => {
+    const events: NoteEvent[] = [
+      makeNote("F", 4, "quarter", "sharp"),
+      makeNote("B", 4, "quarter", "flat"),
+      makeNote("C", 4, "quarter", "double-sharp"),
+      makeNote("E", 4, "quarter", "double-flat"),
+    ];
+    const lily = scoreToLily(makeScore(events));
+    expect(lily).toContain("fis4");
+    expect(lily).toContain("bes4");
+    expect(lily).toContain("cisis4");
+    expect(lily).toContain("eeses4");
+  });
+
+  it("exports chords in LilyPond angle-bracket syntax", () => {
+    const events: NoteEvent[] = [
+      makeChord([
+        { pitchClass: "C", octave: 4 },
+        { pitchClass: "E", octave: 4 },
+        { pitchClass: "G", octave: 4 },
+        { pitchClass: "B", octave: 4, accidental: "flat" },
+      ]),
+    ];
+    const lily = scoreToLily(makeScore(events));
+    expect(lily).toContain("<c e g bes>4");
+  });
+
+  it("exports dotted notes", () => {
+    const events: NoteEvent[] = [
+      makeNote("C", 4, "quarter", "natural", 1),
+      makeNote("D", 4, "half", "natural", 1),
+    ];
+    const lily = scoreToLily(makeScore(events));
+    expect(lily).toContain("c4.");
+    expect(lily).toContain("d2.");
+  });
+
+  it("exports multiple measures separated by bar lines", () => {
+    const score = factory.score(
+      "Test",
+      "Composer",
+      [
+        factory.part("Piano", "Pno.", [
+          factory.measure([factory.voice([makeNote("C", 4)])]),
+          factory.measure([factory.voice([makeNote("D", 4)])]),
+          factory.measure([factory.voice([makeNote("E", 4)])]),
+        ]),
+      ],
+      120
+    );
+    const lily = scoreToLily(score);
+    expect(lily).toContain("c4 | d4 | e4");
+  });
+});
+
+// --- parseLilyToScore ---
+
+describe("parseLilyToScore", () => {
+  it("parses title and tempo", () => {
+    const lily = `\\version "2.24.0"
+\\header { title = "Test Song" }
+\\tempo 4 = 140
+\\new Staff { \\time 4/4
+  c4 d4 e4 f4
+}`;
+    const score = parseLilyToScore(lily);
+    expect(score.title).toBe("Test Song");
+    expect(score.tempo).toBe(140);
+  });
+
+  it("parses notes with pitches", () => {
+    const lily = '\\new Staff { c4 d4 e4 f4 }';
+    const score = parseLilyToScore(lily);
+    const events = score.parts[0].measures[0].voices[0].events;
+    expect(events).toHaveLength(4);
+    expect(events[0].kind).toBe("note");
+    if (events[0].kind === "note") {
+      expect(events[0].head.pitch.pitchClass).toBe("C");
+      expect(events[0].head.pitch.octave).toBe(4);
+    }
+    if (events[3].kind === "note") {
+      expect(events[3].head.pitch.pitchClass).toBe("F");
+    }
+  });
+
+  it("parses octave marks", () => {
+    const lily = "\\new Staff { c'4 c''4 c,4 c,,4 }";
+    const score = parseLilyToScore(lily);
+    const events = score.parts[0].measures[0].voices[0].events;
+    expect(events).toHaveLength(4);
+    if (events[0].kind === "note") expect(events[0].head.pitch.octave).toBe(5);
+    if (events[1].kind === "note") expect(events[1].head.pitch.octave).toBe(6);
+    if (events[2].kind === "note") expect(events[2].head.pitch.octave).toBe(3);
+    if (events[3].kind === "note") expect(events[3].head.pitch.octave).toBe(2);
+  });
+
+  it("parses accidentals", () => {
+    const lily = "\\new Staff { fis4 bes4 cisis4 eeses4 }";
+    const score = parseLilyToScore(lily);
+    const events = score.parts[0].measures[0].voices[0].events;
+    expect(events).toHaveLength(4);
+    if (events[0].kind === "note") {
+      expect(events[0].head.pitch.pitchClass).toBe("F");
+      expect(events[0].head.pitch.accidental).toBe("sharp");
+    }
+    if (events[1].kind === "note") {
+      expect(events[1].head.pitch.pitchClass).toBe("B");
+      expect(events[1].head.pitch.accidental).toBe("flat");
+    }
+    if (events[2].kind === "note") {
+      expect(events[2].head.pitch.pitchClass).toBe("C");
+      expect(events[2].head.pitch.accidental).toBe("double-sharp");
+    }
+    if (events[3].kind === "note") {
+      expect(events[3].head.pitch.pitchClass).toBe("E");
+      expect(events[3].head.pitch.accidental).toBe("double-flat");
+    }
+  });
+
+  it("parses durations", () => {
+    const lily = "\\new Staff { c1 d2 e4 f8 g16 a32 }";
+    const score = parseLilyToScore(lily);
+    const events = score.parts[0].measures[0].voices[0].events;
+    expect(events).toHaveLength(6);
+    expect(events[0].duration.type).toBe("whole");
+    expect(events[1].duration.type).toBe("half");
+    expect(events[2].duration.type).toBe("quarter");
+    expect(events[3].duration.type).toBe("eighth");
+    expect(events[4].duration.type).toBe("16th");
+    expect(events[5].duration.type).toBe("32nd");
+  });
+
+  it("parses dotted notes", () => {
+    const lily = "\\new Staff { c4. d2. }";
+    const score = parseLilyToScore(lily);
+    const events = score.parts[0].measures[0].voices[0].events;
+    expect(events).toHaveLength(2);
+    expect(events[0].duration.type).toBe("quarter");
+    expect(events[0].duration.dots).toBe(1);
+    expect(events[1].duration.type).toBe("half");
+    expect(events[1].duration.dots).toBe(1);
+  });
+
+  it("parses rests", () => {
+    const lily = "\\new Staff { c4 r4 e4 r4 }";
+    const score = parseLilyToScore(lily);
+    const events = score.parts[0].measures[0].voices[0].events;
+    expect(events).toHaveLength(4);
+    expect(events[1].kind).toBe("rest");
+    expect(events[1].duration.type).toBe("quarter");
+    expect(events[3].kind).toBe("rest");
+  });
+
+  it("parses chords", () => {
+    const lily = "\\new Staff { <c e g>4 <d fis a>2 }";
+    const score = parseLilyToScore(lily);
+    const events = score.parts[0].measures[0].voices[0].events;
+    expect(events).toHaveLength(2);
+    expect(events[0].kind).toBe("chord");
+    if (events[0].kind === "chord") {
+      expect(events[0].heads).toHaveLength(3);
+      expect(events[0].heads[0].pitch.pitchClass).toBe("C");
+      expect(events[0].heads[1].pitch.pitchClass).toBe("E");
+      expect(events[0].heads[2].pitch.pitchClass).toBe("G");
+      expect(events[0].duration.type).toBe("quarter");
+    }
+    if (events[1].kind === "chord") {
+      expect(events[1].heads[1].pitch.accidental).toBe("sharp");
+      expect(events[1].duration.type).toBe("half");
+    }
+  });
+
+  it("parses multiple measures", () => {
+    const lily = "\\new Staff { c4 d4 e4 f4 | g4 a4 b4 c'4 }";
+    const score = parseLilyToScore(lily);
+    expect(score.parts[0].measures).toHaveLength(2);
+    expect(score.parts[0].measures[0].voices[0].events).toHaveLength(4);
+    expect(score.parts[0].measures[1].voices[0].events).toHaveLength(4);
+  });
+
+  it("parses multiple staves as multiple parts", () => {
+    const lily = `\\version "2.24.0"
+\\new Staff { c'4 d'4 }
+\\new Staff { c,4 d,4 }`;
+    const score = parseLilyToScore(lily);
+    expect(score.parts).toHaveLength(2);
+    const p1 = score.parts[0].measures[0].voices[0].events;
+    const p2 = score.parts[1].measures[0].voices[0].events;
+    if (p1[0].kind === "note") expect(p1[0].head.pitch.octave).toBe(5);
+    if (p2[0].kind === "note") expect(p2[0].head.pitch.octave).toBe(3);
+  });
+
+  it("parses time signature", () => {
+    const lily = "\\new Staff { \\time 3/4 c4 d4 e4 }";
+    const score = parseLilyToScore(lily);
+    const ts = score.parts[0].measures[0].timeSignature;
+    expect(ts.numerator).toBe(3);
+    expect(ts.denominator).toBe(4);
+  });
+
+  it("handles bare LilyPond without \\new Staff", () => {
+    const lily = 'c4 d4 e4 f4';
+    const score = parseLilyToScore(lily);
+    const events = score.parts[0].measures[0].voices[0].events;
+    expect(events).toHaveLength(4);
+    expect(events[0].kind).toBe("note");
+  });
+
+  it("handles empty input gracefully", () => {
+    const score = parseLilyToScore("");
+    expect(score.parts.length).toBeGreaterThanOrEqual(1);
+    expect(score.parts[0].measures.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// --- LilyPond round-trip ---
+
+describe("round-trip: score -> LilyPond -> parse", () => {
+  it("preserves note pitches through round-trip", () => {
+    const original = makeScore([
+      makeNote("C", 4),
+      makeNote("E", 5),
+      makeNote("G", 3),
+      makeRest("quarter"),
+    ]);
+    const lily = scoreToLily(original);
+    const parsed = parseLilyToScore(lily);
+    const events = parsed.parts[0].measures[0].voices[0].events;
+
+    expect(events).toHaveLength(4);
+    expect(events[0].kind).toBe("note");
+    if (events[0].kind === "note") {
+      expect(events[0].head.pitch.pitchClass).toBe("C");
+      expect(events[0].head.pitch.octave).toBe(4);
+    }
+    if (events[1].kind === "note") {
+      expect(events[1].head.pitch.pitchClass).toBe("E");
+      expect(events[1].head.pitch.octave).toBe(5);
+    }
+    if (events[2].kind === "note") {
+      expect(events[2].head.pitch.pitchClass).toBe("G");
+      expect(events[2].head.pitch.octave).toBe(3);
+    }
+    expect(events[3].kind).toBe("rest");
+  });
+
+  it("preserves accidentals through round-trip", () => {
+    const original = makeScore([
+      makeNote("F", 4, "quarter", "sharp"),
+      makeNote("B", 4, "quarter", "flat"),
+      makeNote("C", 4, "quarter", "double-sharp"),
+      makeNote("E", 4, "quarter", "double-flat"),
+    ]);
+    const lily = scoreToLily(original);
+    const parsed = parseLilyToScore(lily);
+    const events = parsed.parts[0].measures[0].voices[0].events;
+
+    if (events[0].kind === "note") expect(events[0].head.pitch.accidental).toBe("sharp");
+    if (events[1].kind === "note") expect(events[1].head.pitch.accidental).toBe("flat");
+    if (events[2].kind === "note") expect(events[2].head.pitch.accidental).toBe("double-sharp");
+    if (events[3].kind === "note") expect(events[3].head.pitch.accidental).toBe("double-flat");
+  });
+
+  it("preserves durations through round-trip", () => {
+    const original = makeScore([
+      makeNote("C", 4, "whole"),
+      makeNote("D", 4, "half"),
+      makeNote("E", 4, "eighth"),
+      makeNote("F", 4, "16th"),
+    ]);
+    const lily = scoreToLily(original);
+    const parsed = parseLilyToScore(lily);
+    const events = parsed.parts[0].measures[0].voices[0].events;
+
+    expect(events[0].duration.type).toBe("whole");
+    expect(events[1].duration.type).toBe("half");
+    expect(events[2].duration.type).toBe("eighth");
+    expect(events[3].duration.type).toBe("16th");
+  });
+
+  it("preserves chords through round-trip", () => {
+    const original = makeScore([
+      makeChord([
+        { pitchClass: "C", octave: 4 },
+        { pitchClass: "E", octave: 4 },
+        { pitchClass: "G", octave: 4 },
+      ]),
+    ]);
+    const lily = scoreToLily(original);
+    const parsed = parseLilyToScore(lily);
+    const events = parsed.parts[0].measures[0].voices[0].events;
+
+    expect(events[0].kind).toBe("chord");
+    if (events[0].kind === "chord") {
+      expect(events[0].heads).toHaveLength(3);
+      expect(events[0].heads[0].pitch.pitchClass).toBe("C");
+      expect(events[0].heads[1].pitch.pitchClass).toBe("E");
+      expect(events[0].heads[2].pitch.pitchClass).toBe("G");
+    }
+  });
+
+  it("preserves title and tempo through round-trip", () => {
+    const original = makeScore([makeNote("C", 4)], "My Song", 160);
+    const lily = scoreToLily(original);
+    const parsed = parseLilyToScore(lily);
+    expect(parsed.title).toBe("My Song");
+    expect(parsed.tempo).toBe(160);
   });
 });

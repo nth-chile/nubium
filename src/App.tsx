@@ -7,6 +7,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { PluginPanel } from "./components/PluginPanel";
 import { CommandPalette } from "./components/CommandPalette";
 import { HistoryModal, showHistoryModal } from "./components/HistoryModal";
+import { ToastContainer, showToast } from "./components/Toast";
 import { PanelLayout } from "./components/PanelLayout";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { useEditorStore } from "./state";
@@ -16,6 +17,7 @@ import { loadScore } from "./fileio/load";
 import { emptyScore } from "./model/factory";
 import { getSettings, matchesBinding } from "./settings";
 import { useEffect, useCallback, useState, useSyncExternalStore, useRef } from "react";
+import { checkForUpdates, installUpdate } from "./updater";
 import {
   PluginManager,
   TransposePlugin,
@@ -31,6 +33,7 @@ import {
   MidiInputPlugin,
 } from "./plugins";
 import { setGlobalPluginManager } from "./plugins/PluginManager";
+import { isCommunityPluginsEnabled, loadAllInstalled } from "./plugins/CommunityRegistry";
 
 export function App() {
   const score = useEditorStore((s) => s.score);
@@ -51,7 +54,7 @@ export function App() {
       getCursor: () => useEditorStore.getState().inputState.cursor,
       getSelection: () => useEditorStore.getState().selection,
       showNotification: (message, type) => {
-        console.log(`[${type ?? "info"}] ${message}`);
+        showToast(message, type);
       },
     });
 
@@ -74,7 +77,18 @@ export function App() {
     pm.registerAndActivate(ClipboardPlugin, false);
     pm.registerAndActivate(MidiInputPlugin, false);
 
+    // Load installed community plugins
+    if (isCommunityPluginsEnabled()) {
+      for (const plugin of loadAllInstalled()) {
+        pm.registerAndActivate(plugin, true);
+      }
+    }
+
     setGlobalPluginManager(pm);
+
+    // Updater commands
+    pm.registerCoreCommand("nubium.check-updates", "Check for Updates", () => checkForUpdates(true));
+    pm.registerCoreCommand("nubium.install-update", "Install Update and Restart", () => installUpdate());
   }
 
   const pm = pluginManagerRef.current;
@@ -168,6 +182,11 @@ export function App() {
   // Suppress unused variable warning — pluginVersion is used to trigger re-renders
   void pluginVersion;
 
+  // Check for updates on launch (Tauri only, non-blocking)
+  useEffect(() => {
+    checkForUpdates();
+  }, []);
+
   return (
     <TooltipProvider delayDuration={600} skipDelayDuration={400}>
     <div className="flex flex-col h-screen w-screen overflow-hidden">
@@ -199,6 +218,7 @@ export function App() {
       />
       <CommandPalette pluginManager={pluginManagerRef.current} />
       <HistoryModal />
+      <ToastContainer />
     </div>
     </TooltipProvider>
   );
