@@ -1,9 +1,9 @@
 import type { Score, NoteEventId } from "../model";
 import { TICKS_PER_QUARTER, durationToTicks } from "../model/duration";
 import { StaveTie, type StaveNote } from "vexflow";
-import { renderMeasure, renderMultiMeasureRest, renderSystemBarline, renderBrace, clearCanvas, createVexStave, type RenderContext, type NoteBox, type AnnotationBox } from "./vexBridge";
+import { renderMeasure, renderMultiMeasureRest, renderSystemBarline, renderBrace, clearCanvas, createVexStave, type RenderContext, type NoteBox, type AnnotationBox, type MeasureRenderResult } from "./vexBridge";
 import { getMeasureIndexForTick } from "../playback/TonePlayback";
-import { renderTabMeasure } from "./TabRenderer";
+import { renderTabMeasure, type TabMeasureRenderResult } from "./TabRenderer";
 import { computeLayout, totalContentHeight, totalPageCount, partStaveCount, DEFAULT_LAYOUT, type LayoutConfig, type SystemLine } from "./SystemLayout";
 import type { CursorPosition } from "../input/InputState";
 import type { ViewConfig, AnnotationFilter } from "../views/ViewMode";
@@ -355,7 +355,7 @@ export function renderScore(
             measureToRender = { ...measureToRender, clef: { type: "bass" as const } };
           }
 
-          let result;
+          let result: MeasureRenderResult | TabMeasureRenderResult;
           if (useTab && si === 0) {
             // Render as tab staff
             result = renderTabMeasure(
@@ -399,7 +399,7 @@ export function renderScore(
             );
 
             // Store stave for cross-staff use by the other stave index
-            if (staveCount >= 2 && result.vexStave) {
+            if (staveCount >= 2 && 'vexStave' in result && result.vexStave) {
               grandStaffStaves.set(`${mi}:${si}`, result.vexStave);
             }
           }

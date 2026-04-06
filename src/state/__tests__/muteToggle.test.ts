@@ -52,7 +52,7 @@ describe("moveCursorToPart resets voice", () => {
     useEditorStore.setState((s) => ({
       inputState: {
         ...s.inputState,
-        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 2, eventIndex: 0 },
+        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 2, eventIndex: 0, staveIndex: 0 },
       },
     }));
 

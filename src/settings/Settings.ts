@@ -15,7 +15,6 @@ export interface AppSettings {
   defaultClef: ClefType;
   autoBeam: boolean;
   metronomeEnabled: boolean;
-  theme: "light" | "dark";
   historyMaxSnapshots: number;
   keyBindings: Record<string, KeyBinding>;
   viewMode: string;
@@ -47,7 +46,6 @@ function defaultSettings(): AppSettings {
     defaultClef: "treble",
     autoBeam: true,
     metronomeEnabled: false,
-    theme: "light",
     historyMaxSnapshots: 50,
     keyBindings: defaultKeyBindings(),
     viewMode: "full-score",

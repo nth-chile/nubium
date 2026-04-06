@@ -32,3 +32,16 @@ export { registerCorePartManager } from "./builtins/PartManager";
 export { registerCoreEditor } from "./builtins/ScoreEditor";
 export { ClipboardPlugin } from "./builtins/Clipboard";
 export { MidiInputPlugin } from "./builtins/MidiInput";
+
+// Community plugin registry
+export {
+  fetchRegistry,
+  installPlugin,
+  uninstallPlugin,
+  isInstalled,
+  isCommunityPluginsEnabled,
+  enableCommunityPlugins,
+  loadAllInstalled,
+  loadPluginFromBundle,
+} from "./CommunityRegistry";
+export type { RegistryEntry } from "./CommunityRegistry";

@@ -82,7 +82,7 @@ interface EditorStore {
   // Rendering
   noteBoxes: Map<NoteEventId, NoteBox>;
   annotationBoxes: AnnotationBox[];
-  measurePositions: { partIndex: number; measureIndex: number; x: number; y: number; width: number; height: number }[];
+  measurePositions: { partIndex: number; measureIndex: number; staveIndex: number; x: number; y: number; width: number; height: number; noteStartX: number }[];
   titlePositions: { title?: { x: number; y: number; width: number; height: number }; composer?: { x: number; y: number; width: number; height: number } };
   editingTitle: boolean;
   editingComposer: boolean;

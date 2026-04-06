@@ -13,6 +13,10 @@
     "fs:allow-mkdir",
     "fs:allow-appconfig-read",
     "fs:allow-appconfig-write",
-    "fs:allow-appconfig-meta"
+    "fs:allow-appconfig-meta",
+    "updater:default",
+    "updater:allow-check",
+    "updater:allow-download-and-install",
+    "process:allow-restart"
   ]
 }

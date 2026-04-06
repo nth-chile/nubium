@@ -21,7 +21,7 @@ function setupWithContent() {
     filePath: "/path/to/file.musicxml",
     inputState: {
       ...useEditorStore.getState().inputState,
-      cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 2 },
+      cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 2, staveIndex: 0 },
     },
   });
 }

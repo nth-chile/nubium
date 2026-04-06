@@ -1210,10 +1210,10 @@ describe("MusicXML Round-trip", () => {
 
     const reimported = importFromMusicXML(xml);
     const chords = reimported.parts[0].measures[0].annotations.filter(
-      (a: any) => a.kind === "chord-symbol"
+      (a) => a.kind === "chord-symbol"
     );
     expect(chords.length).toBe(1);
-    expect(chords[0].text).toContain("D");
+    expect(chords[0].kind === "chord-symbol" && chords[0].text).toContain("D");
   });
 
   it("should round-trip volta brackets", () => {

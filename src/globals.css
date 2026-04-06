@@ -9,7 +9,7 @@
   --color-card-foreground: #ebebeb;
   --color-popover: #252526;
   --color-popover-foreground: #e0e0e0;
-  --color-primary: #4a7dff;
+  --color-primary: #4a6fa5;
   --color-primary-foreground: #ffffff;
   --color-secondary: #2d2d2d;
   --color-secondary-foreground: #e0e0e0;
@@ -21,7 +21,7 @@
   --color-destructive-foreground: #ffffff;
   --color-border: #3e3e42;
   --color-input: #3e3e42;
-  --color-ring: #4a7dff;
+  --color-ring: #4a6fa5;
   --radius: 0.375rem;
 }
 

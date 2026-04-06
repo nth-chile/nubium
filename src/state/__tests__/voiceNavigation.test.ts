@@ -30,7 +30,7 @@ function setupTwoMeasures() {
     score,
     inputState: {
       ...useEditorStore.getState().inputState,
-      cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 1, eventIndex: 0 },
+      cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 1, eventIndex: 0, staveIndex: 0 },
     },
   });
 }
@@ -43,7 +43,7 @@ describe("Voice navigation across measures", () => {
     useEditorStore.setState((s) => ({
       inputState: {
         ...s.inputState,
-        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 1, eventIndex: 1 },
+        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 1, eventIndex: 1, staveIndex: 0 },
       },
     }));
 
@@ -60,7 +60,7 @@ describe("Voice navigation across measures", () => {
     useEditorStore.setState((s) => ({
       inputState: {
         ...s.inputState,
-        cursor: { partIndex: 0, measureIndex: 1, voiceIndex: 1, eventIndex: 0 },
+        cursor: { partIndex: 0, measureIndex: 1, voiceIndex: 1, eventIndex: 0, staveIndex: 0 },
       },
     }));
 
@@ -77,7 +77,7 @@ describe("Voice navigation across measures", () => {
     useEditorStore.setState((s) => ({
       inputState: {
         ...s.inputState,
-        cursor: { partIndex: 0, measureIndex: 1, voiceIndex: 1, eventIndex: 0 },
+        cursor: { partIndex: 0, measureIndex: 1, voiceIndex: 1, eventIndex: 0, staveIndex: 0 },
       },
     }));
 

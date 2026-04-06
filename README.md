@@ -4,7 +4,7 @@ Notate music, or ask your favorite AI model to.
 
 ## Philosophy
 
-Inspired by [Obsidian](https://obsidian.md), Nubium is extremely flexible. Turn off all the features you don't want, turn on what you want, and drag the UI around to wherever you want it to be. Nubium supports community plugins, or ask me to ask Claude do it.
+Inspired by [Obsidian](https://obsidian.md), Nubium is extremely flexible. Turn off all the features you don't want, turn on what you want, and drag the UI around to wherever you want it to be. Nubium supports [community plugins](https://github.com/nth-chile/nubium-plugins), or ask me to ask Claude do it.
 
 ## Getting Started
 

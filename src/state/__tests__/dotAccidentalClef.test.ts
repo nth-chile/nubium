@@ -20,13 +20,14 @@ function setupScore() {
       ]),
     ]),
   ]);
-  useEditorStore.setState({
+  useEditorStore.setState((s) => ({
     score,
     inputState: {
+      ...s.inputState,
       duration: { type: "quarter", dots: 0 },
       accidental: "natural",
       voice: 0,
-      cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0 },
+      cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0, staveIndex: 0 },
       octave: 4,
       stepEntry: false,
       graceNoteMode: false,
@@ -34,7 +35,7 @@ function setupScore() {
       textInputBuffer: "",
       textInputInitialValue: "",
     },
-  });
+  }));
 }
 
 describe("toggleDot on existing note (#95)", () => {
@@ -69,7 +70,7 @@ describe("toggleDot on existing note (#95)", () => {
     useEditorStore.setState((s) => ({
       inputState: {
         ...s.inputState,
-        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 2 },
+        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 2, staveIndex: 0 },
       },
     }));
     useEditorStore.getState().toggleDot();
@@ -179,7 +180,7 @@ describe("Clef-aware octave in ChangePitch (#119)", () => {
       score,
       inputState: {
         ...useEditorStore.getState().inputState,
-        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0 },
+        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0, staveIndex: 0 },
         octave: 4,
       },
     });
@@ -205,7 +206,7 @@ describe("Clef-aware octave in insertNote (#119)", () => {
       score,
       inputState: {
         ...useEditorStore.getState().inputState,
-        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0 },
+        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0, staveIndex: 0 },
         octave: 4,
       },
     });
@@ -229,7 +230,7 @@ describe("Clef-aware octave in insertNote (#119)", () => {
       score,
       inputState: {
         ...useEditorStore.getState().inputState,
-        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0 },
+        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0, staveIndex: 0 },
         octave: 4,
       },
     });
@@ -245,7 +246,7 @@ describe("Clef-aware octave in insertNote (#119)", () => {
     const score = factory.score("Test", "", [
       factory.part("Cello", "Vc.", [
         factory.measure([factory.voice([
-          factory.note("G", 3, "quarter"),
+          factory.note("G", 3, factory.dur("quarter")),
         ])], { clef: { type: "bass" } }),
       ]),
     ]);
@@ -253,7 +254,7 @@ describe("Clef-aware octave in insertNote (#119)", () => {
       score,
       inputState: {
         ...useEditorStore.getState().inputState,
-        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 1 },
+        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 1, staveIndex: 0 },
         octave: 4,
       },
     });
@@ -276,7 +277,7 @@ describe("Clef-aware octave in insertNote (#119)", () => {
       score,
       inputState: {
         ...useEditorStore.getState().inputState,
-        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0 },
+        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0, staveIndex: 0 },
         octave: 4,
       },
     });
@@ -298,7 +299,7 @@ describe("Clef-aware octave in insertNote (#119)", () => {
       score,
       inputState: {
         ...useEditorStore.getState().inputState,
-        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0 },
+        cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0, staveIndex: 0 },
         octave: 4,
       },
     });

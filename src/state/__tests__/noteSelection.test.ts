@@ -22,7 +22,7 @@ function resetStore() {
     noteSelection: null,
     inputState: {
       ...useEditorStore.getState().inputState,
-      cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0 },
+      cursor: { partIndex: 0, measureIndex: 0, voiceIndex: 0, eventIndex: 0, staveIndex: 0 },
     },
   });
 }

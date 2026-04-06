@@ -25,10 +25,6 @@ describe("defaultSettings", () => {
     expect(defaultSettings().metronomeEnabled).toBe(false);
   });
 
-  it("defaults to light theme", () => {
-    expect(defaultSettings().theme).toBe("light");
-  });
-
   it("has 50 max history snapshots", () => {
     expect(defaultSettings().historyMaxSnapshots).toBe(50);
   });

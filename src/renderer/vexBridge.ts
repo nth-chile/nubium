@@ -718,16 +718,16 @@ export function renderMeasure(
         const data = vfVoice as unknown as { __staveNotes: StaveNote[]; __eventIds: NoteEventId[] };
         data.__staveNotes.forEach((sn, idx) => {
           if (activeNoteIds.has(data.__eventIds[idx])) {
-            sn.setStyle({ fillStyle: "#4a7dff", strokeStyle: "#4a7dff" });
+            sn.setStyle({ fillStyle: "#4a6fa5", strokeStyle: "#4a6fa5" });
           }
         });
       }
 
       // Suppress cross-staff notes during Voice.draw by replacing drawWithStyle with a no-op
-      const savedDrawFns = new Map<StaveNote, () => void>();
+      const savedDrawFns = new Map<StaveNote, () => StaveNote>();
       for (const sn of crossStaffNoteSet) {
         savedDrawFns.set(sn, sn.drawWithStyle.bind(sn));
-        sn.drawWithStyle = () => {};
+        sn.drawWithStyle = () => sn;
       }
       vfVoice.draw(ctx.context, stave);
       // Restore drawWithStyle
