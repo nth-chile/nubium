@@ -43,10 +43,18 @@ export class SetNavigationMark implements Command {
           nav.fine = nav.fine ? undefined : true;
           break;
         case "ds":
-          nav.dsText = nav.dsText ? undefined : (typeof this.value === "string" ? this.value : "D.S. al Coda");
+          if (typeof this.value === "string") {
+            nav.dsText = nav.dsText === this.value ? undefined : this.value;
+          } else {
+            nav.dsText = nav.dsText ? undefined : "D.S. al Coda";
+          }
           break;
         case "dc":
-          nav.dcText = nav.dcText ? undefined : (typeof this.value === "string" ? this.value : "D.C. al Fine");
+          if (typeof this.value === "string") {
+            nav.dcText = nav.dcText === this.value ? undefined : this.value;
+          } else {
+            nav.dcText = nav.dcText ? undefined : "D.C. al Fine";
+          }
           break;
       }
 

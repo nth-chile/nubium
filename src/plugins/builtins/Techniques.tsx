@@ -2,11 +2,15 @@ import { useState, useEffect, type ReactNode } from "react";
 import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
 import type { Score } from "../../model";
 
-// --- SVG Icons (14x14, stroke-based) ---
+// --- Icons ---
+// Bravura (SMuFL) glyph helper — proper engraved music symbols
+const G = ({ code, size = 16 }: { code: string; size?: number }) => (
+  <span style={{ fontFamily: "Bravura, serif", fontSize: size, lineHeight: 0, display: "inline-block" }}>{code}</span>
+);
 
-const S = 14; // icon size
-const sw = "1.8"; // stroke width
-
+// SVG helper for techniques without Bravura glyphs
+const S = 14;
+const sw = "1.8";
 const Icon = ({ children }: { children: ReactNode }) => (
   <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} fill="none" stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
     {children}
@@ -14,52 +18,52 @@ const Icon = ({ children }: { children: ReactNode }) => (
 );
 
 const icons: Record<string, ReactNode> = {
-  // Articulations
-  staccato: <Icon><circle cx="7" cy="9" r="1.5" fill="currentColor" stroke="none"/></Icon>,
-  accent: <Icon><path d="M3 10 L7 4 L11 10"/></Icon>,
-  tenuto: <Icon><line x1="3" y1="8" x2="11" y2="8"/></Icon>,
-  marcato: <Icon><path d="M4 10 L7 3 L10 10"/><line x1="4" y1="12" x2="10" y2="12"/></Icon>,
-  fermata: <Icon><path d="M2 11 Q7 1 12 11"/><circle cx="7" cy="9" r="1.2" fill="currentColor" stroke="none"/></Icon>,
+  // Articulations (Bravura)
+  staccato:  <G code={"\uE4A2"} />,           // articStaccatoAbove
+  accent:    <G code={"\uE4A0"} />,           // articAccentAbove
+  tenuto:    <G code={"\uE4A4"} />,           // articTenutoAbove
+  marcato:   <G code={"\uE4AC"} />,           // articMarcatoAbove
+  fermata:   <G code={"\uE4C0"} />,           // fermataAbove
 
-  // Ornaments
-  trill: <span className="text-[10px] font-bold italic">tr</span>,
-  vibrato: <Icon><path d="M1 7 Q3.5 2 5 7 Q6.5 12 8 7 Q9.5 2 11 7 Q12 10 13 7"/></Icon>,
-  mordent: <Icon><path d="M2 7 L5 4 L7 10 L9 4 L12 7"/></Icon>,
-  turn: <Icon><path d="M2 7 Q4 2 7 7 Q10 12 12 7"/></Icon>,
+  // Ornaments (Bravura)
+  trill:     <G code={"\uE566"} size={14} />, // ornamentTrill
+  vibrato:   <G code={"\uEAE0"} size={14} />, // wiggleTrill (wavy line segment)
+  mordent:   <G code={"\uE56C"} size={14} />, // ornamentMordent
+  turn:      <G code={"\uE567"} size={14} />, // ornamentTurn
 
-  // Bends
+  // Bends (SVG — no standard music font glyphs)
   bend: <Icon><path d="M4 12 L4 5 Q4 2 7 2 L10 2" fill="none"/><path d="M8 0 L10 2 L8 4" fill="none"/></Icon>,
   "pre-bend": <Icon><path d="M4 12 L4 2" fill="none"/><path d="M2.5 4 L4 1.5 L5.5 4" fill="none"/><line x1="4" y1="2" x2="10" y2="2" strokeDasharray="1.5 1.5"/></Icon>,
   "bend-release": <Icon><path d="M3 12 L3 5 Q3 2 5.5 2 Q8 2 8 5 L8 12" fill="none"/><path d="M6.5 0 L8.5 2 L6.5 4" fill="none" strokeWidth="1.5"/></Icon>,
 
-  // Slides
+  // Slides (SVG — diagonal lines are the convention)
   "slide-up": <Icon><line x1="3" y1="11" x2="11" y2="3"/></Icon>,
   "slide-down": <Icon><line x1="3" y1="3" x2="11" y2="11"/></Icon>,
-  "slide-in-below": <Icon><line x1="1" y1="12" x2="9" y2="5"/><circle cx="10" cy="4" r="1.5" fill="currentColor" stroke="none"/></Icon>,
-  "slide-in-above": <Icon><line x1="1" y1="2" x2="9" y2="9"/><circle cx="10" cy="10" r="1.5" fill="currentColor" stroke="none"/></Icon>,
-  "slide-out-above": <Icon><circle cx="4" cy="10" r="1.5" fill="currentColor" stroke="none"/><line x1="5" y1="9" x2="13" y2="2"/></Icon>,
-  "slide-out-below": <Icon><circle cx="4" cy="4" r="1.5" fill="currentColor" stroke="none"/><line x1="5" y1="5" x2="13" y2="12"/></Icon>,
+  "slide-in-below": <Icon><line x1="1" y1="10" x2="8" y2="6"/><circle cx="10" cy="5" r="1.5" fill="currentColor" stroke="none"/></Icon>,
+  "slide-in-above": <Icon><line x1="1" y1="4" x2="8" y2="8"/><circle cx="10" cy="9" r="1.5" fill="currentColor" stroke="none"/></Icon>,
+  "slide-out-above": <Icon><circle cx="4" cy="9" r="1.5" fill="currentColor" stroke="none"/><line x1="6" y1="8" x2="13" y2="4"/></Icon>,
+  "slide-out-below": <Icon><circle cx="4" cy="5" r="1.5" fill="currentColor" stroke="none"/><line x1="6" y1="6" x2="13" y2="10"/></Icon>,
 
   // Legato
-  "hammer-on": <Icon><path d="M2 9 Q7 2 12 9" fill="none"/><text x="7" y="8" textAnchor="middle" fontSize="7" fontWeight="bold" fill="currentColor" stroke="none">H</text></Icon>,
-  "pull-off": <Icon><path d="M2 9 Q7 2 12 9" fill="none"/><text x="7" y="8" textAnchor="middle" fontSize="7" fontWeight="bold" fill="currentColor" stroke="none">P</text></Icon>,
+  "hammer-on": <span className="text-[10px] font-bold">H</span>,
+  "pull-off": <span className="text-[10px] font-bold">P</span>,
 
   // String techniques
   "palm-mute": <span className="text-[9px] font-bold">PM</span>,
   "dead-note": <Icon><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></Icon>,
-  "ghost-note": <Icon><path d="M4 2 Q1 7 4 12" fill="none"/><path d="M10 2 Q13 7 10 12" fill="none"/></Icon>,
-  tapping: <Icon><text x="7" y="11" textAnchor="middle" fontSize="11" fontWeight="bold" fill="currentColor" stroke="none">T</text></Icon>,
-  "let-ring": <Icon><path d="M2 4 Q2 12 7 12 Q12 12 12 4" fill="none"/><circle cx="7" cy="5" r="1" fill="currentColor" stroke="none"/></Icon>,
-  harmonic: <Icon><path d="M7 1 L12 7 L7 13 L2 7 Z" fill="none"/></Icon>,
-  "tremolo-picking": <Icon><line x1="7" y1="1" x2="7" y2="13"/><line x1="4" y1="4" x2="10" y2="3"/><line x1="4" y1="7" x2="10" y2="6"/><line x1="4" y1="10" x2="10" y2="9"/></Icon>,
+  "ghost-note": <Icon><path d="M5 2 Q2 7 5 12" fill="none"/><path d="M9 2 Q12 7 9 12" fill="none"/></Icon>,
+  tapping: <span className="text-[10px] font-bold">T</span>,
+  "let-ring": <span className="text-[9px] font-bold italic">l.r.</span>,
+  harmonic: <G code={"\uE614"} />,             // stringsHarmonic (diamond)
+  "tremolo-picking": <G code={"\uE222"} size={14} />, // tremolo3 (three slashes)
 
-  // Bowing
-  "down-bow": <Icon><path d="M3 3 L3 11 L11 11 L11 3" fill="none"/></Icon>,
-  "up-bow": <Icon><path d="M4 11 L7 3 L10 11" fill="none"/></Icon>,
+  // Bowing (Bravura)
+  "down-bow": <G code={"\uE610"} />,           // stringsDownBow
+  "up-bow":   <G code={"\uE612"} />,           // stringsUpBow
 
   // Picking
-  "down-stroke": <Icon><line x1="7" y1="2" x2="7" y2="11"/><path d="M4 8 L7 12 L10 8" fill="none"/></Icon>,
-  "up-stroke": <Icon><path d="M4 11 L7 3 L10 11" fill="none"/></Icon>,
+  "down-stroke": <G code={"\uE610"} />,        // same glyph as down-bow
+  "up-stroke":   <G code={"\uE612"} />,        // same glyph as up-bow
   "fingerpick-p": <span className="text-[10px] font-bold">p</span>,
   "fingerpick-i": <span className="text-[10px] font-bold">i</span>,
   "fingerpick-m": <span className="text-[10px] font-bold">m</span>,
@@ -238,7 +242,7 @@ function TechniquesPanel({ api }: { api: PluginAPI }) {
                 key={btn.command}
                 onClick={() => api.executeCommand(btn.command)}
                 title={btn.title}
-                className="h-7 w-7 flex items-center justify-center rounded border border-input bg-background hover:bg-accent transition-colors"
+                className="h-7 w-7 flex items-center justify-center rounded border border-input bg-background hover:bg-accent transition-colors focus:outline-none"
               >
                 {icons[btn.id] ?? <span className="text-[10px] font-bold">{btn.id}</span>}
               </button>

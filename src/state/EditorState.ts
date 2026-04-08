@@ -1507,17 +1507,55 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   toggleArticulation(kind) {
     const state = get();
 
+    // Mutually exclusive groups — adding one removes others in the same group
+    const EXCLUSION_GROUPS: string[][] = [
+      ["bend", "pre-bend", "bend-release"],
+      ["slide-in-below", "slide-in-above"],
+      ["slide-out-below", "slide-out-above"],
+      ["down-bow", "up-bow"],
+      ["down-stroke", "up-stroke", "fingerpick-p", "fingerpick-i", "fingerpick-m", "fingerpick-a"],
+      ["hammer-on", "pull-off"],
+      ["staccato", "staccatissimo"],       // tenuto can coexist (portato)
+      ["accent", "marcato"],               // marcato implies accent
+      ["dead-note", "bend", "pre-bend", "bend-release", "harmonic",
+       "slide-up", "slide-down", "slide-in-below", "slide-in-above",
+       "slide-out-below", "slide-out-above", "hammer-on", "pull-off",
+       "trill", "vibrato", "let-ring"],    // dead note = no pitch, these are meaningless
+    ];
+    const excluded = new Set<string>();
+    for (const group of EXCLUSION_GROUPS) {
+      if (group.includes(kind)) {
+        for (const k of group) if (k !== kind) excluded.add(k);
+      }
+    }
+
     // Helper to toggle articulation on a single event
+    const SEMITONE_ARTS = new Set(["bend", "pre-bend", "bend-release"]);
+    const BEND_CYCLE = [1, 2, 3]; // half, full, 1½
     const toggleArt = (ev: import("../model/note").NoteEvent): import("../model/note").NoteEvent => {
       if (ev.kind === "rest" || ev.kind === "slash") return ev;
       const arts = ev.articulations ?? [];
-      const has = arts.some((a) => a.kind === kind);
-      const SEMITONE_ARTS = new Set(["bend", "pre-bend", "bend-release"]);
-      const newArt: import("../model/note").Articulation = SEMITONE_ARTS.has(kind)
-        ? { kind, semitones: 2 } as import("../model/note").Articulation
-        : { kind } as import("../model/note").Articulation;
-      const newArts = has ? arts.filter((a) => a.kind !== kind) : [...arts, newArt];
-      return { ...ev, articulations: newArts.length > 0 ? newArts : undefined };
+      const filtered = arts.filter((a) => a.kind !== kind && !excluded.has(a.kind));
+
+      if (SEMITONE_ARTS.has(kind)) {
+        const existing = arts.find((a) => a.kind === kind);
+        if (existing && "semitones" in existing) {
+          const curIdx = BEND_CYCLE.indexOf(existing.semitones);
+          const nextIdx = curIdx + 1;
+          if (nextIdx < BEND_CYCLE.length) {
+            filtered.push({ kind, semitones: BEND_CYCLE[nextIdx] } as import("../model/note").Articulation);
+          }
+        } else {
+          filtered.push({ kind, semitones: 1 } as import("../model/note").Articulation);
+        }
+      } else {
+        const has = arts.some((a) => a.kind === kind);
+        if (!has) {
+          filtered.push({ kind } as import("../model/note").Articulation);
+        }
+      }
+
+      return { ...ev, articulations: filtered.length > 0 ? filtered : undefined };
     };
 
     // Note-level selection
@@ -2317,7 +2355,8 @@ let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
 async function autoSave(score: Score, filePath: string | null): Promise<void> {
   try {
     const serialized = serializeScore(score);
-    const payload = JSON.stringify({ score: serialized, filePath, savedAt: Date.now() });
+    const viewConfig = useEditorStore.getState().viewConfig;
+    const payload = JSON.stringify({ score: serialized, filePath, viewConfig, savedAt: Date.now() });
 
     // Try Tauri app data dir first, fall back to localStorage
     const tauri = await getTauriRecoveryPath();
@@ -2390,6 +2429,7 @@ async function restoreAutoSave(): Promise<void> {
         score,
         filePath: parsed.filePath ?? parsed.importSource ?? null,
         cleanScoreJson: parsed.score,
+        ...(parsed.viewConfig ? { viewConfig: parsed.viewConfig } : {}),
       });
     }
   } catch {

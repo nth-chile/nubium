@@ -1,4 +1,4 @@
-import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Dot, Beam, StaveConnector, Barline, Repetition, Volta as VexVolta, StaveTie, StaveHairpin, MultiMeasureRest, Tuplet as VexTuplet, Articulation as VexArticulation, Ornament as VexOrnament, Annotation as VexAnnotation, StaveText, StaveModifierPosition, GraceNote as VexGraceNote, GraceNoteGroup, GhostNote } from "vexflow";
+import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Dot, Beam, StaveConnector, Barline, Repetition, Volta as VexVolta, StaveTie, StaveHairpin, MultiMeasureRest, Tuplet as VexTuplet, Articulation as VexArticulation, Ornament as VexOrnament, Annotation as VexAnnotation, StaveText, StaveModifierPosition, GraceNote as VexGraceNote, GraceNoteGroup, GhostNote, Tremolo } from "vexflow";
 import type { ChordSymbol, DynamicMark, Lyric, Hairpin } from "../model/annotations";
 import type { Measure, NoteEvent, NoteEventId } from "../model";
 import type { BarlineType } from "../model/time";
@@ -133,6 +133,10 @@ const ORNAMENT_KINDS = new Set(["trill", "mordent", "turn"]);
 function addArticulations(sn: StaveNote, event: NoteEvent): void {
   if ((event.kind === "note" || event.kind === "chord" || event.kind === "grace") && event.articulations) {
     for (const art of event.articulations) {
+      if (art.kind === "tremolo-picking") {
+        sn.addModifier(new Tremolo(3));
+        continue;
+      }
       const code = ARTICULATION_VEX[art.kind];
       if (!code) continue;
       if (ORNAMENT_KINDS.has(art.kind)) {
