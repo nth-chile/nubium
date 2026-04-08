@@ -40,7 +40,7 @@ VITE_CLEAN_SETTINGS=1 npm run tauri dev  # Same for desktop
 **Editing:** Ctrl+Z / Ctrl+Shift+Z: undo/redo | Ctrl+M: insert measure | Ctrl+Backspace: delete measure
 **Voices:** Ctrl+1-4: switch voice
 **Annotations:** Shift+C: chord input | Shift+L: lyric input | Shift+D: dynamics | Shift+R: rehearsal mark | Shift+B: barline | Shift+N: navigation marks | Ctrl+T: time sig | Ctrl+K: key sig | Ctrl+Shift+T: tempo
-**Articulations:** Shift+>: accent | Shift+<: staccato | Shift+T: tenuto | Shift+U: fermata | Shift+^: marcato
+**Articulations:** Shift+>: accent | Shift+<: staccato | Shift+T: tenuto | Shift+U: fermata | Shift+^: marcato | Shift+Alt+R: trill
 **Playback:** Space: play/pause | Ctrl+.: stop | Shift+M: metronome | Shift+I: count-in
 **File:** Ctrl+N: new | Ctrl+O: open | Ctrl+S: save | Ctrl+Shift+H: file history
 **UI:** Ctrl+,: settings | Ctrl+B: left sidebar | Ctrl+Shift+B: right sidebar | Ctrl+Shift+P: command palette | Ctrl+Shift+E: plugins | Ctrl+Shift+A: AI chat

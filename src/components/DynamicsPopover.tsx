@@ -50,15 +50,31 @@ function usePopoverPosition() {
 
 function DynamicsContent() {
   const setDynamic = useEditorStore((s) => s.setDynamic);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      const n = parseInt(e.key);
+      if (n >= 1 && n <= DYNAMIC_LEVELS.length) {
+        e.preventDefault();
+        e.stopPropagation();
+        setDynamic(DYNAMIC_LEVELS[n - 1]);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [setDynamic]);
+
   return (
     <div className="flex gap-0.5">
-      {DYNAMIC_LEVELS.map((level) => (
+      {DYNAMIC_LEVELS.map((level, i) => (
         <button
           key={level}
           onClick={() => setDynamic(level)}
-          className="px-2 py-1 text-sm font-serif italic hover:bg-accent rounded min-w-[32px]"
+          className="px-2 py-1 text-sm font-serif italic hover:bg-accent rounded min-w-[32px] relative"
+          title={`${level} (${i + 1})`}
         >
           {level}
+          <span className="absolute -top-2.5 right-0 text-[8px] text-muted-foreground/40 font-sans not-italic pointer-events-none">{i + 1}</span>
         </button>
       ))}
     </div>
@@ -110,11 +126,11 @@ function TempoContent() {
       </div>
       <div className="flex items-center gap-1">
         <span className="text-sm text-muted-foreground">Feel</span>
-        {SWING_OPTIONS.map((opt) => (
+        {SWING_OPTIONS.map((opt, i) => (
           <button
             key={opt.value}
             onClick={() => handleSwingChange(opt.value)}
-            className={`px-2 py-1 text-sm rounded ${swing === opt.value ? "bg-accent font-medium" : "hover:bg-accent/50"}`}
+            className={`px-2 py-1 text-sm rounded relative ${swing === opt.value ? "bg-accent font-medium" : "hover:bg-accent/50"}`}
           >
             {opt.label}
           </button>
@@ -165,14 +181,33 @@ function KeySigContent() {
     setPopover(null);
   };
 
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      // 1-9 for first 9, 0 for 10th, - for 11th
+      let idx = -1;
+      if (e.key >= "1" && e.key <= "9") idx = parseInt(e.key) - 1;
+      else if (e.key === "0") idx = 9;
+      else if (e.key === "-") idx = 10;
+      if (idx >= 0 && idx < KEY_SIGS.length) {
+        e.preventDefault();
+        e.stopPropagation();
+        select(KEY_SIGS[idx].fifths);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [changeKeySig, setPopover]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="grid grid-cols-3 gap-0.5 max-h-48 overflow-auto">
-      {KEY_SIGS.map((k) => (
+      {KEY_SIGS.map((k, i) => (
         <button
           key={k.fifths}
           onClick={() => select(k.fifths)}
-          className="px-2 py-1 text-sm hover:bg-accent rounded text-left"
+          className="px-2 py-1 text-sm hover:bg-accent rounded text-left relative"
+          title={`${k.label} (${i < 9 ? i + 1 : i === 9 ? "0" : "-"})`}
         >
+          <span className="text-[9px] text-muted-foreground/50 mr-1">{i < 9 ? i + 1 : i === 9 ? "0" : "-"}</span>
           {k.label}
         </button>
       ))}
@@ -210,15 +245,31 @@ function BarlineContent() {
   const setRepeatBarline = useEditorStore((s) => s.setRepeatBarline);
   const setPopover = useEditorStore((s) => s.setPopover);
 
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      const n = parseInt(e.key);
+      if (n >= 1 && n <= BARLINES.length) {
+        e.preventDefault();
+        e.stopPropagation();
+        setRepeatBarline(BARLINES[n - 1].type);
+        setPopover(null);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [setRepeatBarline, setPopover]);
+
   return (
     <div className="flex gap-0.5">
-      {BARLINES.map((b) => (
+      {BARLINES.map((b, i) => (
         <button
           key={b.type}
           onClick={() => { setRepeatBarline(b.type); setPopover(null); }}
-          className="px-2 py-1 text-sm hover:bg-accent rounded"
+          className="px-2 py-1 text-sm hover:bg-accent rounded relative"
+          title={`${b.label} (${i + 1})`}
         >
           {b.label}
+          <span className="absolute -top-2.5 right-0 text-[8px] text-muted-foreground/40 pointer-events-none">{i + 1}</span>
         </button>
       ))}
     </div>
@@ -276,8 +327,15 @@ const DC_OPTIONS = [
 ];
 
 function MusicGlyph({ code }: { code: string }) {
-  return <span style={{ fontFamily: "Bravura, Petaluma, serif", fontSize: "20px", lineHeight: 1 }}>{code}</span>;
+  return <span style={{ fontFamily: "Bravura, Petaluma, serif", fontSize: "20px", lineHeight: 0, display: "inline-block", transform: "translateY(8px)" }}>{code}</span>;
 }
+
+const SIGN_MARKS = [
+  { type: "segno" as const, key: "segno" },
+  { type: "coda" as const, key: "coda" },
+  { type: "toCoda" as const, key: "toCoda" },
+  { type: "fine" as const, key: "fine" },
+];
 
 function NavigationMarksContent() {
   const setNavigationMark = useEditorStore((s) => s.setNavigationMark);
@@ -299,7 +357,7 @@ function NavigationMarksContent() {
   const setDS = (value: string) => {
     const isActive = nav?.dsText === value;
     if (isActive) {
-      setNavigationMark("ds"); // toggle off
+      setNavigationMark("ds");
     } else {
       setNavigationMark("ds", value);
     }
@@ -308,7 +366,7 @@ function NavigationMarksContent() {
   const setDC = (value: string) => {
     const isActive = nav?.dcText === value;
     if (isActive) {
-      setNavigationMark("dc"); // toggle off
+      setNavigationMark("dc");
     } else {
       setNavigationMark("dc", value);
     }
@@ -317,7 +375,7 @@ function NavigationMarksContent() {
   const submitVolta = () => {
     const text = voltaInput.trim();
     if (!text) {
-      setVolta(null); // remove
+      setVolta(null);
       return;
     }
     const endings = text.split(/[,\s]+/).map(Number).filter((n) => !isNaN(n) && n > 0);
@@ -326,6 +384,33 @@ function NavigationMarksContent() {
       setPopover(null);
     }
   };
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      // Don't intercept when volta input is focused
+      if (document.activeElement === voltaRef.current) return;
+      const n = parseInt(e.key);
+      if (n >= 1 && n <= 4) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleMark(SIGN_MARKS[n - 1].type);
+      } else if (n >= 5 && n <= 7) {
+        e.preventDefault();
+        e.stopPropagation();
+        setDS(DS_OPTIONS[n - 5].value);
+      } else if (n >= 8 && n <= 9) {
+        e.preventDefault();
+        e.stopPropagation();
+        setDC(DC_OPTIONS[n - 8].value);
+      } else if (e.key === "0") {
+        e.preventDefault();
+        e.stopPropagation();
+        setDC(DC_OPTIONS[2].value);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }); // intentionally no deps — reads nav from closure each render
 
   const activeClass = "bg-accent font-medium";
   const inactiveClass = "hover:bg-accent/50";
@@ -341,13 +426,15 @@ function NavigationMarksContent() {
             { type: "coda" as const, label: <MusicGlyph code={"\uE048"} />, active: !!nav?.coda },
             { type: "toCoda" as const, label: "To Coda" as unknown as React.ReactElement, active: !!nav?.toCoda },
             { type: "fine" as const, label: "Fine" as unknown as React.ReactElement, active: !!nav?.fine },
-          ] as { type: "segno" | "coda" | "toCoda" | "fine"; label: React.ReactNode; active: boolean }[]).map((m) => (
+          ] as { type: "segno" | "coda" | "toCoda" | "fine"; label: React.ReactNode; active: boolean }[]).map((m, i) => (
             <button
               key={m.type}
               onClick={() => toggleMark(m.type)}
-              className={`px-2 py-1 text-sm rounded flex items-center justify-center min-w-[40px] ${m.active ? activeClass : inactiveClass}`}
+              className={`px-2 py-1 text-sm rounded flex items-center justify-center min-w-[40px] relative ${m.active ? activeClass : inactiveClass}`}
+              title={`(${i + 1})`}
             >
               {m.label}
+              <span className="absolute -top-2.5 right-0 text-[8px] text-muted-foreground/40 pointer-events-none">{i + 1}</span>
             </button>
           ))}
         </div>
@@ -356,13 +443,15 @@ function NavigationMarksContent() {
       <div>
         <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Dal Segno</div>
         <div className="flex gap-0.5">
-          {DS_OPTIONS.map((opt) => (
+          {DS_OPTIONS.map((opt, i) => (
             <button
               key={opt.value}
               onClick={() => setDS(opt.value)}
-              className={`px-2 py-1 text-sm rounded ${nav?.dsText === opt.value ? activeClass : inactiveClass}`}
+              className={`px-2 py-1 text-sm rounded relative ${nav?.dsText === opt.value ? activeClass : inactiveClass}`}
+              title={`(${i + 5})`}
             >
               {opt.label}
+              <span className="absolute -top-2.5 right-0 text-[8px] text-muted-foreground/40 pointer-events-none">{i + 5}</span>
             </button>
           ))}
         </div>
@@ -371,13 +460,15 @@ function NavigationMarksContent() {
       <div>
         <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Da Capo</div>
         <div className="flex gap-0.5">
-          {DC_OPTIONS.map((opt) => (
+          {DC_OPTIONS.map((opt, i) => (
             <button
               key={opt.value}
               onClick={() => setDC(opt.value)}
-              className={`px-2 py-1 text-sm rounded ${nav?.dcText === opt.value ? activeClass : inactiveClass}`}
+              className={`px-2 py-1 text-sm rounded relative ${nav?.dcText === opt.value ? activeClass : inactiveClass}`}
+              title={`(${i + 8 <= 9 ? i + 8 : "0"})`}
             >
               {opt.label}
+              <span className="absolute -top-2.5 right-0 text-[8px] text-muted-foreground/40 pointer-events-none">{i + 8 <= 9 ? i + 8 : "0"}</span>
             </button>
           ))}
         </div>

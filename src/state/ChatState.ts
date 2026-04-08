@@ -27,34 +27,20 @@ interface ChatStore {
   clearMessages(): void;
 }
 
-function loadSettings(): { provider: ProviderType; apiKey: string } {
-  try {
-    const stored = localStorage.getItem("notation-ai-settings");
-    if (stored) {
-      const parsed = JSON.parse(stored) as {
-        provider?: string;
-        apiKey?: string;
-      };
-      return {
-        provider: (parsed.provider as ProviderType) ?? "anthropic",
-        apiKey: parsed.apiKey ?? "",
-      };
-    }
-  } catch {
-    // ignore
-  }
-  return { provider: "anthropic", apiKey: "" };
+import { readDualStorage, writeDualStorage } from "../settings/storage";
+
+const AI_LS_KEY = "notation-ai-settings";
+const AI_CONFIG_FILE = "ai-settings.json";
+
+interface AiSettings { provider: ProviderType; apiKey: string }
+const AI_DEFAULTS: AiSettings = { provider: "anthropic", apiKey: "" };
+
+function loadSettings(): AiSettings {
+  return readDualStorage<AiSettings>(AI_LS_KEY, AI_CONFIG_FILE, AI_DEFAULTS);
 }
 
 function saveSettings(provider: ProviderType, apiKey: string) {
-  try {
-    localStorage.setItem(
-      "notation-ai-settings",
-      JSON.stringify({ provider, apiKey })
-    );
-  } catch {
-    // ignore
-  }
+  writeDualStorage(AI_LS_KEY, AI_CONFIG_FILE, { provider, apiKey });
 }
 
 export const useChatStore = create<ChatStore>((set, get) => {

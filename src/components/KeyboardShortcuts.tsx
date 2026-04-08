@@ -171,6 +171,7 @@ export function KeyboardShortcuts() {
       "articulation:tenuto": () => toggleArticulation("tenuto"),
       "articulation:fermata": () => toggleArticulation("fermata"),
       "articulation:marcato": () => toggleArticulation("marcato"),
+      "articulation:trill": () => toggleArticulation("trill"),
 
       // Playback
       "play-pause": () => { if (isPlaying) pause(); else play(); },
@@ -182,6 +183,11 @@ export function KeyboardShortcuts() {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (textInputMode) return;
+
+      // When a popover is open, only handle Escape (popover handles its own keys)
+      if (useEditorStore.getState().popover) {
+        return;
+      }
 
       // Tab input mode: intercept digit keys for fret entry and arrows for string nav
       if (getEffectiveInputMode(viewConfig, useEditorStore.getState().inputState.cursor.partIndex, useEditorStore.getState().inputState.tabInputActive) === "tab") {

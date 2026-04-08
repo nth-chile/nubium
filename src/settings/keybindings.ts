@@ -108,6 +108,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   { id: "articulation:tenuto", label: "Tenuto", category: "Articulations", defaultBinding: { key: "t", shift: true } },
   { id: "articulation:fermata", label: "Fermata", category: "Articulations", defaultBinding: { key: "u", shift: true } },
   { id: "articulation:marcato", label: "Marcato", category: "Articulations", defaultBinding: { key: "^", shift: true } },
+  { id: "articulation:trill", label: "Trill", category: "Articulations", defaultBinding: { key: "r", shift: true, alt: true } },
 
   // Playback
   { id: "play-pause", label: "Play / Pause", category: "Playback", defaultBinding: { key: " " } },

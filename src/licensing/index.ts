@@ -1,4 +1,7 @@
-const LICENSE_STORAGE_KEY = "nubium-license";
+import { readDualStorage, writeDualStorage } from "../settings/storage";
+
+const LICENSE_LS_KEY = "nubium-license";
+const LICENSE_CONFIG_FILE = "license.json";
 
 export interface LicenseState {
   licenseKey: string | null;
@@ -16,19 +19,18 @@ let state: LicenseState | null = null;
 
 export function getLicenseState(): LicenseState {
   if (state) return state;
-  try {
-    const stored = localStorage.getItem(LICENSE_STORAGE_KEY);
-    state = stored ? { ...defaultState(), ...JSON.parse(stored) } : defaultState();
-  } catch {
-    state = defaultState();
-  }
+  state = readDualStorage<LicenseState>(LICENSE_LS_KEY, LICENSE_CONFIG_FILE, defaultState(), (loaded) => {
+    // Config file loaded async — update in-memory state if it has a license
+    if (loaded.isValid && state && !state.isValid) {
+      state.licenseKey = loaded.licenseKey;
+      state.isValid = loaded.isValid;
+    }
+  });
   return state!;
 }
 
 function persist() {
-  try {
-    localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(state));
-  } catch { /* ignore */ }
+  writeDualStorage(LICENSE_LS_KEY, LICENSE_CONFIG_FILE, state);
 }
 
 /** Reset in-memory cache so next read comes from localStorage (for testing) */
@@ -39,7 +41,7 @@ export function _resetCache() {
 /** Full reset: clear both in-memory state and localStorage (for testing) */
 export function _resetAll() {
   state = null;
-  try { localStorage.removeItem(LICENSE_STORAGE_KEY); } catch { /* ignore */ }
+  try { localStorage.removeItem(LICENSE_LS_KEY); } catch { /* ignore */ }
 }
 
 /** Returns true if the nag dialog should be shown */
