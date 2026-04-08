@@ -321,6 +321,12 @@ function parseMeasure(
   const ORNAMENT_MAP: Record<string, ArticulationKind> = {
     "trill-mark": "trill", trill: "trill", mordent: "mordent", turn: "turn",
   };
+  const TECHNICAL_MAP: Record<string, ArticulationKind> = {
+    "hammer-on": "hammer-on", "pull-off": "pull-off",
+    harmonic: "harmonic", "palm-mute": "palm-mute",
+    "dead-note": "dead-note", vibrato: "vibrato",
+    tap: "tapping", "let-ring": "let-ring",
+  };
 
   function flushPendingChord() {
     if (pendingChordHeads.length > 0 && pendingChordDuration) {
@@ -445,6 +451,57 @@ function parseMeasure(
                 const kind = ORNAMENT_MAP[(ornChild as Element).tagName];
                 if (kind) noteArticulations.push({ kind } as Articulation);
               }
+            }
+          }
+          // Parse <technical> elements (guitar techniques)
+          const techEl = getDirectChild(notationsEl, "technical");
+          if (techEl) {
+            for (let t = 0; t < techEl.childNodes.length; t++) {
+              const techChild = techEl.childNodes[t];
+              if (techChild.nodeType !== 1) continue;
+              const tag = (techChild as Element).tagName;
+              // Bends have nested structure
+              if (tag === "bend") {
+                const alterEl = getDirectChild(techChild as Element, "bend-alter");
+                const semitones = alterEl ? parseFloat(alterEl.textContent ?? "2") : 2;
+                if (getDirectChild(techChild as Element, "pre-bend")) {
+                  noteArticulations.push({ kind: "pre-bend", semitones } as Articulation);
+                } else if (getDirectChild(techChild as Element, "release")) {
+                  noteArticulations.push({ kind: "bend-release", semitones } as Articulation);
+                } else {
+                  noteArticulations.push({ kind: "bend", semitones } as Articulation);
+                }
+                continue;
+              }
+              // Slides
+              if (tag === "slide") {
+                const slideType = (techChild as Element).getAttribute("type");
+                const lineType = (techChild as Element).getAttribute("line-type");
+                if (slideType === "start" && lineType === "dashed") {
+                  noteArticulations.push({ kind: "slide-in-below" } as Articulation);
+                } else if (slideType === "stop" && lineType === "dashed") {
+                  noteArticulations.push({ kind: "slide-out-below" } as Articulation);
+                } else {
+                  noteArticulations.push({ kind: "slide-up" } as Articulation);
+                }
+                continue;
+              }
+              // Fingering → fingerpick
+              if (tag === "fingering") {
+                const finger = (techChild as Element).textContent?.trim();
+                if (finger === "p" || finger === "i" || finger === "m" || finger === "a") {
+                  noteArticulations.push({ kind: `fingerpick-${finger}` } as Articulation);
+                }
+                continue;
+              }
+              // Other technical → ghost note
+              if (tag === "other-technical" && (techChild as Element).textContent?.trim() === "ghost") {
+                noteArticulations.push({ kind: "ghost-note" } as Articulation);
+                continue;
+              }
+              // Simple mappings
+              const kind = TECHNICAL_MAP[tag];
+              if (kind) noteArticulations.push({ kind } as Articulation);
             }
           }
         }

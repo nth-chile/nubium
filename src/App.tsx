@@ -161,17 +161,28 @@ export function App() {
   const toolbarPanels = pm.getPanels("toolbar");
   const leftPanels = pm.getPanels("sidebar-left");
   const rightPanels = pm.getPanels("sidebar-right");
+  const saveConfirmed = useEditorStore((s) => s.saveConfirmed);
+  const fileHandle = useEditorStore((s) => s.fileHandle);
   const handleSave = useCallback(async () => {
     try {
-      const path = await saveScore(score, filePath ?? undefined, useEditorStore.getState().viewConfig);
-      setFilePath(path);
+      // Show dialog on first save after opening/importing a file, so user confirms destination
+      const needsDialog = !saveConfirmed;
+      const result = await saveScore(score, filePath ?? undefined, useEditorStore.getState().viewConfig, needsDialog, fileHandle);
+      // Set path, handle, and confirmed atomically to avoid resetting each other
+      useEditorStore.setState({
+        filePath: result.path,
+        ...(result.handle ? { fileHandle: result.handle } : {}),
+        saveConfirmed: true,
+      });
       useEditorStore.getState().markClean();
       useEditorStore.getState().setAutoSaveStatus("Saved");
       if (recordSave()) setNagVisible(true);
     } catch (err) {
+      // AbortError = user cancelled the File System Access picker
+      if (err instanceof DOMException && err.name === "AbortError") return;
       console.error("Save failed:", err);
     }
-  }, [score, filePath, setFilePath]);
+  }, [score, filePath, fileHandle, saveConfirmed, setFilePath]);
 
   const handleNew = useCallback(async () => {
     setScore(emptyScore());

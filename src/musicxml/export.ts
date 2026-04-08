@@ -98,7 +98,7 @@ function tieXml(tieStart: boolean | undefined, tieStop: boolean | undefined, isC
 }
 
 // Map our articulation kinds to MusicXML element names
-const ART_TO_XML: Record<string, { parent: "articulations" | "ornaments" | "notations"; tag: string }> = {
+const ART_TO_XML: Record<string, { parent: "articulations" | "ornaments" | "notations" | "technical"; tag: string }> = {
   staccato: { parent: "articulations", tag: "staccato" },
   staccatissimo: { parent: "articulations", tag: "staccatissimo" },
   accent: { parent: "articulations", tag: "accent" },
@@ -112,6 +112,17 @@ const ART_TO_XML: Record<string, { parent: "articulations" | "ornaments" | "nota
   trill: { parent: "ornaments", tag: "trill-mark" },
   mordent: { parent: "ornaments", tag: "mordent" },
   turn: { parent: "ornaments", tag: "turn" },
+  "hammer-on": { parent: "technical", tag: "hammer-on" },
+  "pull-off": { parent: "technical", tag: "pull-off" },
+  harmonic: { parent: "technical", tag: "harmonic" },
+  "palm-mute": { parent: "technical", tag: "palm-mute" },  // non-standard but common extension
+  "dead-note": { parent: "technical", tag: "dead-note" },   // non-standard but common extension
+  vibrato: { parent: "technical", tag: "vibrato" },          // non-standard but common extension
+  tapping: { parent: "technical", tag: "tap" },
+  "let-ring": { parent: "technical", tag: "let-ring" },      // non-standard but common extension
+  "down-stroke": { parent: "technical", tag: "down-bow" },   // reuse bowing notation for pick direction
+  "up-stroke": { parent: "technical", tag: "up-bow" },
+  "tremolo-picking": { parent: "ornaments", tag: "tremolo" },
 };
 
 function notationsXml(
@@ -143,7 +154,44 @@ function notationsXml(
   if (hasArts) {
     const artXmls: string[] = [];
     const ornXmls: string[] = [];
+    const techXmls: string[] = [];
     for (const art of articulations!) {
+      // Special handling for bends (need <bend-alter> child)
+      if (art.kind === "bend" || art.kind === "pre-bend" || art.kind === "bend-release") {
+        const semitones = (art as { semitones: number }).semitones ?? 2;
+        if (art.kind === "pre-bend") {
+          techXmls.push(`            <bend>\n              <bend-alter>${semitones}</bend-alter>\n              <pre-bend/>\n            </bend>\n`);
+        } else if (art.kind === "bend-release") {
+          techXmls.push(`            <bend>\n              <bend-alter>${semitones}</bend-alter>\n              <release/>\n            </bend>\n`);
+        } else {
+          techXmls.push(`            <bend>\n              <bend-alter>${semitones}</bend-alter>\n            </bend>\n`);
+        }
+        continue;
+      }
+      // Special handling for slides (need type attribute)
+      if (art.kind === "slide-up" || art.kind === "slide-down") {
+        techXmls.push(`            <slide type="start" line-type="solid"/>\n`);
+        continue;
+      }
+      if (art.kind === "slide-in-below" || art.kind === "slide-in-above") {
+        techXmls.push(`            <slide type="start" line-type="dashed"/>\n`);
+        continue;
+      }
+      if (art.kind === "slide-out-below" || art.kind === "slide-out-above") {
+        techXmls.push(`            <slide type="stop" line-type="dashed"/>\n`);
+        continue;
+      }
+      // Ghost note wraps the note in parentheses via notation
+      if (art.kind === "ghost-note") {
+        techXmls.push(`            <other-technical>ghost</other-technical>\n`);
+        continue;
+      }
+      // Fingerpicking
+      if (art.kind === "fingerpick-p" || art.kind === "fingerpick-i" || art.kind === "fingerpick-m" || art.kind === "fingerpick-a") {
+        const finger = art.kind.split("-")[1];
+        techXmls.push(`            <fingering>${finger}</fingering>\n`);
+        continue;
+      }
       const mapping = ART_TO_XML[art.kind];
       if (!mapping) continue;
       if (mapping.parent === "articulations") {
@@ -152,6 +200,8 @@ function notationsXml(
         ornXmls.push(`            <${mapping.tag}/>\n`);
       } else if (mapping.parent === "notations") {
         xml += `          <${mapping.tag}/>\n`;
+      } else if (mapping.parent === "technical") {
+        techXmls.push(`            <${mapping.tag}/>\n`);
       }
     }
     if (artXmls.length > 0) {
@@ -159,6 +209,9 @@ function notationsXml(
     }
     if (ornXmls.length > 0) {
       xml += `          <ornaments>\n${ornXmls.join("")}          </ornaments>\n`;
+    }
+    if (techXmls.length > 0) {
+      xml += `          <technical>\n${techXmls.join("")}          </technical>\n`;
     }
   }
   xml += `        </notations>\n`;

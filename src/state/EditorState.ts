@@ -72,6 +72,8 @@ interface EditorStore {
   // Document
   score: Score;
   filePath: string | null;
+  fileHandle: FileSystemFileHandle | null; // browser File System Access API handle
+  saveConfirmed: boolean; // true after user confirms save destination this session
   autoSaveStatus: string | null;
   isDirty: boolean;
   cleanScoreJson: string | null; // serialized score at last save — used to detect dirty state
@@ -112,6 +114,8 @@ interface EditorStore {
   nudgePitch(direction: "up" | "down", mode: "diatonic" | "chromatic" | "octave"): void;
   setScore(score: Score): void;
   setFilePath(path: string | null): void;
+  setFileHandle(handle: FileSystemFileHandle | null): void;
+  confirmSave(): void;
   setAutoSaveStatus(status: string | null): void;
   markClean(): void;
   setNoteBoxes(boxes: Map<NoteEventId, NoteBox>, hitBoxes?: NoteBox[]): void;
@@ -320,6 +324,8 @@ const initialScore = factory.emptyScore();
 export const useEditorStore = create<EditorStore>((set, get) => ({
   score: initialScore,
   filePath: null,
+  fileHandle: null,
+  saveConfirmed: false,
   autoSaveStatus: null,
   isDirty: false,
   cleanScoreJson: serializeScore(initialScore),
@@ -1046,7 +1052,18 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   setFilePath(path: string | null) {
-    set({ filePath: path });
+    const prev = get().filePath;
+    if (path !== prev) {
+      set({ filePath: path, fileHandle: null, saveConfirmed: false });
+    }
+  },
+
+  setFileHandle(handle: FileSystemFileHandle | null) {
+    set({ fileHandle: handle });
+  },
+
+  confirmSave() {
+    set({ saveConfirmed: true });
   },
 
   setAutoSaveStatus(status: string | null) {

@@ -134,7 +134,7 @@ function PartsPanel() {
               <div className="p-0.5 flex-shrink-0 cursor-grab">
                 <GripVertical className="h-3 w-3 text-muted-foreground" />
               </div>
-              <span className="font-semibold text-[11px] leading-none">{part.name}</span>
+              <span className="font-semibold text-[11px] leading-none mt-0.5">{part.name}</span>
               <div className="flex-1" />
               <div className="flex flex-col gap-1 items-end">
                 {(() => {
