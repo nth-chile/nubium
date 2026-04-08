@@ -29,6 +29,14 @@ Durations: "whole", "half", "quarter", "eighth", "16th", "32nd", "64th". Dotted:
 Ticks: whole=1920, half=960, quarter=480, eighth=240, 16th=120. Dotted=×1.5. Measure must fill exactly (4/4=1920 ticks).
 Keys (fifths): -2=Bb, -1=F, 0=C, 1=G, 2=D. Instruments: piano, guitar, bass, violin, cello, flute, clarinet, trumpet, drums.
 
+You can also control the UI by including an "actions" array in your JSON response:
+\`\`\`json
+{ "actions": [{ "type": "setView", "part": 0, "standard": true, "tab": true, "slash": false }] }
+\`\`\`
+Actions can be combined with patches: { "patch": [...], "actions": [...] }
+Available actions:
+- setView: toggle notation display. Fields: part (index), standard/tab/slash (booleans).
+
 If not editing, respond without a code block.`;
 }
 

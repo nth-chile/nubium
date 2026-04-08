@@ -174,6 +174,7 @@ function applyArticulations(
       case "ghost-note": velocity = Math.max(20, velocity * 0.5); break;
       case "palm-mute": durationMultiplier *= 0.4; break;
       case "dead-note": velocity = Math.max(20, velocity * 0.3); durationMultiplier *= 0.15; break;
+      case "hammer-on": case "pull-off": velocity = Math.max(30, velocity * 0.7); break;
     }
   }
   return { velocity, durationMultiplier };
@@ -532,10 +533,13 @@ function schedulerTick(): void {
   const endAt = stopAtTick ?? totalTicks;
   const lookaheadTick = Math.min(currentTick + secToTicks(LOOKAHEAD_SEC, currentBpm), endAt);
 
-  // Schedule notes (skip muted parts at play time so mute toggles take effect immediately)
+  // Schedule notes (skip muted/non-soloed parts at play time so toggles take effect immediately)
+  const anySolo = currentScore!.parts.some((p) => p.solo);
   while (eventCursor < events.length && events[eventCursor].tick < lookaheadTick) {
     const e = events[eventCursor];
-    if (customPlayer && e.tick >= scheduledUpToTick && !(currentScore!.parts[e.partIndex]?.muted)) {
+    const part = currentScore!.parts[e.partIndex];
+    const shouldPlay = part && !part.muted && (!anySolo || part.solo);
+    if (customPlayer && e.tick >= scheduledUpToTick && shouldPlay) {
       const swungTick = applySwing(e.tick);
       const audioTime = tickToAudioTime(swungTick);
       const dur = Math.max(ticksToSec(e.durationTicks, currentBpm) * e.durationMultiplier, 0.05);

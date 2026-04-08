@@ -100,6 +100,19 @@ export const useChatStore = create<ChatStore>((set, get) => {
         // Try to extract and apply JSON patch from response
         const notationText = extractScoreFromResponse(responseText);
         if (notationText) {
+          // Handle actions-only responses (no score edits)
+          const actionsApplied = applyActions(notationText);
+          const isActionsOnly = actionsApplied && !hasScoreEdits(notationText);
+          if (isActionsOnly) {
+            const displayText = stripCodeBlock(responseText);
+            const content = displayText.trim() || "\u2713 Done";
+            set((s) => ({
+              messages: [...s.messages, { role: "assistant" as const, content }],
+              isLoading: false,
+            }));
+            return;
+          }
+
           const result = applyAIEdit(score, notationText);
           if (result.ok) {
             // Apply to editor state
@@ -138,6 +151,7 @@ export const useChatStore = create<ChatStore>((set, get) => {
             const retryJson = extractScoreFromResponse(retryText);
             if (retryJson) {
               const retryResult = applyAIEdit(score, retryJson);
+              applyActions(retryJson);
               if (retryResult.ok) {
                 useEditorStore.getState().setScore(retryResult.score);
     
@@ -213,6 +227,41 @@ export const useChatStore = create<ChatStore>((set, get) => {
     },
   };
 });
+
+/** Check if the JSON response contains score edits (patch or full score). */
+function hasScoreEdits(jsonText: string): boolean {
+  try {
+    const parsed = JSON.parse(jsonText) as Record<string, unknown>;
+    if (Array.isArray(parsed.patch)) return true;
+    if (parsed.parts || parsed.title) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Apply UI actions from the AI response JSON (e.g. view mode toggles). */
+function applyActions(jsonText: string): boolean {
+  try {
+    const parsed = JSON.parse(jsonText) as Record<string, unknown>;
+    if (!Array.isArray(parsed.actions) || parsed.actions.length === 0) return false;
+
+    const editor = useEditorStore.getState();
+    for (const action of parsed.actions as Record<string, unknown>[]) {
+      if (action.type === "setView") {
+        const partIndex = (action.part as number) ?? 0;
+        const display: Record<string, boolean> = {};
+        if (typeof action.standard === "boolean") display.standard = action.standard;
+        if (typeof action.tab === "boolean") display.tab = action.tab;
+        if (typeof action.slash === "boolean") display.slash = action.slash;
+        editor.setPartNotation(partIndex, display);
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** Strip JSON code blocks from AI response text, keeping everything else. */
 function stripCodeBlock(text: string): string {

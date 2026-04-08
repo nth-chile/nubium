@@ -5,6 +5,10 @@ import { useEditorStore } from "../../state";
 import { AISettings } from "../../components/AISettings";
 import { Textarea } from "@/components/ui/textarea";
 
+// Module-level refs so the menu item can toggle/read settings even across remounts
+let toggleSettingsRef: (() => void) | null = null;
+let isSettingsOpenRef = false;
+
 function ChatPanel() {
   const messages = useChatStore((s) => s.messages);
   const isLoading = useChatStore((s) => s.isLoading);
@@ -14,6 +18,13 @@ function ChatPanel() {
   const [input, setInput] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    toggleSettingsRef = () => setShowSettings((s) => !s);
+    return () => { toggleSettingsRef = null; isSettingsOpenRef = false; };
+  }, []);
+
+  useEffect(() => { isSettingsOpenRef = showSettings; }, [showSettings]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -36,12 +47,9 @@ function ChatPanel() {
     [handleSend]
   );
 
-  // Expose settings toggle for the panel menu
-  ChatPanel._toggleSettings = () => setShowSettings((s) => !s);
-
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
-      {showSettings && <AISettings />}
+      {showSettings && <AISettings onClose={() => setShowSettings(false)} />}
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 flex flex-col gap-2 min-h-0">
         {messages.length === 0 && !showSettings && (
@@ -109,8 +117,6 @@ function ChatPanel() {
   );
 }
 
-// Static ref for menu items to toggle settings
-ChatPanel._toggleSettings = () => {};
 
 function formatMessageContent(content: string): React.ReactNode {
   const parts = content.split(/(```[\s\S]*?```)/g);
@@ -140,10 +146,11 @@ export const AIChatPlugin: NubiumPlugin = {
       component: () => <ChatPanel />,
       defaultEnabled: true,
       fill: true,
-      menuItems: [
+      menuItems: () => [
         {
           label: "Settings",
-          onClick: () => ChatPanel._toggleSettings(),
+          checked: isSettingsOpenRef,
+          onClick: () => toggleSettingsRef?.(),
         },
         {
           label: "Clear Chat",

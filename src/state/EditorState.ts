@@ -2149,6 +2149,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       const part = score.parts[partIndex];
       if (!part) return s;
       part.solo = !part.solo;
+      // Update playback reference so solo takes effect during playback
+      getGlobalPluginManager()?.getPlaybackService()?.updateScore(score);
       return { score };
     });
   },

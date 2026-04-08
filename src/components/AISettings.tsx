@@ -1,8 +1,9 @@
 import { useChatStore } from "../state/ChatState";
 import type { ProviderType } from "../state/ChatState";
 import { Input } from "./ui/input";
+import { X } from "lucide-react";
 
-export function AISettings() {
+export function AISettings({ onClose }: { onClose?: () => void }) {
   const provider = useChatStore((s) => s.provider);
   const apiKey = useChatStore((s) => s.apiKey);
   const setProvider = useChatStore((s) => s.setProvider);
@@ -10,8 +11,15 @@ export function AISettings() {
 
   return (
     <div className="p-2 border-b flex flex-col gap-2">
-      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-        AI Settings
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          AI Settings
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="p-0.5 rounded-sm hover:bg-accent cursor-pointer" title="Close settings">
+            <X className="h-3 w-3 text-muted-foreground" />
+          </button>
+        )}
       </div>
 
       <label className="flex flex-col text-xs text-muted-foreground gap-1">

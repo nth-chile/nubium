@@ -10,6 +10,7 @@ import type { PanelMenuItem } from "../plugins/PluginAPI";
 
 function PortalMenu({ menuRef, items, onClose, onRefresh }: { menuRef: React.RefObject<HTMLDivElement | null>; items: PanelMenuItem[]; onClose: () => void; onRefresh: () => void }) {
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const portalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = menuRef.current;
@@ -21,7 +22,10 @@ function PortalMenu({ menuRef, items, onClose, onRefresh }: { menuRef: React.Ref
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose();
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target)) return;
+      if (portalRef.current?.contains(target)) return;
+      onClose();
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -29,6 +33,7 @@ function PortalMenu({ menuRef, items, onClose, onRefresh }: { menuRef: React.Ref
 
   return (
     <div
+      ref={portalRef}
       className="fixed bg-popover border rounded-md shadow-md z-[9999] py-1 min-w-[140px]"
       style={{ top: pos.top, left: pos.left }}
     >

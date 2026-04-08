@@ -42,17 +42,20 @@ const GM_INSTRUMENTS: Record<string, string> = {
   flute: "flute",
   oboe: "oboe",
   bassoon: "bassoon",
-  drums: "steel_drums",
-  percussion: "steel_drums",
+  // drums/percussion: no GM SoundFont equivalent — needs dedicated drum sampler
+  drums: "",
+  percussion: "",
   voice: "choir_aahs",
   choir: "choir_aahs",
   synth: "synth_strings_1",
   "": "acoustic_grand_piano",
 };
 
-function resolveInstrument(instrumentId: string): string {
+function resolveInstrument(instrumentId: string): string | null {
   const lower = instrumentId.toLowerCase().replace(/\s+/g, "-");
-  return GM_INSTRUMENTS[lower] ?? GM_INSTRUMENTS["piano"];
+  const resolved = GM_INSTRUMENTS[lower];
+  if (resolved === "") return null; // no playback for this instrument
+  return resolved ?? GM_INSTRUMENTS["piano"];
 }
 
 class SmplrPlayer implements NotePlayer {
@@ -64,14 +67,22 @@ class SmplrPlayer implements NotePlayer {
   constructor() {
     this.ctx = Tone.getContext().rawContext as AudioContext;
     this.masterGain = this.ctx.createGain();
-    // MusyngKite SoundFont samples peak at ~-31dB. smplr's extraGain adds +14dB.
-    // We add another +16dB (6x) to bring output close to 0dB full scale.
-    this.masterGain.gain.value = 6.0;
-    this.masterGain.connect(this.ctx.destination);
+    // MusyngKite SoundFont samples are quiet. Boost to audible level without clipping.
+    this.masterGain.gain.value = 4.0;
+    // Limiter to prevent clipping on instruments with rich harmonics (reeds, brass)
+    const compressor = this.ctx.createDynamicsCompressor();
+    compressor.threshold.value = -6;
+    compressor.knee.value = 6;
+    compressor.ratio.value = 8;
+    compressor.attack.value = 0.002;
+    compressor.release.value = 0.1;
+    this.masterGain.connect(compressor);
+    compressor.connect(this.ctx.destination);
   }
 
   async loadInstrument(name: string): Promise<Soundfont> {
-    const gmName = resolveInstrument(name);
+    // name is already resolved via resolveInstrument — don't double-resolve
+    const gmName = name;
     const existing = this.instruments.get(gmName);
     if (existing) return existing;
 
@@ -94,6 +105,7 @@ class SmplrPlayer implements NotePlayer {
 
   play(midi: number, duration: number, time: number, instrumentId?: string, velocity?: number): void {
     const gmName = resolveInstrument(instrumentId ?? "");
+    if (!gmName) return; // no playback for this instrument (e.g. drums)
     const instrument = this.instruments.get(gmName) ?? this.instruments.values().next().value;
     if (!instrument) return;
     if (this.ctx.state !== "running") return;
@@ -108,7 +120,8 @@ class SmplrPlayer implements NotePlayer {
   }
 
   async preloadForScore(instrumentIds: string[]): Promise<void> {
-    const unique = [...new Set(instrumentIds.map(resolveInstrument))];
+    const resolved = instrumentIds.map(resolveInstrument).filter((n): n is string => n !== null);
+    const unique = [...new Set(resolved)];
     await Promise.all(unique.map((name) => this.loadInstrument(name)));
   }
 }
