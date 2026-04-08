@@ -386,6 +386,7 @@ function exportMeasure(
   prevMeasure?: Measure,
   staveCount = 1,
   slashHint = false,
+  tabHint = false,
 ): string {
   const xmlMeasureNum = measure.isPickup ? "0" : measureNumber;
   let xml = `    <measure number="${xmlMeasureNum}"${measure.isPickup ? ' implicit="yes"' : ""}>\n`;
@@ -458,6 +459,11 @@ function exportMeasure(
         xml += `          <line>${clefInfo.line}</line>\n`;
         xml += `        </clef>\n`;
       }
+    }
+    if (tabHint && isFirstMeasure) {
+      xml += `        <staff-details>\n`;
+      xml += `          <staff-type>tab</staff-type>\n`;
+      xml += `        </staff-details>\n`;
     }
     if (slashHint && isFirstMeasure) {
       xml += `        <measure-style>\n`;
@@ -704,10 +710,11 @@ export function exportToMusicXML(score: Score, viewConfig?: ViewConfig): string 
     const staveCount = instrument?.staves ?? 1;
     const partDisplay = viewConfig ? getPartDisplay(viewConfig, i) : undefined;
     const slashHint = partDisplay?.slash ?? false;
+    const tabHint = partDisplay?.tab ?? false;
 
     for (let m = 0; m < part.measures.length; m++) {
       const prevMeasure = m > 0 ? part.measures[m - 1] : undefined;
-      xml += exportMeasure(part.measures[m], m + 1, m === 0, prevMeasure, staveCount, slashHint);
+      xml += exportMeasure(part.measures[m], m + 1, m === 0, prevMeasure, staveCount, slashHint, tabHint);
     }
 
     xml += `  </part>\n`;

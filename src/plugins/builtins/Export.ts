@@ -1,4 +1,5 @@
 import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
+import { useEditorStore } from "../../state";
 
 async function saveBlob(blob: Blob, filename: string): Promise<void> {
   try {
@@ -29,16 +30,18 @@ export const ExportPlugin: NubiumPlugin = {
   activate(api: PluginAPI) {
     api.registerCommand("nubium.export-pdf", "Export as PDF", () => {
       const score = api.getScore();
+      const viewConfig = useEditorStore.getState().viewConfig;
       import("../../fileio/pdf").then(({ exportPDF }) => {
-        exportPDF(score).catch((err) => console.error("PDF export failed:", err));
+        exportPDF(score, viewConfig).catch((err) => console.error("PDF export failed:", err));
       });
     });
 
     api.registerCommand("nubium.export-part-pdf", "Export Current Part as PDF", () => {
       const score = api.getScore();
       const { partIndex } = api.getCursorPosition();
+      const viewConfig = useEditorStore.getState().viewConfig;
       import("../../fileio/pdf").then(({ exportPartPDF }) => {
-        exportPartPDF(score, partIndex).catch((err) => console.error("PDF export failed:", err));
+        exportPartPDF(score, partIndex, viewConfig).catch((err) => console.error("PDF export failed:", err));
       });
     });
 

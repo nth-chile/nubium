@@ -472,6 +472,8 @@ export function renderScore(
           });
 
           for (const nb of result.noteBoxes) {
+            // Tag each noteBox with the stave it was rendered on
+            nb.staveIndex = si;
             // Map stores first (standard) stave's boxes for cursor/slur positioning
             if (!allNoteBoxes.has(nb.id)) {
               allNoteBoxes.set(nb.id, nb);

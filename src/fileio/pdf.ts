@@ -153,9 +153,10 @@ export async function exportPDF(score: Score, viewConfig?: ViewConfig, options?:
 /**
  * Export a single part from the score as a PDF.
  */
-export async function exportPartPDF(score: Score, partIndex: number): Promise<void> {
+export async function exportPartPDF(score: Score, partIndex: number, viewConfig?: ViewConfig): Promise<void> {
+  const base = viewConfig ?? defaultViewConfig();
   const config: ViewConfig = {
-    ...defaultViewConfig(),
+    ...base,
     partsToShow: [partIndex],
   };
   return exportPDF(score, config);

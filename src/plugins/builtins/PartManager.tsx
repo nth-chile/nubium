@@ -141,8 +141,8 @@ function PartsPanel() {
                   const display = getPartDisplay(viewConfig, index);
                   const toggles = [
                     { key: "standard" as const, show: displaySettings.showStandardToggle, active: display.standard, icon: <QuarterNoteIcon className="h-3.5 w-3.5" />, title: "Standard" },
-                    { key: "tab" as const, show: displaySettings.showTabToggle, active: display.tab, icon: <span className="text-[8px] font-bold leading-none">TAB</span>, title: "Tab" },
                     { key: "slash" as const, show: displaySettings.showSlashToggle, active: display.slash, icon: <SlashNoteIcon className="h-3.5 w-3.5" />, title: "Slash" },
+                    { key: "tab" as const, show: displaySettings.showTabToggle, active: display.tab, icon: <span className="text-[8px] font-bold leading-none">TAB</span>, title: "Tab" },
                   ];
                   const visible = toggles.filter((t) => t.show);
                   if (visible.length <= 1) return null;

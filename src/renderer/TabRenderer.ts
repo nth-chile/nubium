@@ -4,12 +4,14 @@ import type { Articulation } from "../model/note";
 import { pitchToTab, STANDARD_TUNING, type Tuning } from "../model/guitar";
 import { durationToTicks as durationToTicksFn } from "../model/duration";
 import type { RenderContext, NoteBox } from "./vexBridge";
+import { TAB_STAFF_HEIGHT } from "./SystemLayout";
 
 // Monkey-patch TabNote.tabToElement to use sans-serif for fret numbers
 const origTabToElement = TabNote.tabToElement.bind(TabNote);
 TabNote.tabToElement = (fret: string) => {
   const el = origTabToElement(fret);
-  // Override serif font for numeric frets (not "X" dead notes which use a glyph)
+  // Override serif font for numeric frets
+  // "X" dead notes use a music glyph — setting Arial breaks it, so skip
   if (fret.toUpperCase() !== "X") {
     el.setFont("Arial, sans-serif", el.fontInfo?.size, el.fontInfo?.weight);
   }
@@ -285,28 +287,26 @@ export function renderTabMeasure(
     renderTabConnections(ctx, modelVoice.events, allTabNotes);
 
     // Collect bounding boxes (skip GhostNotes — they have no visual)
+    // VexFlow TabNote.getBoundingBox() returns y=0/h=0, so use stave position instead
     allTabNotes.forEach((tn, idx) => {
       if (tn instanceof GhostNote) return;
-      const bb = tn.getBoundingBox();
-      if (bb) {
-        // VexFlow TabNote.getBoundingBox() returns relative X — use getAbsoluteX() for absolute position
-        const absX = (tn as any).getAbsoluteX?.() ?? (stave.getNoteStartX() + bb.getX());
-        noteBoxes.push({
-          id: eventIds[idx],
-          x: absX,
-          y: bb.getY(),
-          width: bb.getW(),
-          height: bb.getH(),
-          headX: absX,
-          headY: bb.getY(),
-          headWidth: bb.getW(),
-          headHeight: bb.getH(),
-          partIndex,
-          measureIndex,
-          voiceIndex: 0,
-          eventIndex: idx,
-        });
-      }
+      const absX = (tn as any).getAbsoluteX?.() ?? stave.getNoteStartX();
+      const noteWidth = 20; // reasonable click target width for tab numbers
+      noteBoxes.push({
+        id: eventIds[idx],
+        x: absX - noteWidth / 2,
+        y,
+        width: noteWidth,
+        height: TAB_STAFF_HEIGHT,
+        headX: absX - noteWidth / 2,
+        headY: y,
+        headWidth: noteWidth,
+        headHeight: TAB_STAFF_HEIGHT,
+        partIndex,
+        measureIndex,
+        voiceIndex: 0,
+        eventIndex: idx,
+      });
     });
   }
 

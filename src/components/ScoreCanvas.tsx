@@ -116,19 +116,30 @@ export function ScoreCanvas() {
       rawCtx.save();
       rawCtx.fillStyle = "rgba(59, 130, 246, 0.12)";
 
+      // Use the cursor's staveIndex to determine which stave to highlight on
+      const selStaveIndex = inputState.cursor.staveIndex ?? 0;
+
+      // Build a lookup from hitBoxes filtered by staveIndex for the correct stave's boxes
+      const staveBoxes = new Map<string, typeof result.hitBoxes[0]>();
+      for (const hb of result.hitBoxes) {
+        if (hb.partIndex === noteSelection.partIndex && (hb.staveIndex ?? 0) === selStaveIndex) {
+          staveBoxes.set(hb.id, hb);
+        }
+      }
+
       // Group selected notes by system line (same Y = same system)
       const bands = new Map<number, { minX: number; maxX: number; y: number; height: number }>();
       for (let mi = noteSelection.startMeasure; mi <= noteSelection.endMeasure; mi++) {
         const voice = score.parts[noteSelection.partIndex]?.measures[mi]?.voices[noteSelection.voiceIndex];
         if (!voice) continue;
         const mp = result.measurePositions.find(
-          (p) => p.partIndex === noteSelection.partIndex && p.measureIndex === mi && p.staveIndex === 0
+          (p) => p.partIndex === noteSelection.partIndex && p.measureIndex === mi && p.staveIndex === selStaveIndex
         );
         if (!mp) continue;
         const startIdx = mi === noteSelection.startMeasure ? noteSelection.startEvent : 0;
         const endIdx = mi === noteSelection.endMeasure ? noteSelection.endEvent : voice.events.length - 1;
         for (let i = startIdx; i <= endIdx && i < voice.events.length; i++) {
-          const box = result.noteBoxes.get(voice.events[i].id);
+          const box = staveBoxes.get(voice.events[i].id) ?? result.noteBoxes.get(voice.events[i].id);
           if (box) {
             const band = bands.get(mp.y) ?? { minX: Infinity, maxX: -Infinity, y: mp.y, height: mp.height };
             band.minX = Math.min(band.minX, box.headX - 3);

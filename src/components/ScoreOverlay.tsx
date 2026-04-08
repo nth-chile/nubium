@@ -54,7 +54,7 @@ export function ScoreOverlay({ width, height }: Props) {
     directNoteHit: boolean;
     startX: number;
     startY: number;
-    anchor: { partIndex: number; measureIndex: number; voiceIndex: number; eventIndex: number };
+    anchor: { partIndex: number; measureIndex: number; voiceIndex: number; eventIndex: number; staveIndex?: number };
   } | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -113,7 +113,7 @@ export function ScoreOverlay({ width, height }: Props) {
         directNoteHit: true,
         startX: x,
         startY: y,
-        anchor: { partIndex: nb.partIndex, measureIndex: nb.measureIndex, voiceIndex: nb.voiceIndex, eventIndex: nb.eventIndex },
+        anchor: { partIndex: nb.partIndex, measureIndex: nb.measureIndex, voiceIndex: nb.voiceIndex, eventIndex: nb.eventIndex, staveIndex: nb.staveIndex },
       };
       return;
     }
@@ -129,7 +129,7 @@ export function ScoreOverlay({ width, height }: Props) {
           directNoteHit: false,
           startX: x,
           startY: y,
-          anchor: { partIndex: nearest.partIndex, measureIndex: nearest.measureIndex, voiceIndex: nearest.voiceIndex, eventIndex: nearest.eventIndex },
+          anchor: { partIndex: nearest.partIndex, measureIndex: nearest.measureIndex, voiceIndex: nearest.voiceIndex, eventIndex: nearest.eventIndex, staveIndex: nearest.staveIndex },
         };
       }
     }
@@ -190,8 +190,7 @@ export function ScoreOverlay({ width, height }: Props) {
       // Double-click on a note — select it using anchor from mousedown
       if (drag?.directNoteHit) {
         const a = drag.anchor;
-        const clickedVoice = score.parts[a.partIndex]?.measures[a.measureIndex]?.voices[a.voiceIndex];
-        const stave = clickedVoice?.staff ?? 0;
+        const stave = a.staveIndex ?? (score.parts[a.partIndex]?.measures[a.measureIndex]?.voices[a.voiceIndex]?.staff ?? 0);
         const dblMp = measurePositions.find((mp) =>
           mp.partIndex === a.partIndex && mp.measureIndex === a.measureIndex && mp.staveIndex === stave
         );
@@ -246,8 +245,8 @@ export function ScoreOverlay({ width, height }: Props) {
     // Single click on a note
     const nb = hitTestNote(x, y);
     if (nb) {
-      const clickedVoice = score.parts[nb.partIndex]?.measures[nb.measureIndex]?.voices[nb.voiceIndex];
-      const clickedStaveIndex = clickedVoice?.staff ?? 0;
+      // Use staveIndex from the noteBox if available (set by renderer), otherwise derive from voice
+      const clickedStaveIndex = nb.staveIndex ?? (score.parts[nb.partIndex]?.measures[nb.measureIndex]?.voices[nb.voiceIndex]?.staff ?? 0);
       // Detect if clicked note is on a tab stave
       const clickedMp = measurePositions.find((mp) =>
         mp.partIndex === nb.partIndex && mp.measureIndex === nb.measureIndex && mp.staveIndex === clickedStaveIndex

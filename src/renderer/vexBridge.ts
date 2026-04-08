@@ -31,6 +31,7 @@ export interface NoteBox {
   measureIndex: number;
   voiceIndex: number;
   eventIndex: number;
+  staveIndex?: number;
 }
 
 export interface AnnotationBox {
