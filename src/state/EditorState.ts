@@ -1224,20 +1224,32 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     // First press: just select the current measure
     if (!state.selection) {
       set({
-        selection: { partIndex: cursor.partIndex, measureStart: cursor.measureIndex, measureEnd: cursor.measureIndex },
+        selection: { partIndex: cursor.partIndex, measureStart: cursor.measureIndex, measureEnd: cursor.measureIndex, measureAnchor: cursor.measureIndex },
         noteSelection: null,
       });
       return;
     }
 
-    // Subsequent presses: extend in the given direction
+    // Subsequent presses: shrink back toward anchor first, then extend past it
     const sel = state.selection;
     if (direction === "right") {
-      const newEnd = Math.min(sel.measureEnd + 1, part.measures.length - 1);
-      set({ selection: { ...sel, measureEnd: newEnd }, noteSelection: null });
+      if (sel.measureStart < sel.measureAnchor) {
+        // Shrink from the left toward anchor
+        set({ selection: { ...sel, measureStart: sel.measureStart + 1 }, noteSelection: null });
+      } else {
+        // Extend right
+        const newEnd = Math.min(sel.measureEnd + 1, part.measures.length - 1);
+        set({ selection: { ...sel, measureEnd: newEnd }, noteSelection: null });
+      }
     } else {
-      const newStart = Math.max(sel.measureStart - 1, 0);
-      set({ selection: { ...sel, measureStart: newStart }, noteSelection: null });
+      if (sel.measureEnd > sel.measureAnchor) {
+        // Shrink from the right toward anchor
+        set({ selection: { ...sel, measureEnd: sel.measureEnd - 1 }, noteSelection: null });
+      } else {
+        // Extend left
+        const newStart = Math.max(sel.measureStart - 1, 0);
+        set({ selection: { ...sel, measureStart: newStart }, noteSelection: null });
+      }
     }
   },
 

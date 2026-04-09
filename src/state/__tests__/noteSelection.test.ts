@@ -40,14 +40,14 @@ describe("Note-level selection", () => {
   });
 
   it("selectNoteAtCursor clears measure selection", () => {
-    useEditorStore.setState({ selection: { partIndex: 0, measureStart: 0, measureEnd: 1 } });
+    useEditorStore.setState({ selection: { partIndex: 0, measureStart: 0, measureEnd: 1, measureAnchor: 0 } });
     useEditorStore.getState().selectNoteAtCursor();
     expect(useEditorStore.getState().selection).toBeNull();
     expect(useEditorStore.getState().noteSelection).not.toBeNull();
   });
 
   it("setNoteSelection clears measure selection", () => {
-    useEditorStore.setState({ selection: { partIndex: 0, measureStart: 0, measureEnd: 1 } });
+    useEditorStore.setState({ selection: { partIndex: 0, measureStart: 0, measureEnd: 1, measureAnchor: 0 } });
     useEditorStore.getState().setNoteSelection({
       partIndex: 0, voiceIndex: 0, startMeasure: 0, startEvent: 0, endMeasure: 0, endEvent: 2, anchorMeasure: 0, anchorEvent: 0,
     });
@@ -58,7 +58,7 @@ describe("Note-level selection", () => {
     useEditorStore.getState().setNoteSelection({
       partIndex: 0, voiceIndex: 0, startMeasure: 0, startEvent: 0, endMeasure: 0, endEvent: 2, anchorMeasure: 0, anchorEvent: 0,
     });
-    useEditorStore.getState().setSelection({ partIndex: 0, measureStart: 0, measureEnd: 1 });
+    useEditorStore.getState().setSelection({ partIndex: 0, measureStart: 0, measureEnd: 1, measureAnchor: 0 });
     expect(useEditorStore.getState().noteSelection).toBeNull();
   });
 

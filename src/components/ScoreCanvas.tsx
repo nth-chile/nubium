@@ -50,13 +50,37 @@ export function ScoreCanvas() {
   const [displaySettings, setDisplaySettings] = useState(getSettings().display);
   useEffect(() => subscribeSettings((s) => setDisplaySettings(s.display)), []);
 
-  // Auto-scroll to keep editing cursor visible (disabled during playback)
+  // Auto-scroll to keep editing cursor or selection edge visible (disabled during playback)
   const isPlaying = useEditorStore((s) => s.isPlaying);
+  const selectionStart = selection?.measureStart ?? null;
+  const selectionEnd = selection?.measureEnd ?? null;
+  const prevSelRef = useRef<{ start: number | null; end: number | null }>({ start: selectionStart, end: selectionEnd });
   useEffect(() => {
     const container = containerRef.current;
     if (!container || measurePositions.length === 0 || isPlaying) return;
+
+    const targetPart = inputState.cursor.partIndex;
+    let targetMeasure: number | null = null;
+    const prev = prevSelRef.current;
+    prevSelRef.current = { start: selectionStart, end: selectionEnd };
+
+    if (selectionStart != null && selectionEnd != null) {
+      // Selection active: only scroll when the selection edges change
+      if (selectionEnd !== prev.end) {
+        targetMeasure = selectionEnd;
+      } else if (selectionStart !== prev.start) {
+        targetMeasure = selectionStart;
+      }
+      // If neither edge changed, don't scroll (cursor moved but selection didn't)
+    } else {
+      // No selection: scroll to cursor
+      targetMeasure = inputState.cursor.measureIndex;
+    }
+
+    if (targetMeasure == null) return;
+
     const mp = measurePositions.find(
-      (p) => p.partIndex === inputState.cursor.partIndex && p.measureIndex === inputState.cursor.measureIndex && p.staveIndex === 0,
+      (p) => p.partIndex === targetPart && p.measureIndex === targetMeasure && p.staveIndex === 0,
     );
     if (!mp) return;
 
@@ -72,7 +96,7 @@ export function ScoreCanvas() {
     if (mp.y < scrollTop || mp.y + (mp.height || 80) > scrollTop + rect.height) {
       container.scrollTo({ top: Math.max(0, mp.y - 40), behavior: "smooth" });
     }
-  }, [inputState.cursor.partIndex, inputState.cursor.measureIndex, measurePositions, isPlaying]);
+  }, [inputState.cursor.partIndex, inputState.cursor.measureIndex, selectionStart, selectionEnd, measurePositions, isPlaying]);
 
   // Track container size
   useEffect(() => {

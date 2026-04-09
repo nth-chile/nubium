@@ -957,7 +957,7 @@ function drawSelection(
   rawCtx: CanvasRenderingContext2D,
   selection: Selection,
   measurePositions: ScoreRenderResult["measurePositions"],
-  config: LayoutConfig
+  _config: LayoutConfig
 ): void {
   rawCtx.save();
   rawCtx.fillStyle = "rgba(66, 133, 244, 0.15)";
@@ -967,7 +967,7 @@ function drawSelection(
       mp.measureIndex >= selection.measureStart &&
       mp.measureIndex <= selection.measureEnd
     ) {
-      rawCtx.fillRect(mp.x, mp.y, mp.width, config.staffHeight);
+      rawCtx.fillRect(mp.x, mp.y, mp.width, mp.height);
     }
   }
   rawCtx.restore();

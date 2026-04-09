@@ -129,6 +129,7 @@ export function KeyboardShortcuts() {
             partIndex: s.inputState.cursor.partIndex,
             measureStart: 0,
             measureEnd: part.measures.length - 1,
+            measureAnchor: s.inputState.cursor.measureIndex,
           });
         }
       },

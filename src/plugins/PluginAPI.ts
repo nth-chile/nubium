@@ -6,6 +6,8 @@ export interface Selection {
   partIndex: number;
   measureStart: number;
   measureEnd: number;
+  /** The measure where selection was initiated — used to determine shrink vs extend */
+  measureAnchor: number;
 }
 
 export interface NoteSelection {

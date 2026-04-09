@@ -227,6 +227,7 @@ export function ScoreOverlay({ width, height }: Props) {
           partIndex: mp.partIndex,
           measureStart: mp.measureIndex,
           measureEnd: mp.measureIndex,
+          measureAnchor: mp.measureIndex,
         });
         anchorRef.current = { partIndex: mp.partIndex, measureIndex: mp.measureIndex };
       }
@@ -280,6 +281,7 @@ export function ScoreOverlay({ width, height }: Props) {
           partIndex: nb.partIndex,
           measureStart: Math.min(anchorRef.current.measureIndex, nb.measureIndex),
           measureEnd: Math.max(anchorRef.current.measureIndex, nb.measureIndex),
+          measureAnchor: anchorRef.current.measureIndex,
         });
       } else {
         noteAnchorRef.current = { partIndex: nb.partIndex, measureIndex: nb.measureIndex, voiceIndex: nb.voiceIndex, eventIndex: nb.eventIndex };
@@ -331,6 +333,7 @@ export function ScoreOverlay({ width, height }: Props) {
           partIndex: mp.partIndex,
           measureStart: Math.min(anchorRef.current.measureIndex, mp.measureIndex),
           measureEnd: Math.max(anchorRef.current.measureIndex, mp.measureIndex),
+          measureAnchor: anchorRef.current.measureIndex,
         });
       } else {
         anchorRef.current = { partIndex: mp.partIndex, measureIndex: mp.measureIndex };

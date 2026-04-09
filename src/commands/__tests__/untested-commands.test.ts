@@ -405,7 +405,7 @@ describe("DeleteSelectedMeasures", () => {
       factory.measure([factory.voice([factory.note("E", 4, factory.dur("quarter"))])]),
     ];
     const snap = makeSnapshot({ measures });
-    const sel = { partIndex: 0, measureStart: 0, measureEnd: 1 };
+    const sel = { partIndex: 0, measureStart: 0, measureEnd: 1, measureAnchor: 0 };
     const result = new DeleteSelectedMeasures(sel).execute(snap);
     expect(result.score.parts[0].measures.length).toBe(1);
     // Remaining measure should be the third one
@@ -418,7 +418,7 @@ describe("DeleteSelectedMeasures", () => {
   it("keeps at least one measure when all are deleted", () => {
     const measures = [factory.measure([factory.voice([])])];
     const snap = makeSnapshot({ measures });
-    const sel = { partIndex: 0, measureStart: 0, measureEnd: 0 };
+    const sel = { partIndex: 0, measureStart: 0, measureEnd: 0, measureAnchor: 0 };
     const result = new DeleteSelectedMeasures(sel).execute(snap);
     expect(result.score.parts[0].measures.length).toBe(1);
   });
@@ -430,7 +430,7 @@ describe("DeleteSelectedMeasures", () => {
       factory.measure([factory.voice([])]),
     ];
     const snap = makeSnapshot({ measures, cursor: { measureIndex: 2 } });
-    const sel = { partIndex: 0, measureStart: 1, measureEnd: 2 };
+    const sel = { partIndex: 0, measureStart: 1, measureEnd: 2, measureAnchor: 1 };
     const result = new DeleteSelectedMeasures(sel).execute(snap);
     // Cursor should be clamped to valid range
     expect(result.inputState.cursor.measureIndex).toBeLessThanOrEqual(
@@ -441,7 +441,7 @@ describe("DeleteSelectedMeasures", () => {
 
   it("returns state for invalid part index", () => {
     const snap = makeSnapshot({});
-    const sel = { partIndex: 99, measureStart: 0, measureEnd: 0 };
+    const sel = { partIndex: 99, measureStart: 0, measureEnd: 0, measureAnchor: 0 };
     const result = new DeleteSelectedMeasures(sel).execute(snap);
     expect(result).toBe(snap);
   });
