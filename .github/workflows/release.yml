@@ -21,12 +21,16 @@ jobs:
         include:
           - platform: macos-latest
             args: --target aarch64-apple-darwin
+            arch: aarch64
           - platform: macos-latest
             args: --target x86_64-apple-darwin
+            arch: x86_64
           - platform: ubuntu-22.04
             args: ''
+            arch: x86_64
           - platform: windows-latest
             args: ''
+            arch: x86_64
 
     runs-on: ${{ matrix.platform }}
 
@@ -52,6 +56,7 @@ jobs:
       - run: npm ci
 
       - uses: tauri-apps/tauri-action@v0
+        id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -68,5 +73,86 @@ jobs:
           releaseBody: ''
           releaseDraft: true
           prerelease: false
-          includeUpdaterJson: true
           args: ${{ matrix.args }}
+
+      - name: Upload sig files with unique names
+        if: runner.os == 'macOS'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          ARCH="${{ matrix.arch }}"
+          SIG=$(find src-tauri/target -name "*.app.tar.gz.sig" 2>/dev/null | head -1)
+          if [ -f "$SIG" ]; then
+            cp "$SIG" "Nubium_${ARCH}.app.tar.gz.sig"
+            gh release upload "$TAG" "Nubium_${ARCH}.app.tar.gz.sig" --clobber
+          fi
+
+      - name: Upload sig files (Linux)
+        if: runner.os == 'Linux'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          for sig in $(find src-tauri/target -name "*.AppImage.tar.gz.sig" 2>/dev/null); do
+            gh release upload "$TAG" "$sig" --clobber || true
+          done
+
+  updater-json:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Generate and upload latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          REPO="${{ github.repository }}"
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          BASE="https://github.com/${REPO}/releases/download/${TAG}"
+
+          # Download sig files from release
+          mkdir -p sigs
+          gh release download "$TAG" -R "$REPO" -p "*.sig" -D sigs 2>/dev/null || true
+
+          get_sig() {
+            local file="sigs/$1"
+            if [ -f "$file" ]; then cat "$file"; else echo ""; fi
+          }
+
+          AARCH64_SIG=$(get_sig "Nubium_aarch64.app.tar.gz.sig")
+          X64_SIG=$(get_sig "Nubium_x86_64.app.tar.gz.sig")
+
+          # Find the AppImage sig (version is in filename)
+          APPIMAGE_SIG=""
+          APPIMAGE_FILE=$(gh release view "$TAG" -R "$REPO" --json assets -q '.assets[].name | select(endswith(".AppImage.tar.gz"))' | head -1)
+          APPIMAGE_SIG_FILE=$(find sigs -name "*AppImage.tar.gz.sig" 2>/dev/null | head -1)
+          if [ -f "$APPIMAGE_SIG_FILE" ]; then
+            APPIMAGE_SIG=$(cat "$APPIMAGE_SIG_FILE")
+          fi
+
+          cat > latest.json << ENDJSON
+          {
+            "version": "${VERSION}",
+            "pub_date": "${DATE}",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "${AARCH64_SIG}",
+                "url": "${BASE}/Nubium_aarch64.app.tar.gz"
+              },
+              "darwin-x86_64": {
+                "signature": "${X64_SIG}",
+                "url": "${BASE}/Nubium_x64.app.tar.gz"
+              },
+              "linux-x86_64": {
+                "signature": "${APPIMAGE_SIG}",
+                "url": "${BASE}/${APPIMAGE_FILE}"
+              }
+            }
+          }
+          ENDJSON
+
+          echo "Generated latest.json:"
+          cat latest.json
+          gh release upload "$TAG" latest.json --clobber -R "$REPO"
