@@ -6,7 +6,7 @@ import { useLayoutStore } from "../state/LayoutState";
 import { cn } from "@/lib/utils";
 import { ChevronDown, GripVertical, MoreVertical } from "lucide-react";
 
-import type { PanelMenuItem } from "../plugins/PluginAPI";
+import type { PanelMenuItem, PanelHeaderAction } from "../plugins/PluginAPI";
 
 function PortalMenu({ menuRef, items, onClose, onRefresh }: { menuRef: React.RefObject<HTMLDivElement | null>; items: PanelMenuItem[]; onClose: () => void; onRefresh: () => void }) {
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -39,21 +39,26 @@ function PortalMenu({ menuRef, items, onClose, onRefresh }: { menuRef: React.Ref
     >
       {items.map((item) => {
         const isToggle = item.checked !== undefined;
+        const Icon = item.icon;
         return (
-          <button
-            key={item.label}
-            onClick={() => {
-              item.onClick();
-              if (isToggle) onRefresh();
-              else onClose();
-            }}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent cursor-pointer flex items-center gap-2"
-          >
-            {isToggle && (
-              <span className="w-3 text-[10px]">{item.checked ? "✓" : ""}</span>
-            )}
-            <span>{item.label}</span>
-          </button>
+          <React.Fragment key={item.label}>
+            {item.separator && <div className="border-t my-1" />}
+            <button
+              onClick={() => {
+                item.onClick();
+                if (isToggle) onRefresh();
+                else onClose();
+              }}
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent cursor-pointer flex items-center gap-2"
+            >
+              {isToggle ? (
+                <span className="w-3 text-[10px]">{item.checked ? "✓" : ""}</span>
+              ) : Icon ? (
+                <Icon className="h-3 w-3 text-muted-foreground" />
+              ) : null}
+              <span>{item.label}</span>
+            </button>
+          </React.Fragment>
         );
       })}
     </div>
@@ -66,16 +71,18 @@ interface DraggablePanelProps {
   children: React.ReactNode;
   isOverlay?: boolean;
   menuItems?: PanelMenuItem[] | (() => PanelMenuItem[]);
+  headerActions?: PanelHeaderAction[] | (() => PanelHeaderAction[]);
   fill?: boolean;
 }
 
-export function DraggablePanel({ id, title, children, isOverlay, menuItems, fill }: DraggablePanelProps) {
+export function DraggablePanel({ id, title, children, isOverlay, menuItems, headerActions, fill }: DraggablePanelProps) {
   const collapsed = useLayoutStore((s) => s.panelCollapsed[id] ?? false);
   const toggleCollapsed = useLayoutStore((s) => s.togglePanelCollapsed);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuVersion, setMenuVersion] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const resolvedMenuItems = typeof menuItems === "function" ? menuItems() : menuItems;
+  const resolvedHeaderActions = typeof headerActions === "function" ? headerActions() : headerActions;
   void menuVersion; // used to trigger re-resolve of function menuItems
 
   const {
@@ -128,6 +135,20 @@ export function DraggablePanel({ id, title, children, isOverlay, menuItems, fill
             )}
           />
         </button>
+
+        {resolvedHeaderActions && resolvedHeaderActions.map((action) => {
+          const ActionIcon = action.icon;
+          return (
+            <button
+              key={action.title}
+              onClick={action.onClick}
+              className="p-1 rounded-sm hover:bg-accent cursor-pointer"
+              title={action.title}
+            >
+              <ActionIcon className="h-3 w-3 text-muted-foreground" />
+            </button>
+          );
+        })}
 
         {resolvedMenuItems && resolvedMenuItems.length > 0 && (
           <div className="relative" ref={menuRef}>

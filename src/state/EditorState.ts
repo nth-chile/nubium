@@ -1089,6 +1089,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   setScore(score: Score) {
+    const state = get();
+    history.pushSnapshot({ score: state.score, inputState: state.inputState });
     set((s) => ({
       score,
       viewConfig: { ...s.viewConfig, notationDisplay: {} },

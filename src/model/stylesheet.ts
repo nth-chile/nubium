@@ -18,7 +18,7 @@ export function defaultStylesheet(): Stylesheet {
     chordSymbolSize: 14,
     lyricSize: 16,
     measureMinWidth: 150,
-    measureMaxWidth: 400,
+    measureMaxWidth: 700,
     systemMarginLeft: 20,
     systemMarginRight: 20,
     staffSpacing: 80,

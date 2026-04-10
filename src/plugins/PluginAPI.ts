@@ -31,6 +31,16 @@ export interface PanelMenuItem {
   onClick: () => void;
   /** When defined, item renders as a toggle with a checkmark */
   checked?: boolean;
+  /** Lucide icon component to show before the label */
+  icon?: React.ComponentType<{ className?: string }>;
+  /** When true, renders a separator line above this item */
+  separator?: boolean;
+}
+
+export interface PanelHeaderAction {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  onClick: () => void;
 }
 
 export interface PanelConfig {
@@ -39,6 +49,8 @@ export interface PanelConfig {
   component: () => React.ReactNode;
   defaultEnabled?: boolean;
   menuItems?: PanelMenuItem[] | (() => PanelMenuItem[]);
+  /** Buttons shown in the panel header bar (before the ⋮ menu) */
+  headerActions?: PanelHeaderAction[] | (() => PanelHeaderAction[]);
   /** When true, the panel fills remaining sidebar height instead of sizing to content */
   fill?: boolean;
 }

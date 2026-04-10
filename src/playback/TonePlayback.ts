@@ -10,6 +10,7 @@ import { pitchToMidi } from "../model/pitch";
 import type { TempoMark, DynamicLevel, DynamicMark, Hairpin, SwingSettings } from "../model/annotations";
 import { computePlaybackOrder } from "./PlaybackOrder";
 import type { Articulation } from "../model/note";
+import { getInstrument } from "../model/instruments";
 
 export type TransportState = "stopped" | "playing" | "paused";
 
@@ -308,6 +309,7 @@ function buildEvents(score: Score): void {
       const m = part.measures[mi];
       if (!m) continue;
       const instId = part.instrumentId;
+      const transposition = getInstrument(instId)?.transposition ?? 0;
       const dynMap = dynamicMaps[pi];
       const hpMap = hairpinMaps[pi];
       for (const voice of m.voices) {
@@ -316,7 +318,7 @@ function buildEvents(score: Score): void {
         for (const evt of voice.events) {
           if (evt.kind === "grace") {
             const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
-            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch), instrumentId: instId, velocity: vel });
+            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch) + transposition, instrumentId: instId, velocity: vel });
             continue;
           }
           const evtTicks = durationToTicks(evt.duration);
@@ -340,10 +342,10 @@ function buildEvents(score: Score): void {
             graceBuffer.length = 0;
           }
           if (evt.kind === "note") {
-            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch), durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
+            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
           } else if (evt.kind === "chord") {
             for (const h of evt.heads) {
-              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch), durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
+              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
             }
           }
           offset += evtTicks;
@@ -394,6 +396,7 @@ function buildEventsForRange(score: Score, startMeasure: number, endMeasure: num
       const m = part.measures[mi];
       if (!m) continue;
       const instId = part.instrumentId;
+      const transposition = getInstrument(instId)?.transposition ?? 0;
       const dynMap = dynamicMaps[pi];
       const hpMap = hairpinMaps[pi];
       for (const voice of m.voices) {
@@ -402,7 +405,7 @@ function buildEventsForRange(score: Score, startMeasure: number, endMeasure: num
         for (const evt of voice.events) {
           if (evt.kind === "grace") {
             const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
-            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch), instrumentId: instId, velocity: vel });
+            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch) + transposition, instrumentId: instId, velocity: vel });
             continue;
           }
           const evtTicks = durationToTicks(evt.duration);
@@ -424,10 +427,10 @@ function buildEventsForRange(score: Score, startMeasure: number, endMeasure: num
             graceBuffer.length = 0;
           }
           if (evt.kind === "note") {
-            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch), durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
+            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
           } else if (evt.kind === "chord") {
             for (const h of evt.heads) {
-              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch), durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
+              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
             }
           }
           offset += evtTicks;

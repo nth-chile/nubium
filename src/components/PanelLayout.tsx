@@ -93,7 +93,7 @@ function DroppableSidebar({
           return (
             <React.Fragment key={panelId}>
               {i > 0 && <div className="border-t" />}
-              <DraggablePanel id={panelId} title={reg.config.title} menuItems={reg.config.menuItems} fill={reg.config.fill}>
+              <DraggablePanel id={panelId} title={reg.config.title} menuItems={reg.config.menuItems} headerActions={reg.config.headerActions} fill={reg.config.fill}>
                 {reg.config.component()}
               </DraggablePanel>
             </React.Fragment>
@@ -339,7 +339,7 @@ export function PanelLayout({ leftPanels, rightPanels, children }: PanelLayoutPr
 
       <DragOverlay>
         {activeId && activePanel ? (
-          <DraggablePanel id={activeId} title={activePanel.config.title} isOverlay menuItems={activePanel.config.menuItems}>
+          <DraggablePanel id={activeId} title={activePanel.config.title} isOverlay menuItems={activePanel.config.menuItems} headerActions={activePanel.config.headerActions}>
             {activePanel.config.component()}
           </DraggablePanel>
         ) : null}

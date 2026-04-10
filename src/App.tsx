@@ -209,11 +209,15 @@ export function App() {
       if (!result) return;
       setScore(result.score);
       setFilePath(result.path);
-      // Apply display hints from MusicXML (slash regions, tab staff-type)
-      if (Object.keys(result.displayHints).length > 0) {
+      // Restore view config: prefer Nubium's saved viewConfig, fall back to MusicXML display hints
+      if (result.viewConfig) {
+        useEditorStore.setState({ viewConfig: result.viewConfig });
+      } else if (Object.keys(result.displayHints).length > 0) {
         for (const [pi, hints] of Object.entries(result.displayHints)) {
-          if (hints.slash) useEditorStore.getState().toggleNotation("slash", Number(pi));
-          if (hints.tab) useEditorStore.getState().toggleNotation("tab", Number(pi));
+          const display: { standard?: boolean; tab?: boolean; slash?: boolean } = {};
+          if (hints.slash) { display.slash = true; display.standard = false; }
+          if (hints.tab) { display.tab = true; display.standard = false; }
+          useEditorStore.getState().setPartNotation(Number(pi), display);
         }
       }
       useEditorStore.getState().markClean();

@@ -34,8 +34,8 @@ export class CommandHistory {
 
   /** Push a before-snapshot so the next state change can be undone */
   pushSnapshot(before: EditorSnapshot): void {
-    const noOp: Command = { execute: (s) => s, undo: (s) => s, description: "paste" };
-    this.undoStack.push({ command: noOp, before: structuredClone(before) });
+    const snapshotCmd: Command = { execute: (s) => s, undo: (s) => s, description: "snapshot", isSnapshot: true };
+    this.undoStack.push({ command: snapshotCmd, before: structuredClone(before) });
     this.redoStack = [];
   }
 
@@ -57,6 +57,11 @@ export class CommandHistory {
   redo(currentState: EditorSnapshot): EditorSnapshot | null {
     const entry = this.redoStack.pop();
     if (!entry) return null;
+    // For snapshot entries, `before` IS the after-state (saved by undo as currentState)
+    if (entry.command.isSnapshot) {
+      this.undoStack.push({ command: entry.command, before: structuredClone(currentState) });
+      return entry.before;
+    }
     const after = entry.command.execute(currentState);
     this.undoStack.push({ command: entry.command, before: currentState });
     return after;

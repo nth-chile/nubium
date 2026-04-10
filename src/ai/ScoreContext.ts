@@ -2,42 +2,18 @@ import type { Score } from "../model";
 import { scoreToAIJson } from "../serialization";
 
 /**
- * Builds the system prompt that teaches the AI about the JSON score format.
+ * Builds the system prompt for the AI.
+ * Simplified — tool descriptions now carry the format reference and command list.
  */
-export function buildSystemPrompt(availableCommands?: string[]): string {
-  const commandBlock = availableCommands && availableCommands.length > 0
-    ? `\nIMPORTANT: The app has built-in commands (accessible via Ctrl+Shift+P) that are faster and more reliable than AI for mechanical tasks. When the user asks for something a command can handle, tell them which command to use instead of editing the score yourself. Available commands: ${availableCommands.join(", ")}. Only edit the score directly for creative tasks that require musical judgment: composing, arranging, harmonizing, adding chord symbols, writing melodies/bass lines, rewriting sections, etc.\n`
-    : "";
+export function buildSystemPrompt(): string {
+  return `You are a musician and arranger editing a music score. You MUST use tools for every request. Never respond with only text — always call a tool.
 
-  return `You are a skilled musician and arranger. You edit scores represented as JSON. Be concise. Make musical judgment calls rather than asking for clarification.
-${commandBlock}
-To edit, return a JSON code block. Either a patch (for small edits):
-\`\`\`json
-{ "patch": [{ "part": 0, "measure": 1, "data": { <measure> } }] }
-\`\`\`
-Or a full score (for adding/removing parts or large rewrites):
-\`\`\`json
-{ "title": "...", "tempo": 120, "parts": [{ "name": "Piano", "instrument": "piano", "measures": [...] }] }
-\`\`\`
-
-Measure: { number, time: "4/4", key: 0, clef: "treble", annotations: [...], voices: [{ voice: 1, events: [...] }] }
-Note: { "type": "note", "pitch": "C4", "duration": "quarter" } — accidentals: "accidental": "sharp"|"flat"
-Chord: { "type": "chord", "pitches": ["C4","E4","G4"], "duration": "half" }
-Rest: { "type": "rest", "duration": "quarter" }
-Chord symbol: { "type": "chord", "beat": 0, "symbol": "Cmaj7" } in annotations
-Durations: "whole", "half", "quarter", "eighth", "16th", "32nd", "64th". Dotted: append "."
-Ticks: whole=1920, half=960, quarter=480, eighth=240, 16th=120. Dotted=×1.5. Measure must fill exactly (4/4=1920 ticks).
-Keys (fifths): -2=Bb, -1=F, 0=C, 1=G, 2=D. Instruments: piano, guitar, bass, violin, cello, flute, clarinet, trumpet, drums.
-
-You can also control the UI by including an "actions" array in your JSON response:
-\`\`\`json
-{ "actions": [{ "type": "setView", "part": 0, "standard": true, "tab": true, "slash": false }] }
-\`\`\`
-Actions can be combined with patches: { "patch": [...], "actions": [...] }
-Available actions:
-- setView: toggle notation display. Fields: part (index), standard/tab/slash (booleans).
-
-If not editing, respond without a code block.`;
+Rules:
+1. If the user asks to change the score, call patch_score or replace_score immediately. Do NOT say "I'll do that" without calling a tool.
+2. If the user says you didn't do something, call get_score to check, then fix it with patch_score.
+3. Write actual notes and music — don't create empty parts with just rests.
+4. Keep text responses to one sentence. The user can see the score.
+5. Make musical judgment calls rather than asking for clarification.`;
 }
 
 /**
@@ -64,23 +40,4 @@ export function buildScoreContext(
   }
 
   return `Here is the current score:\n\n\`\`\`json\n${jsonStr}\n\`\`\`\n\nFocus on Part "${part.name}", measures ${selection.measureStart + 1} through ${selection.measureEnd + 1}.`;
-}
-
-/**
- * Extracts a score JSON block from the AI's response text.
- */
-export function extractScoreFromResponse(response: string): string | null {
-  // Match ```json ... ``` blocks
-  const jsonMatch = response.match(/```json\s*\n([\s\S]*?)```/);
-  if (jsonMatch) {
-    return jsonMatch[1].trim();
-  }
-
-  // Fallback: match any code block that looks like JSON with title
-  const genericMatch = response.match(/```\s*\n(\{[\s\S]*?"title"[\s\S]*?\})\s*```/);
-  if (genericMatch) {
-    return genericMatch[1].trim();
-  }
-
-  return null;
 }

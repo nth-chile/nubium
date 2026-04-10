@@ -2,8 +2,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
 import { useChatStore } from "../../state/ChatState";
 import { useEditorStore } from "../../state";
+import { getMessageText } from "../../ai/ChatProvider";
 import { AISettings } from "../../components/AISettings";
 import { Textarea } from "@/components/ui/textarea";
+import { Settings, Trash2 } from "lucide-react";
 
 // Module-level refs so the menu item can toggle/read settings even across remounts
 let toggleSettingsRef: (() => void) | null = null;
@@ -61,18 +63,19 @@ function ChatPanel() {
         )}
 
         {messages.map((msg, i) => {
-          const hasApplyStatus = msg.role === "assistant" && msg.content.startsWith("\u2713 ");
-          const isError = msg.role === "assistant" && msg.content.startsWith("I couldn't apply that edit:");
+          const text = getMessageText(msg);
+          const hasToolStatus = msg.role === "assistant" && text.includes("\u2713 ");
+          const hasError = msg.role === "assistant" && text.includes("\u2717 ");
           return (
             <div
               key={i}
-              className={`rounded-md px-2.5 py-1.5 text-xs leading-relaxed max-w-full break-words overflow-hidden ${
+              className={`rounded-md px-2.5 py-1.5 text-xs leading-relaxed max-w-full break-words ${
                 msg.role === "user"
                   ? "bg-secondary self-end"
-                  : hasApplyStatus
-                    ? "bg-green-950/40 border-l-2 border-green-500 self-start"
-                    : isError
-                      ? "bg-red-950/40 border-l-2 border-red-500 self-start"
+                  : hasError
+                    ? "bg-red-950/40 border-l-2 border-red-500 self-start"
+                    : hasToolStatus
+                      ? "bg-green-950/40 border-l-2 border-green-500 self-start"
                       : "bg-secondary/50 self-start"
               }`}
             >
@@ -80,7 +83,7 @@ function ChatPanel() {
                 {msg.role === "user" ? "You" : "AI"}
               </div>
               <div className="whitespace-pre-wrap break-words">
-                {formatMessageContent(msg.content)}
+                {formatMessageContent(text)}
               </div>
             </div>
           );
@@ -146,19 +149,16 @@ export const AIChatPlugin: NubiumPlugin = {
       component: () => <ChatPanel />,
       defaultEnabled: true,
       fill: true,
-      menuItems: () => [
+      headerActions: () => [
         {
-          label: "Settings",
-          checked: isSettingsOpenRef,
-          onClick: () => toggleSettingsRef?.(),
-        },
-        {
-          label: "Clear Chat",
+          icon: Trash2,
+          title: "Clear Chat",
           onClick: () => useChatStore.getState().clearMessages(),
         },
         {
-          label: "Undo Last AI Edit",
-          onClick: () => useEditorStore.getState().undo(),
+          icon: Settings,
+          title: "AI Settings",
+          onClick: () => toggleSettingsRef?.(),
         },
       ],
     });

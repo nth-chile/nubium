@@ -25,12 +25,12 @@ async function extractMxl(data: ArrayBuffer): Promise<string> {
   throw new Error("No MusicXML file found in .mxl archive");
 }
 
-export type LoadResult = { score: Score; path: string; displayHints: MusicXMLImportResult["displayHints"] };
+export type LoadResult = { score: Score; path: string; displayHints: MusicXMLImportResult["displayHints"]; viewConfig?: MusicXMLImportResult["viewConfig"] };
 
 export async function loadScore(): Promise<LoadResult | null> {
   function fromXml(xml: string, path: string): LoadResult {
     const result = importFromMusicXML(xml, true);
-    return { score: result.score, path, displayHints: result.displayHints };
+    return { score: result.score, path, displayHints: result.displayHints, viewConfig: result.viewConfig };
   }
 
   try {

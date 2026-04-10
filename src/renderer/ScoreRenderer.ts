@@ -51,7 +51,7 @@ function breaksRestSpan(m: Measure | undefined, prev?: Measure): boolean {
   if (m.barlineEnd !== "single") return true;
   if (m.navigation?.segno || m.navigation?.coda || m.navigation?.volta) return true;
   if (m.navigation?.fine || m.navigation?.toCoda || m.navigation?.dsText || m.navigation?.dcText) return true;
-  if (m.annotations.some(a => a.kind === "rehearsal-mark" || a.kind === "tempo-mark")) return true;
+  if (m.annotations.some(a => a.kind === "rehearsal-mark" || a.kind === "tempo-mark" || a.kind === "chord-symbol" || a.kind === "dynamic")) return true;
   if (prev) {
     if (prev.keySignature.fifths !== m.keySignature.fifths) return true;
     if (prev.timeSignature.numerator !== m.timeSignature.numerator ||

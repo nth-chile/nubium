@@ -153,7 +153,7 @@ function PartsPanel() {
                           key={t.key}
                           className={cn(
                             "flex items-center justify-center h-5 w-5 rounded-sm border border-border",
-                            t.active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
+                            t.active ? "bg-secondary text-secondary-foreground" : "bg-transparent text-muted-foreground hover:text-foreground"
                           )}
                           onClick={(e) => { e.stopPropagation(); toggleNotation(t.key, index); }}
                           title={t.title}

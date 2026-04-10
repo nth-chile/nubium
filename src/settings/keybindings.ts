@@ -44,6 +44,9 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   { id: "toggle-pitch-before-duration", label: "Toggle pitch-before-duration", category: "Notes", defaultBinding: { key: "k" } },
   { id: "toggle-grace-note", label: "Grace note mode", category: "Notes", defaultBinding: { key: "g", shift: true } },
   { id: "toggle-slur", label: "Slur (start/end)", category: "Notes", defaultBinding: { key: "s", shift: true } },
+  { id: "toggle-tie", label: "Tie", category: "Notes", defaultBinding: { key: "t" } },
+  { id: "hairpin:crescendo", label: "Crescendo (start/end)", category: "Annotation", defaultBinding: { key: ",", shift: true, alt: true } },
+  { id: "hairpin:diminuendo", label: "Diminuendo (start/end)", category: "Annotation", defaultBinding: { key: ".", shift: true, alt: true } },
 
   // Accidentals
   { id: "accidental:sharp", label: "Sharp", category: "Accidentals", defaultBinding: { key: "=" } },

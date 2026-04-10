@@ -270,6 +270,24 @@ export function registerCoreEditor(pm: PluginManager): void {
   pm.registerCoreCommand("nubium.toggle-slur", "Toggle slur", () => {
     useEditorStore.getState().toggleSlur();
   });
+  pm.registerCoreCommand("nubium.toggle-tie", "Toggle tie", () => {
+    useEditorStore.getState().toggleTie();
+  });
+  pm.registerCoreCommand("nubium.hairpin-crescendo", "Crescendo (start/end)", () => {
+    useEditorStore.getState().setHairpin("crescendo");
+  });
+  pm.registerCoreCommand("nubium.hairpin-diminuendo", "Diminuendo (start/end)", () => {
+    useEditorStore.getState().setHairpin("diminuendo");
+  });
+  pm.registerCoreCommand("nubium.stem-up", "Stem up", () => {
+    useEditorStore.getState().setStemDirection("up");
+  });
+  pm.registerCoreCommand("nubium.stem-down", "Stem down", () => {
+    useEditorStore.getState().setStemDirection("down");
+  });
+  pm.registerCoreCommand("nubium.stem-auto", "Stem auto", () => {
+    useEditorStore.getState().setStemDirection(null);
+  });
   pm.registerCoreCommand("nubium.toggle-step-entry", "Toggle step entry", () => {
     useEditorStore.getState().toggleStepEntry();
   });

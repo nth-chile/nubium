@@ -33,13 +33,13 @@ VITE_CLEAN_SETTINGS=1 npm run tauri dev  # Same for desktop
 ## Keyboard Shortcuts
 
 **Note input:** A-G: insert note | R: rest | Backspace: delete | 1-7: duration | .: dot | =/- : sharp/flat
-**Modes:** N: step entry | I: insert mode | K: pitch-before-duration | Shift+G: grace note | Shift+S: slur | Shift+X: cross-staff
+**Modes:** N: step entry | I: insert mode | K: pitch-before-duration | Shift+G: grace note | Shift+S: slur | T: tie | Shift+X: cross-staff
 **Navigation:** Arrow L/R: move cursor | Arrow U/D: navigate parts | Enter: go to beginning | Ctrl+G: go to measure
 **Pitch:** Alt+Up/Down: diatonic | Shift+Alt+Up/Down: chromatic | Ctrl+Alt+Up/Down: octave
 **Selection:** Shift+Arrow L/R: extend measure selection | Alt+Shift+Arrow L/R: extend note selection | Ctrl+A: select all | Ctrl+C/X/V: copy/cut/paste | Escape: clear
 **Editing:** Ctrl+Z / Ctrl+Shift+Z: undo/redo | Ctrl+M: insert measure | Ctrl+Backspace: delete measure
 **Voices:** Ctrl+1-4: switch voice
-**Annotations:** Shift+C: chord input | Shift+L: lyric input | Shift+D: dynamics | Shift+R: rehearsal mark | Shift+B: barline | Shift+N: navigation marks | Ctrl+T: time sig | Ctrl+K: key sig | Ctrl+Shift+T: tempo
+**Annotations:** Shift+C: chord input | Shift+L: lyric input | Shift+D: dynamics | Shift+R: rehearsal mark | Shift+B: barline | Shift+N: navigation marks | Ctrl+T: time sig | Ctrl+K: key sig | Ctrl+Shift+T: tempo | Shift+Alt+,: crescendo | Shift+Alt+.: diminuendo
 **Articulations:** Shift+>: accent | Shift+<: staccato | Shift+T: tenuto | Shift+U: fermata | Shift+^: marcato | Shift+Alt+R: trill
 **Playback:** Space: play/pause | Ctrl+.: stop | Shift+M: metronome | Shift+I: count-in
 **File:** Ctrl+N: new | Ctrl+O: open | Ctrl+S: save | Ctrl+Shift+H: file history

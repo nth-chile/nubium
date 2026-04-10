@@ -47,6 +47,8 @@ export function KeyboardShortcuts() {
   const togglePitchBeforeDuration = useEditorStore((s) => s.togglePitchBeforeDuration);
   const toggleGraceNoteMode = useEditorStore((s) => s.toggleGraceNoteMode);
   const toggleSlur = useEditorStore((s) => s.toggleSlur);
+  const toggleTie = useEditorStore((s) => s.toggleTie);
+  const setHairpin = useEditorStore((s) => s.setHairpin);
   const toggleCrossStaff = useEditorStore((s) => s.toggleCrossStaff);
   const popover = useEditorStore((s) => s.popover);
   const setPopover = useEditorStore((s) => s.setPopover);
@@ -96,6 +98,9 @@ export function KeyboardShortcuts() {
       "toggle-pitch-before-duration": () => togglePitchBeforeDuration(),
       "toggle-grace-note": () => toggleGraceNoteMode(),
       "toggle-slur": () => toggleSlur(),
+      "toggle-tie": () => toggleTie(),
+      "hairpin:crescendo": () => setHairpin("crescendo"),
+      "hairpin:diminuendo": () => setHairpin("diminuendo"),
       "toggle-cross-staff": () => toggleCrossStaff(),
       "go-to-measure": () => getGlobalPluginManager()?.executeCommand("nubium.go-to-measure"),
 
@@ -323,7 +328,7 @@ export function KeyboardShortcuts() {
     enterChordMode, enterLyricMode, textInputMode, isPlaying, play,
     pause, stopPlayback, toggleMetronome, toggleCountIn, moveCursorPart, toggleNotation, selection,
     copySelection, pasteAtCursor, deleteSelectedMeasures,
-    toggleArticulation, toggleStepEntry, toggleInsertMode, togglePitchBeforeDuration, toggleGraceNoteMode, toggleSlur, toggleCrossStaff, popover, setPopover,
+    toggleArticulation, toggleStepEntry, toggleInsertMode, togglePitchBeforeDuration, toggleGraceNoteMode, toggleSlur, toggleTie, setHairpin, toggleCrossStaff, popover, setPopover,
     setSelection, setNoteSelection, extendSelection, extendNoteSelection,
     noteSelection, deleteNoteSelection, viewConfig, insertTabNote,
   ]);

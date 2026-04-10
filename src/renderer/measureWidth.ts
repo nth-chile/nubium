@@ -29,11 +29,17 @@ export function calculateMeasureWidth(
     eventCount += voice.events.length;
   }
 
-  // Base width: scale by event count
-  // ~50px per event, starting from a baseline
+  // Base width: scale by event count with diminishing returns for dense measures
   const BASE = 100;
   const PER_EVENT = 35;
-  let width = BASE + eventCount * PER_EVENT;
+  const DENSE_THRESHOLD = 8;
+  const PER_EVENT_DENSE = 20;
+  let width: number;
+  if (eventCount <= DENSE_THRESHOLD) {
+    width = BASE + eventCount * PER_EVENT;
+  } else {
+    width = BASE + DENSE_THRESHOLD * PER_EVENT + (eventCount - DENSE_THRESHOLD) * PER_EVENT_DENSE;
+  }
 
   // Add space for decorations
   if (options?.showClef) width += 30;

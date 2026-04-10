@@ -233,7 +233,7 @@ describe("calculateMeasureWidth", () => {
     const events = Array.from({ length: 20 }, () => makeNote("16th"));
     const m = makeMeasure(events);
     const w = calculateMeasureWidth(m);
-    expect(w).toBeLessThanOrEqual(400);
+    expect(w).toBeLessThanOrEqual(700);
   });
 
   it("adds width for decorations", () => {

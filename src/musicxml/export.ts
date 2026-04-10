@@ -731,10 +731,18 @@ export function exportToMusicXML(score: Score, viewConfig?: ViewConfig): string 
   }
 
   // Identification
-  if (score.composer) {
-    xml += `  <identification>\n`;
-    xml += `    <creator type="composer">${esc(score.composer)}</creator>\n`;
-    xml += `  </identification>\n`;
+  {
+    const hasIdBlock = score.composer || viewConfig;
+    if (hasIdBlock) xml += `  <identification>\n`;
+    if (score.composer) {
+      xml += `    <creator type="composer">${esc(score.composer)}</creator>\n`;
+    }
+    if (viewConfig) {
+      xml += `    <miscellaneous>\n`;
+      xml += `      <miscellaneous-field name="nubium-view-config">${esc(JSON.stringify(viewConfig))}</miscellaneous-field>\n`;
+      xml += `    </miscellaneous>\n`;
+    }
+    if (hasIdBlock) xml += `  </identification>\n`;
   }
 
   // Part list
@@ -761,9 +769,11 @@ export function exportToMusicXML(score: Score, viewConfig?: ViewConfig): string 
 
     const instrument = getInstrument(part.instrumentId);
     const staveCount = instrument?.staves ?? 1;
-    const partDisplay = viewConfig ? getPartDisplay(viewConfig, i) : undefined;
-    const slashHint = partDisplay?.slash ?? false;
-    const tabHint = partDisplay?.tab ?? false;
+    // Never write display-mode hints — MusicXML can't roundtrip all view states,
+    // and it's better to show extra (standard view) than hide something the user had visible.
+    // Slash/tab data is always preserved in <notehead> and note content.
+    const slashHint = false;
+    const tabHint = false;
 
     for (let m = 0; m < part.measures.length; m++) {
       const prevMeasure = m > 0 ? part.measures[m - 1] : undefined;
