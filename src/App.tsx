@@ -19,7 +19,7 @@ import { getSettings, matchesBinding } from "./settings";
 import { recordSave } from "./licensing";
 import { LicenseNag } from "./components/LicenseNag";
 import { useEffect, useCallback, useState, useSyncExternalStore, useRef } from "react";
-import { checkForUpdates, installUpdate } from "./updater";
+import { checkForUpdates, restartApp, getUpdateDialogState, subscribeUpdateDialog, dismissUpdateDialog } from "./updater";
 import {
   PluginManager,
   TransposePlugin,
@@ -142,7 +142,7 @@ export function App() {
 
     // Updater commands
     pm.registerCoreCommand("nubium.check-updates", "Check for Updates", () => checkForUpdates(true));
-    pm.registerCoreCommand("nubium.install-update", "Install Update and Restart", () => installUpdate());
+    pm.registerCoreCommand("nubium.install-update", "Install Update and Restart", () => restartApp());
   }
 
   const pm = pluginManagerRef.current;
@@ -294,8 +294,39 @@ export function App() {
       <HistoryModal />
       <LicenseNag open={nagVisible} onClose={() => setNagVisible(false)} />
       <ToastContainer />
+      <UpdateDialog />
     </div>
     </TooltipProvider>
+  );
+}
+
+function UpdateDialog() {
+  const version = useSyncExternalStore(subscribeUpdateDialog, getUpdateDialogState);
+  if (!version) return null;
+
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
+      <div className="bg-background border border-border rounded-lg p-6 shadow-xl max-w-sm">
+        <h3 className="text-sm font-medium mb-2">Update Available</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Version {version} has been downloaded and is ready to install.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            className="px-3 py-1.5 text-sm rounded border border-border hover:bg-muted"
+            onClick={dismissUpdateDialog}
+          >
+            Later
+          </button>
+          <button
+            className="px-3 py-1.5 text-sm rounded bg-primary text-primary-foreground hover:opacity-90"
+            onClick={restartApp}
+          >
+            Restart Now
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -1,9 +1,6 @@
-import { showToast } from "./components/Toast";
-
 let updateChecked = false;
 
 export async function checkForUpdates(manual = false) {
-  // Only auto-check once per session
   if (!manual && updateChecked) return;
   updateChecked = true;
 
@@ -12,34 +9,52 @@ export async function checkForUpdates(manual = false) {
     const update = await check();
 
     if (update) {
-      showToast(
-        `Update ${update.version} available — restart to install`,
-        "info"
-      );
-      // Store for later install
-      (window as any).__nubiumUpdate = update;
+      // Download silently in background
+      await update.downloadAndInstall((event) => {
+        // Could show progress, but keep it simple
+        if (event.event === "Finished") {
+          // Update is ready — show persistent prompt
+          showUpdateDialog(update.version);
+        }
+      });
     } else if (manual) {
+      const { showToast } = await import("./components/Toast");
       showToast("You're on the latest version", "success");
     }
   } catch {
-    // Not in Tauri, or network error — silently ignore for auto-check
     if (manual) {
+      const { showToast } = await import("./components/Toast");
       showToast("Could not check for updates", "error");
     }
   }
 }
 
-export async function installUpdate() {
-  const update = (window as any).__nubiumUpdate;
-  if (!update) return;
+let updateDialogVisible = false;
+const updateDialogListeners = new Set<() => void>();
 
-  try {
-    showToast("Downloading update…", "info");
-    await update.downloadAndInstall();
-    const { relaunch } = await import("@tauri-apps/plugin-process");
-    await relaunch();
-  } catch (err) {
-    showToast("Update failed — try again later", "error");
-    console.error("Update install failed:", err);
-  }
+export function getUpdateDialogState() {
+  return updateDialogVisible ? pendingVersion : null;
+}
+
+export function subscribeUpdateDialog(cb: () => void) {
+  updateDialogListeners.add(cb);
+  return () => updateDialogListeners.delete(cb);
+}
+
+let pendingVersion = "";
+
+function showUpdateDialog(version: string) {
+  pendingVersion = version;
+  updateDialogVisible = true;
+  for (const cb of updateDialogListeners) cb();
+}
+
+export function dismissUpdateDialog() {
+  updateDialogVisible = false;
+  for (const cb of updateDialogListeners) cb();
+}
+
+export async function restartApp() {
+  const { relaunch } = await import("@tauri-apps/plugin-process");
+  await relaunch();
 }
