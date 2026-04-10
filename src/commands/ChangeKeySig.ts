@@ -1,6 +1,5 @@
 import type { Command, EditorSnapshot } from "./Command";
 import type { KeySignature } from "../model";
-import type { PitchClass } from "../model/pitch";
 import { keyAccidental } from "../model/pitch";
 import type { NoteEvent } from "../model/note";
 

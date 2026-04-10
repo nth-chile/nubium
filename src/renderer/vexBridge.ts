@@ -1,15 +1,13 @@
-import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Dot, Beam, StaveConnector, Barline, Repetition, Volta as VexVolta, StaveTie, StaveHairpin, MultiMeasureRest, Tuplet as VexTuplet, Articulation as VexArticulation, Ornament as VexOrnament, Annotation as VexAnnotation, StaveText, StaveModifierPosition, GraceNote as VexGraceNote, GraceNoteGroup, GhostNote, Tremolo } from "vexflow";
-import type { ChordSymbol, DynamicMark, Lyric, Hairpin } from "../model/annotations";
+import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental, Dot, Beam, StaveConnector, Barline, Repetition, Volta as VexVolta, StaveTie, StaveHairpin, MultiMeasureRest, Tuplet as VexTuplet, Articulation as VexArticulation, Ornament as VexOrnament, Annotation as VexAnnotation, GraceNote as VexGraceNote, GraceNoteGroup, GhostNote, Tremolo } from "vexflow";
 import type { Measure, NoteEvent, NoteEventId } from "../model";
 import type { BarlineType } from "../model/time";
-import type { Annotation, TempoMark } from "../model/annotations";
+import type { TempoMark } from "../model/annotations";
 import { isCrossStaff, type ArticulationKind } from "../model/note";
 import type { Stylesheet } from "../model/stylesheet";
 import { resolveStylesheet } from "../model/stylesheet";
 import { durationToTicks as durationToTicksFn, measureCapacity as measureCapacityFn, voiceTicksUsed as voiceTicksUsedFn } from "../model/duration";
 import { keyAccidental } from "../model/pitch";
 import { getBeamGroups } from "./beaming";
-import { useEditorStore } from "../state/EditorState";
 
 export interface RenderContext {
   renderer: Renderer;
@@ -450,7 +448,7 @@ export function applyBarline(stave: Stave, barlineType: BarlineType): void {
 
 /** Create a bare VexFlow Stave for pre-creation (used by cross-staff rendering). */
 export function createVexStave(
-  ctx: RenderContext,
+  _ctx: RenderContext,
   m: Measure,
   x: number,
   y: number,

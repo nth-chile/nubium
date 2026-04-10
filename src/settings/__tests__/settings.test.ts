@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { defaultSettings } from "../Settings";
-import { defaultKeyBindings, SHORTCUT_ACTIONS } from "../keybindings";
+import { SHORTCUT_ACTIONS } from "../keybindings";
 
 describe("defaultSettings", () => {
   it("returns expected default tempo", () => {

@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
 import { useChatStore } from "../../state/ChatState";
-import { useEditorStore } from "../../state";
 import { getMessageText } from "../../ai/ChatProvider";
 import { AISettings } from "../../components/AISettings";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +8,6 @@ import { Settings, Trash2 } from "lucide-react";
 
 // Module-level refs so the menu item can toggle/read settings even across remounts
 let toggleSettingsRef: (() => void) | null = null;
-let isSettingsOpenRef = false;
 
 function ChatPanel() {
   const messages = useChatStore((s) => s.messages);
@@ -23,10 +21,9 @@ function ChatPanel() {
 
   useEffect(() => {
     toggleSettingsRef = () => setShowSettings((s) => !s);
-    return () => { toggleSettingsRef = null; isSettingsOpenRef = false; };
+    return () => { toggleSettingsRef = null; };
   }, []);
 
-  useEffect(() => { isSettingsOpenRef = showSettings; }, [showSettings]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

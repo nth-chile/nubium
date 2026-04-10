@@ -34,7 +34,6 @@ import {
   MidiInputPlugin,
   GuitarPlugin,
   TechniquesPlugin,
-  GuitarProImportPlugin,
 } from "./plugins";
 import { setGlobalPluginManager } from "./plugins/PluginManager";
 import { isCommunityPluginsEnabled, loadAllInstalled } from "./plugins/CommunityRegistry";

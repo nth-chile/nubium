@@ -13,8 +13,7 @@ import type {
   KeySignature,
 } from "../model";
 import type { ClefType } from "../model";
-import { defaultViewConfig, getEffectiveInputMode, getPartDisplay, type ViewConfig, type NotationDisplay } from "../views/ViewMode";
-import { DURATION_TYPES_ORDERED } from "../model";
+import { defaultViewConfig, getPartDisplay, type ViewConfig, type NotationDisplay } from "../views/ViewMode";
 import { durationToTicks as durationToTicksFn, TICKS_PER_QUARTER } from "../model/duration";
 import { factory } from "../model";
 import { getInstrument } from "../model/instruments";
@@ -231,22 +230,6 @@ const CLEF_DEFAULT_OCTAVE: Record<ClefType, number> = {
   alto: 4,
   tenor: 3,
 };
-
-/** Get the effective octave for note entry, applying clef offset to inputState octave.
- *  inputState.octave defaults to 4 (treble). For bass clef, this shifts down by 1, etc. */
-function getEffectiveOctave(score: Score, cursor: CursorPosition, inputOctave: Octave): Octave {
-  const measure = score.parts[cursor.partIndex]?.measures[cursor.measureIndex];
-  if (!measure) return inputOctave;
-
-  // Bass staff on grand staff instruments uses bass clef octave
-  if ((cursor.staveIndex ?? 0) >= 1) {
-    const offset = (CLEF_DEFAULT_OCTAVE["bass"] ?? 3) - 4;
-    return Math.max(0, Math.min(9, inputOctave + offset)) as Octave;
-  }
-
-  const offset = (CLEF_DEFAULT_OCTAVE[measure.clef.type] ?? 4) - 4;
-  return Math.max(0, Math.min(9, inputOctave + offset)) as Octave;
-}
 
 /** Find the flat voice index for voice N on a given staff. Creates the voice if needed. */
 function findOrCreateVoiceForStaff(measure: Measure, staveIndex: number, localVoiceN: number): number {

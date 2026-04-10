@@ -4,7 +4,6 @@ import { useHotkey } from "../../hooks/useHotkey";
 import { exportToMusicXML } from "../../musicxml/export";
 import type { DurationType, Accidental } from "../../model";
 import { ALL_TUNINGS } from "../../model/guitar";
-import { Separator } from "@/components/ui/separator";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 
 /** SVG note icons for duration buttons */

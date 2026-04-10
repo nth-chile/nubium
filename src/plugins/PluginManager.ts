@@ -13,7 +13,6 @@ import type {
   PluginEventType,
   PluginEventCallback,
   PluginEventData,
-  MidiNoteEvent,
 } from "./PluginAPI";
 import { serialize, deserialize } from "../serialization";
 

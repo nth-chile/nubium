@@ -1,7 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useEditorStore } from "../state";
-import type { CursorPosition } from "../input/InputState";
-import type { Selection } from "../plugins/PluginAPI";
 import type { NoteBox } from "../renderer/vexBridge";
 
 const HIT_PADDING = 8; // extra pixels around text for easier clicking

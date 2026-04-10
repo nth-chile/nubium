@@ -640,7 +640,7 @@ function drawCursor(
   let localVoiceIdx = 0;
   if (cursorMeasure) {
     const staffVoices = cursorMeasure.voices
-      .map((v, i) => i)
+      .map((_, i) => i)
       .filter((i) => (cursorMeasure.voices[i]?.staff ?? 0) === cursorStave);
     localVoiceIdx = staffVoices.indexOf(cursor.voiceIndex);
     if (localVoiceIdx < 0) localVoiceIdx = 0;
@@ -811,7 +811,7 @@ function pitchToStaffY(
   octave: number,
   clefType: string,
   staffTop: number,
-  staffHeight: number,
+  _staffHeight: number,
 ): number {
   // Diatonic step number (C=0, D=1, E=2, F=3, G=4, A=5, B=6)
   const DIATONIC: Record<string, number> = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
@@ -873,7 +873,7 @@ function drawPlaybackCursor(
   score: Score,
   playbackTick: number,
   measurePositions: ScoreRenderResult["measurePositions"],
-  config: LayoutConfig,
+  _config: LayoutConfig,
   noteBoxes: Map<NoteEventId, NoteBox>,
 ): void {
   const part = score.parts[0];
@@ -1135,7 +1135,7 @@ function drawCrossSystemSlursAndTies(
   score: Score,
   noteBoxes: Map<NoteEventId, NoteBox>,
   staveNotes: Map<NoteEventId, StaveNote>,
-  measurePositions: ScoreRenderResult["measurePositions"],
+  _measurePositions: ScoreRenderResult["measurePositions"],
   systems: SystemLine[],
 ): void {
   function systemForMeasure(mi: number): SystemLine | undefined {

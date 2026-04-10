@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "../state";
 import type { DynamicLevel } from "../model/annotations";
-import type { BarlineType, DurationType, KeySignature, TimeSignature } from "../model";
+import type { BarlineType, KeySignature, TimeSignature } from "../model";
 
 const DYNAMIC_LEVELS: DynamicLevel[] = ["pp", "p", "mp", "mf", "f", "ff", "sfz", "fp"];
 
@@ -126,7 +126,7 @@ function TempoContent() {
       </div>
       <div className="flex items-center gap-1">
         <span className="text-sm text-muted-foreground">Feel</span>
-        {SWING_OPTIONS.map((opt, i) => (
+        {SWING_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             onClick={() => handleSwingChange(opt.value)}

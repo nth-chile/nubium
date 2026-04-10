@@ -1,5 +1,4 @@
 import type { Command, EditorSnapshot } from "./Command";
-import type { NavigationMarks } from "../model/navigation";
 
 export type NavigationMarkType =
   | "coda"

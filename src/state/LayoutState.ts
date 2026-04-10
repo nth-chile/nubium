@@ -75,7 +75,7 @@ export const DEFAULT_SIDEBAR_WIDTH = 280;
 export const MIN_SIDEBAR_WIDTH = 180;
 export const MAX_SIDEBAR_WIDTH = 500;
 
-export const useLayoutStore = create<LayoutState>((set, get) => ({
+export const useLayoutStore = create<LayoutState>((set) => ({
   panels: { left: [], right: [] },
   sidebarOpen: { left: true, right: true },
   panelCollapsed: {},

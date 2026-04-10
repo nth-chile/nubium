@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { JSDOM } from "jsdom";
-import { durationToTicks, voiceTicksUsed, measureCapacity } from "../duration";
+import { durationToTicks, voiceTicksUsed } from "../duration";
 import { factory } from "..";
 import { serialize, deserialize } from "../../serialization";
 import { importFromMusicXML } from "../../musicxml/import";

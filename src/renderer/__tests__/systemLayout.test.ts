@@ -15,7 +15,7 @@ import { emptyScore } from "../../model/factory";
 function makeScore(instrumentIds: string[] = ["piano"]): Score {
   const score = emptyScore();
   // Replace default part with specified instruments
-  score.parts = instrumentIds.map((id, i) => ({
+  score.parts = instrumentIds.map((id) => ({
     ...score.parts[0],
     name: id,
     instrumentId: id,

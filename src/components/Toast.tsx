@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 
 type ToastType = "info" | "error" | "success";
 

@@ -2,12 +2,11 @@
  * Core algorithm for insert mode: shift events forward in a voice,
  * handling measure overflow, note splitting at barlines, and annotation migration.
  */
-import type { Part, Measure, Voice } from "./score";
+import type { Part } from "./score";
 import type { NoteEvent, NoteHead } from "./note";
 import type { Annotation } from "./annotations";
-import type { Duration } from "./duration";
 import { durationToTicks, measureCapacity, voiceTicksUsed, ticksToDurations } from "./duration";
-import { newId, type NoteEventId, type MeasureId, type VoiceId } from "./ids";
+import { newId, type NoteEventId, type VoiceId } from "./ids";
 import { voice as makeVoice, measure as makeMeasure } from "./factory";
 
 /**

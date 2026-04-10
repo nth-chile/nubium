@@ -1,6 +1,6 @@
 import type { Command, EditorSnapshot } from "./Command";
 import type { Articulation, ArticulationKind, NoteEvent } from "../model/note";
-import { pitchToTab, STANDARD_TUNING, type Tuning } from "../model/guitar";
+import { pitchToTab, STANDARD_TUNING } from "../model/guitar";
 
 // Mutually exclusive groups — adding one removes others in the same group
 const EXCLUSION_GROUPS: string[][] = [

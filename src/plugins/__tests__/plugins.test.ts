@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { transposeEvent, transposeScore } from "../builtins/Transpose";
 import { identifyChord } from "../builtins/ChordAnalysis";
-import { factory, pitchToMidi } from "../../model";
+import { factory } from "../../model";
 import type { Score } from "../../model";
 import type { Note, Rest } from "../../model/note";
 import { newId } from "../../model/ids";

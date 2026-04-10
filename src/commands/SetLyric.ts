@@ -1,5 +1,4 @@
 import type { Command, EditorSnapshot } from "./Command";
-import type { NoteEventId } from "../model";
 
 export class SetLyric implements Command {
   description = "Set lyric";

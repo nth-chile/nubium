@@ -1,5 +1,5 @@
 import { Stave, StaveNote, Dot, Beam, Formatter, Voice, GhostNote } from "vexflow";
-import type { Measure, NoteEvent, NoteEventId } from "../model";
+import type { Measure, NoteEventId } from "../model";
 import { durationToTicks as durationToTicksFn, measureCapacity as measureCapacityFn } from "../model/duration";
 import { getBeamGroups } from "./beaming";
 import type { RenderContext, NoteBox, MeasureRenderResult, AnnotationBox } from "./vexBridge";

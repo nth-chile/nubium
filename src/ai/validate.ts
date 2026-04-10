@@ -5,7 +5,6 @@
 import type { Measure } from "../model";
 import type { NoteEvent } from "../model/note";
 import { durationToTicks, measureCapacity } from "../model/duration";
-import type { PitchClass } from "../model/pitch";
 
 const VALID_PITCH_CLASSES = new Set<string>(["C", "D", "E", "F", "G", "A", "B"]);
 const VALID_DURATIONS = new Set<string>([

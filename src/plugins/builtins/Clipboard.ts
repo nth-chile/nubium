@@ -1,5 +1,5 @@
 import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
-import type { Score, Measure, Voice } from "../../model/score";
+import type { Score, Measure } from "../../model/score";
 import type { NoteEvent } from "../../model/note";
 import type { Pitch } from "../../model/pitch";
 import type { Duration, DurationType } from "../../model/duration";
@@ -492,7 +492,6 @@ function parseLilyToScore(lily: string): Score {
 
 // --- ASCII Tab Parsing ---
 
-const TAB_STRING_NAMES = ["e", "B", "G", "D", "A", "E"]; // high to low (string 1-6)
 const TAB_LINE_RE = /^([A-Ga-g]#?b?)\|([0-9hpbsxX/\\~\-|]+)\|?\s*$/;
 
 function isAsciiTab(text: string): boolean {

@@ -21,7 +21,6 @@ import { useHotkey } from "../hooks/useHotkey";
 import { TooltipButton } from "./ui/tooltip-button";
 import { Separator } from "./ui/separator";
 import { PanelLeft, PanelRight, Undo2, Redo2, Settings, Puzzle } from "lucide-react";
-import { Button } from "./ui/button";
 import { ContextMenu, ContextMenuCheckbox, ContextMenuSeparator, ContextMenuItem, ContextMenuLabel } from "./ui/context-menu";
 import { cn } from "@/lib/utils";
 import type { PanelRegistration } from "../plugins/PluginManager";

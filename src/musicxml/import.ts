@@ -4,7 +4,7 @@ import type { Pitch, PitchClass, Accidental, Octave } from "../model/pitch";
 import { durationToTicks, type Duration, type DurationType } from "../model/duration";
 import type { Clef, ClefType, TimeSignature, KeySignature, BarlineType } from "../model/time";
 import type { NavigationMarks, Volta } from "../model/navigation";
-import type { Annotation, ChordSymbol, Lyric, DynamicMark, Hairpin, Slur, DynamicLevel } from "../model/annotations";
+import type { Annotation, ChordSymbol, Lyric, DynamicLevel } from "../model/annotations";
 import { newId, type ScoreId, type PartId, type MeasureId, type VoiceId, type NoteEventId } from "../model/ids";
 import { INSTRUMENTS } from "../model/instruments";
 import {
@@ -12,7 +12,6 @@ import {
   ALTER_TO_ACCIDENTAL,
   XML_CLEF_MAP,
   MUSICXML_DIVISIONS,
-  DURATION_DIVISIONS,
 } from "./types";
 
 /** Detect instrument from MusicXML part metadata */
@@ -116,7 +115,7 @@ function parsePitch(noteEl: Element): Pitch | null {
   return { pitchClass: step, accidental, octave };
 }
 
-function parseDuration(noteEl: Element, divisions: number): Duration {
+function parseDuration(noteEl: Element, _divisions: number): Duration {
   const typeText = getTextContent(noteEl, "type");
   const durationType: DurationType = typeText
     ? XML_TO_DURATION_TYPE[typeText] ?? "quarter"

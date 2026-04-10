@@ -1,5 +1,5 @@
 import type { Score, Measure } from "../model";
-import { newId, type PartId, type MeasureId, type VoiceId } from "../model/ids";
+import { newId, type MeasureId, type VoiceId } from "../model/ids";
 import { durationToTicks, measureCapacity } from "../model/duration";
 import { parseMeasure, jsonToScore } from "../serialization";
 import { validateMeasure, formatValidationErrors, type ValidationError } from "./validate";

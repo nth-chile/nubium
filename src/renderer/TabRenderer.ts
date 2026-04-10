@@ -1,4 +1,4 @@
-import { TabStave, TabNote, GhostNote, Formatter, Voice, Bend, Vibrato, TabSlide, TabTie, Annotation as VFAnnotation, Element, Tremolo } from "vexflow";
+import { TabStave, TabNote, GhostNote, Formatter, Voice, Bend, Vibrato, TabSlide, TabTie, Element, Tremolo } from "vexflow";
 import type { Measure, NoteEvent, NoteEventId } from "../model";
 import type { Articulation } from "../model/note";
 import { pitchToTab, STANDARD_TUNING, type Tuning } from "../model/guitar";

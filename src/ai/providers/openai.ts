@@ -1,5 +1,4 @@
 import type { ChatMessage, ChatProvider, ChatProviderConfig, ToolDefinition, ProviderResponse, MessageContent } from "../ChatProvider";
-import { getMessageText } from "../ChatProvider";
 import { toOpenAITools } from "../tools/ToolSchema";
 
 export class OpenAIProvider implements ChatProvider {

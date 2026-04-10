@@ -1,11 +1,8 @@
 import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
-import type { Score } from "../../model";
 import type { NoteEvent } from "../../model/note";
 import type { ChordSymbol } from "../../model/annotations";
 import { pitchToMidi } from "../../model/pitch";
-import type { PitchClass } from "../../model/pitch";
 
-const NOTE_NAMES: PitchClass[] = ["C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"];
 const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 interface ChordTemplate {

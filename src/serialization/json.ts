@@ -5,7 +5,6 @@ import type { Duration } from "../model/duration";
 import type { Annotation } from "../model/annotations";
 import type { Stylesheet } from "../model/stylesheet";
 import type { NavigationMarks } from "../model/navigation";
-import type { TabInfo } from "../model/guitar";
 import type { ClefType, BarlineType } from "../model/time";
 import type { PitchClass, Octave } from "../model/pitch";
 import type { DurationType } from "../model/duration";

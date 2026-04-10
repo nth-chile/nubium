@@ -9,7 +9,7 @@ export class SetRepeatBarline implements Command {
   execute(state: EditorSnapshot): EditorSnapshot {
     const score = structuredClone(state.score);
     const input = structuredClone(state.inputState);
-    const { partIndex, measureIndex } = input.cursor;
+    const { measureIndex } = input.cursor;
 
     // Apply barline change across all parts at this measure index
     for (const part of score.parts) {

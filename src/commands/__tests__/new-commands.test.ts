@@ -8,7 +8,6 @@ import { SetSlur } from "../SetSlur";
 import { DeleteNote } from "../DeleteNote";
 import type { EditorSnapshot } from "../Command";
 import { defaultInputState } from "../../input/InputState";
-import type { NoteEventId } from "../../model/ids";
 
 function makeSnapshot(overrides?: {
   measures?: ReturnType<typeof factory.measure>[];

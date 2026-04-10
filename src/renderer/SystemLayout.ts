@@ -1,6 +1,5 @@
 import type { Score } from "../model/score";
 import type { Stylesheet } from "../model/stylesheet";
-import { resolveStylesheet } from "../model/stylesheet";
 import { getInstrument } from "../model/instruments";
 import { calculateMeasureWidth } from "./measureWidth";
 import { getPartDisplay, type ViewConfig } from "../views/ViewMode";

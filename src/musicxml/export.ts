@@ -1,13 +1,12 @@
-import type { Score, Part, Measure, Voice } from "../model/score";
+import type { Score, Measure } from "../model/score";
 import { getInstrument } from "../model/instruments";
-import type { NoteEvent, NoteHead, TupletRatio, Articulation } from "../model/note";
+import type { NoteEvent, TupletRatio, Articulation } from "../model/note";
 import type { Pitch } from "../model/pitch";
 import type { Duration } from "../model/duration";
-import type { Annotation, ChordSymbol, Lyric, DynamicMark, Hairpin, Slur } from "../model/annotations";
-import { durationToTicks, type DurationType } from "../model/duration";
+import type { Annotation, ChordSymbol, Lyric, DynamicMark, Hairpin } from "../model/annotations";
+import type { DurationType } from "../model/duration";
 import { getBeamGroups } from "../renderer/beaming";
 import type { ViewConfig } from "../views/ViewMode";
-import { getPartDisplay } from "../views/ViewMode";
 import {
   DURATION_TYPE_TO_XML,
   DURATION_DIVISIONS,

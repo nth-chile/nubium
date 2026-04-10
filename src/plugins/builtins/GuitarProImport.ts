@@ -1,9 +1,9 @@
 import type { NubiumPlugin, PluginAPI } from "../PluginAPI";
-import type { Score, Part, Measure, Voice } from "../../model/score";
+import type { Score, Part, Measure } from "../../model/score";
 import type { NoteEvent, Articulation, NoteHead } from "../../model/note";
 import type { Duration, DurationType } from "../../model/duration";
 import type { Tuning } from "../../model/guitar";
-import type { Clef, ClefType, BarlineType } from "../../model/time";
+import type { Clef, BarlineType } from "../../model/time";
 import { newId, type ScoreId, type PartId, type MeasureId, type VoiceId, type NoteEventId } from "../../model/ids";
 import { midiToPitch } from "../../model/pitch";
 
@@ -137,7 +137,7 @@ function guessClef(tuningMidi: number[]): Clef {
 
 function convertTrack(
   track: { id: string; name: string; shortName: string; tuning: any[]; tuningMidi: number[]; capoFret: number; bars: any[] },
-  defaultTempo: number,
+  _defaultTempo: number,
 ): Part {
   const clef = guessClef(track.tuningMidi);
   // Convert tuningMidi to our tuning format (low to high)
@@ -229,7 +229,7 @@ export const GuitarProImportPlugin: NubiumPlugin = {
     api.registerImporter("gp-import", {
       name: "Guitar Pro",
       extensions: [".gp", ".gp3", ".gp4", ".gp5", ".gpx"],
-      import: (content: string) => {
+      import: (_content: string) => {
         // This won't be called directly — GP files are binary.
         // We register a command instead that handles the binary file read.
         throw new Error("Use the import command for binary Guitar Pro files");

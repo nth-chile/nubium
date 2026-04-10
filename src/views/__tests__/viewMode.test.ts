@@ -4,8 +4,6 @@ import {
   getPartDisplay,
   getEffectiveInputMode,
   DEFAULT_NOTATION_DISPLAY,
-  type ViewConfig,
-  type NotationDisplay,
 } from "../ViewMode";
 
 describe("defaultViewConfig", () => {

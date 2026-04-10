@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { serialize, deserialize } from "../index";
 import { factory } from "../../model";
-import type { Measure } from "../../model";
 
 describe("Navigation mark serialization", () => {
   it("round-trips navigation marks", () => {

@@ -156,7 +156,6 @@ function TransportPanel() {
     }
   }, [tempoInput, setTempo]);
 
-  const positionDisplay = formatPosition(playbackTick, score);
   const effectiveBpm = isPlaying ? getEffectiveBpm(playbackTick, score) : score.tempo;
 
   return (
@@ -244,27 +243,6 @@ function getEffectiveBpm(
     }
   }
   return score.tempo;
-}
-
-function formatPosition(
-  tick: number | null,
-  score: { parts: Array<{ measures: Array<{ timeSignature: { numerator: number; denominator: number } }> }> }
-): string {
-  if (tick === null || tick <= 0) return "1:1";
-  let accumulated = 0;
-  const part = score.parts[0];
-  if (!part) return "1:1";
-  for (let mi = 0; mi < part.measures.length; mi++) {
-    const ts = part.measures[mi].timeSignature;
-    const measureTicks = (TICKS_PER_QUARTER * 4 * ts.numerator) / ts.denominator;
-    if (accumulated + measureTicks > tick) {
-      const tickInMeasure = tick - accumulated;
-      const beatTicks = (TICKS_PER_QUARTER * 4) / ts.denominator;
-      return `${mi + 1}:${Math.floor(tickInMeasure / beatTicks) + 1}`;
-    }
-    accumulated += measureTicks;
-  }
-  return `${part.measures.length}:1`;
 }
 
 // --- Core transport registration ---
