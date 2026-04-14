@@ -1076,6 +1076,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
       return { inputState: { ...s.inputState, cursor, pendingPitch: null, selectedHeadIndex: null }, lastEnteredPosition: null };
     });
+    const after = get();
+    if (!after.isPlaying) previewEventAt(after.score, after.inputState.cursor);
   },
 
   moveCursorToMeasure(direction: "next" | "prev") {
@@ -1094,6 +1096,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
       return { inputState: { ...s.inputState, cursor }, lastEnteredPosition: null };
     });
+    const after = get();
+    if (!after.isPlaying) previewEventAt(after.score, after.inputState.cursor);
   },
 
   changeOctave(direction: "up" | "down") {
@@ -2656,6 +2660,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
       return { inputState: { ...s.inputState, voice: 0, cursor } };
     });
+    const after = get();
+    if (!after.isPlaying) previewEventAt(after.score, after.inputState.cursor);
   },
 
   // Phase 9: View modes (notation display toggles)
