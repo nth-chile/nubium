@@ -53,6 +53,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   // Transforms (work in both modes)
   { id: "toggle-slur", label: "Slur", category: "Transforms", defaultBinding: { key: "s" }, mode: "normal" },
   { id: "toggle-tie", label: "Tie", category: "Transforms", defaultBinding: { key: "t" } },
+  { id: "toggle-mute", label: "Mute (suppress playback)", category: "Transforms", defaultBinding: { key: "m", shift: true }, mode: "normal" },
   { id: "hairpin:crescendo", label: "Crescendo", category: "Annotation", defaultBinding: { key: ",", shift: true, alt: true } },
   { id: "hairpin:diminuendo", label: "Diminuendo", category: "Annotation", defaultBinding: { key: ".", shift: true, alt: true } },
 

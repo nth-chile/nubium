@@ -62,6 +62,7 @@ import { OverwriteNote } from "../commands/OverwriteNote";
 import { ToggleDot } from "../commands/ToggleDot";
 import { SetAccidental as SetAccidentalCmd } from "../commands/SetAccidental";
 import { ToggleTie } from "../commands/ToggleTie";
+import { ToggleMute } from "../commands/ToggleMute";
 import { SetHairpin } from "../commands/SetHairpin";
 import { SetStemDirection } from "../commands/SetStemDirection";
 import { SetScoreMeta } from "../commands/SetScoreMeta";
@@ -80,6 +81,7 @@ function previewEventAt(score: Score, cursor: CursorPosition): void {
   const part = score.parts[cursor.partIndex];
   const event = part?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex]?.events[cursor.eventIndex];
   if (!event) return;
+  if ((event.kind === "note" || event.kind === "chord" || event.kind === "grace") && event.muted) return;
   let midis: number[] = [];
   if (event.kind === "note" || event.kind === "grace") {
     midis = [pitchToMidi(event.head.pitch)];
@@ -175,6 +177,7 @@ interface EditorStore {
   toggleArticulation(kind: import("../model/note").ArticulationKind): void;
   toggleCrossStaff(): void;
   toggleTie(): void;
+  toggleMute(): void;
   setStemDirection(direction: "up" | "down" | null): void;
 
   // Hairpin
@@ -463,6 +466,13 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   toggleTie() {
     const state = get();
     const cmd = new ToggleTie();
+    const result = history.execute(cmd, { score: state.score, inputState: state.inputState });
+    set({ score: result.score, inputState: result.inputState });
+  },
+
+  toggleMute() {
+    const state = get();
+    const cmd = new ToggleMute();
     const result = history.execute(cmd, { score: state.score, inputState: state.inputState });
     set({ score: result.score, inputState: result.inputState });
   },

@@ -73,6 +73,7 @@ export interface GraceNote {
   articulations?: Articulation[];
   tuplet?: TupletRatio;
   renderStaff?: number; // cross-staff: display on this staff index instead of voice's staff
+  muted?: boolean; // when true, note renders normally but is skipped during playback
 }
 
 export interface Note {
@@ -85,6 +86,7 @@ export interface Note {
   articulations?: Articulation[];
   tuplet?: TupletRatio;
   renderStaff?: number; // cross-staff: display on this staff index instead of voice's staff
+  muted?: boolean; // when true, note renders normally but is skipped during playback
 }
 
 export interface Chord {
@@ -97,6 +99,7 @@ export interface Chord {
   articulations?: Articulation[];
   tuplet?: TupletRatio;
   renderStaff?: number; // cross-staff: display on this staff index instead of voice's staff
+  muted?: boolean; // when true, note renders normally but is skipped during playback
 }
 
 export interface Rest {

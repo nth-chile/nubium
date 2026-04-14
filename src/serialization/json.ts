@@ -63,6 +63,7 @@ function eventToJson(e: NoteEvent): Record<string, unknown> {
       if (e.articulations?.length) obj.articulations = e.articulations.map(articulationToJson);
       if (e.tuplet) obj.tuplet = { actual: e.tuplet.actual, normal: e.tuplet.normal };
       if (e.renderStaff != null) obj.renderStaff = e.renderStaff;
+      if (e.muted) obj.muted = true;
       return obj;
     }
     case "chord": {
@@ -82,6 +83,7 @@ function eventToJson(e: NoteEvent): Record<string, unknown> {
       if (e.articulations?.length) obj.articulations = e.articulations.map(articulationToJson);
       if (e.tuplet) obj.tuplet = { actual: e.tuplet.actual, normal: e.tuplet.normal };
       if (e.renderStaff != null) obj.renderStaff = e.renderStaff;
+      if (e.muted) obj.muted = true;
       return obj;
     }
     case "rest": {
@@ -104,6 +106,7 @@ function eventToJson(e: NoteEvent): Record<string, unknown> {
       if (e.head.pitch.accidental !== "natural") obj.accidental = e.head.pitch.accidental;
       if (e.slash === false) obj.slash = false;
       if (e.renderStaff != null) obj.renderStaff = e.renderStaff;
+      if (e.muted) obj.muted = true;
       return obj;
     }
   }
@@ -285,6 +288,7 @@ function parseEvent(e: Record<string, unknown>): NoteEvent {
       head: { pitch: { pitchClass, accidental, octave } },
       slash: (e.slash as boolean) ?? true,
       ...(typeof e.renderStaff === "number" ? { renderStaff: e.renderStaff } : {}),
+      ...(e.muted === true ? { muted: true } : {}),
     } as NoteEvent;
   }
 
@@ -300,6 +304,7 @@ function parseEvent(e: Record<string, unknown>): NoteEvent {
       ...(Array.isArray(e.articulations) ? { articulations: parseArticulations(e.articulations as string[]) } : {}),
       ...(tuplet ? { tuplet } : {}),
       ...(typeof e.renderStaff === "number" ? { renderStaff: e.renderStaff } : {}),
+      ...(e.muted === true ? { muted: true } : {}),
     } as NoteEvent;
   }
 
@@ -326,6 +331,7 @@ function parseEvent(e: Record<string, unknown>): NoteEvent {
     ...(Array.isArray(e.articulations) ? { articulations: parseArticulations(e.articulations as string[]) } : {}),
     ...(tuplet ? { tuplet } : {}),
     ...(typeof e.renderStaff === "number" ? { renderStaff: e.renderStaff } : {}),
+    ...(e.muted === true ? { muted: true } : {}),
   } as NoteEvent;
 }
 

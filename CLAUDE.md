@@ -41,7 +41,7 @@ The editor has two top-level modes: **Normal** (default) and **Note Entry**. Pre
 
 **Normal mode (commands):**
 - C: chord symbol | L: lyric | D: dynamics | B: barline | R: rehearsal mark | Shift+N: navigation marks
-- S: slur | T: tie | M: metronome | X: cross-staff | U: fermata
+- S: slur | T: tie | M: metronome | X: cross-staff | U: fermata | Shift+M: mute (suppress playback)
 - Backspace: delete selection or note at caret
 
 **Both modes:**

@@ -35,3 +35,4 @@ export { SetPartProperty } from "./SetPartProperty";
 export type { PartPropertyUpdate } from "./SetPartProperty";
 export { ChangeInstrument } from "./ChangeInstrument";
 export { SetMeasureBreak } from "./SetMeasureBreak";
+export { ToggleMute } from "./ToggleMute";

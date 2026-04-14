@@ -317,8 +317,10 @@ function buildEvents(score: Score): void {
         const graceBuffer: { midi: number; instrumentId: string; velocity: number }[] = [];
         for (const evt of voice.events) {
           if (evt.kind === "grace") {
-            const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
-            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch) + transposition, instrumentId: instId, velocity: vel });
+            if (!evt.muted) {
+              const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
+              graceBuffer.push({ midi: pitchToMidi(evt.head.pitch) + transposition, instrumentId: instId, velocity: vel });
+            }
             continue;
           }
           const evtTicks = durationToTicks(evt.duration);
@@ -341,9 +343,9 @@ function buildEvents(score: Score): void {
             }
             graceBuffer.length = 0;
           }
-          if (evt.kind === "note") {
+          if (evt.kind === "note" && !evt.muted) {
             events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
-          } else if (evt.kind === "chord") {
+          } else if (evt.kind === "chord" && !evt.muted) {
             for (const h of evt.heads) {
               events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
             }
@@ -404,8 +406,10 @@ function buildEventsForRange(score: Score, startMeasure: number, endMeasure: num
         const graceBuffer: { midi: number; instrumentId: string; velocity: number }[] = [];
         for (const evt of voice.events) {
           if (evt.kind === "grace") {
-            const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
-            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch) + transposition, instrumentId: instId, velocity: vel });
+            if (!evt.muted) {
+              const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
+              graceBuffer.push({ midi: pitchToMidi(evt.head.pitch) + transposition, instrumentId: instId, velocity: vel });
+            }
             continue;
           }
           const evtTicks = durationToTicks(evt.duration);
@@ -426,9 +430,9 @@ function buildEventsForRange(score: Score, startMeasure: number, endMeasure: num
             }
             graceBuffer.length = 0;
           }
-          if (evt.kind === "note") {
+          if (evt.kind === "note" && !evt.muted) {
             events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
-          } else if (evt.kind === "chord") {
+          } else if (evt.kind === "chord" && !evt.muted) {
             for (const h of evt.heads) {
               events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
             }

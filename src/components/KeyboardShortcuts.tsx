@@ -68,6 +68,7 @@ export function KeyboardShortcuts() {
   const toggleGraceNoteMode = useEditorStore((s) => s.toggleGraceNoteMode);
   const toggleSlur = useEditorStore((s) => s.toggleSlur);
   const toggleTie = useEditorStore((s) => s.toggleTie);
+  const toggleMute = useEditorStore((s) => s.toggleMute);
   const setHairpin = useEditorStore((s) => s.setHairpin);
   const toggleCrossStaff = useEditorStore((s) => s.toggleCrossStaff);
   const popover = useEditorStore((s) => s.popover);
@@ -120,6 +121,7 @@ export function KeyboardShortcuts() {
       "toggle-grace-note": () => toggleGraceNoteMode(),
       "toggle-slur": () => toggleSlur(),
       "toggle-tie": () => toggleTie(),
+      "toggle-mute": () => toggleMute(),
       "hairpin:crescendo": () => setHairpin("crescendo"),
       "hairpin:diminuendo": () => setHairpin("diminuendo"),
       "toggle-cross-staff": () => toggleCrossStaff(),
@@ -387,7 +389,7 @@ export function KeyboardShortcuts() {
     enterChordMode, enterLyricMode, textInputMode, isPlaying, play,
     pause, stopPlayback, toggleMetronome, toggleCountIn, moveCursorPart, moveCursorToMeasure, toggleNotation, selection,
     copySelection, pasteAtCursor, deleteSelectedMeasures, clearSelectedMeasures,
-    toggleArticulation, toggleNoteEntry, toggleInsertMode, togglePitchBeforeDuration, toggleGraceNoteMode, toggleSlur, toggleTie, setHairpin, toggleCrossStaff, popover, setPopover,
+    toggleArticulation, toggleNoteEntry, toggleInsertMode, togglePitchBeforeDuration, toggleGraceNoteMode, toggleSlur, toggleTie, toggleMute, setHairpin, toggleCrossStaff, popover, setPopover,
     setSelection, setNoteSelection, extendSelection, extendNoteSelection,
     noteSelection, deleteNoteSelection, viewConfig, insertTabNote,
   ]);
