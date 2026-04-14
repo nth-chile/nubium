@@ -1200,20 +1200,24 @@ export function renderMeasure(
     }
   }
 
-  // Show overfill/underfill indicator (MuseScore-style + or –)
-  const capacity = measureCapacityFn(m.timeSignature.numerator, m.timeSignature.denominator);
-  const maxTicks = Math.max(...m.voices.map((v) => voiceTicksUsedFn(v.events)), 0);
-  if (maxTicks > 0 && maxTicks !== capacity) {
-    const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
-    if (rawCtx.save) {
-      rawCtx.save();
-      const isOver = maxTicks > capacity;
-      rawCtx.fillStyle = isOver ? "#ef4444" : "#f59e0b";
-      rawCtx.font = "bold 12px sans-serif";
-      rawCtx.textAlign = "right";
-      rawCtx.fillText(isOver ? "+" : "\u2013", x + width - 3, y + 10);
-      rawCtx.textAlign = "start";
-      rawCtx.restore();
+  // Show overfill/underfill indicator (MuseScore-style + or −)
+  // Skip pickup measures — they're intentionally underfilled.
+  if (!m.isPickup) {
+    const capacity = measureCapacityFn(m.timeSignature.numerator, m.timeSignature.denominator);
+    const maxTicks = Math.max(...m.voices.map((v) => voiceTicksUsedFn(v.events)), 0);
+    if (maxTicks > 0 && maxTicks !== capacity) {
+      const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
+      if (rawCtx.save) {
+        rawCtx.save();
+        const isOver = maxTicks > capacity;
+        const symbol = isOver ? "+" : "\u2212";
+        rawCtx.fillStyle = isOver ? "#ef4444" : "#f59e0b";
+        rawCtx.font = "bold 16px sans-serif";
+        rawCtx.textAlign = "right";
+        rawCtx.fillText(symbol, x + width - 4, y - 2);
+        rawCtx.textAlign = "start";
+        rawCtx.restore();
+      }
     }
   }
 
