@@ -272,16 +272,146 @@ function collectEventIdsBetween(score: Score, pi: number, startMi: number, lastM
 
 // --- Build phase ---
 
+/**
+ * Emit or extend a play event for a single pitch, honoring ties.
+ * If a prior tied event on the same (part, voice, pitch) is pending, its
+ * duration is extended by evtTicks; otherwise a new event is emitted.
+ * The pending-tie map is updated based on whether this head is itself tied.
+ */
+function emitOrExtendPitch(
+  midi: number,
+  evtTicks: number,
+  durMult: number,
+  velocity: number,
+  tick: number,
+  offset: number,
+  instId: string,
+  pi: number,
+  vi: number,
+  isTied: boolean,
+  muted: boolean,
+  pendingTies: Map<string, PlayEvent>,
+): void {
+  const key = `${pi}:${vi}:${midi}`;
+  const pending = pendingTies.get(key);
+  if (pending) {
+    pending.durationTicks += evtTicks;
+    if (!isTied) pendingTies.delete(key);
+    return;
+  }
+  if (muted) return;
+  const newEvent: PlayEvent = {
+    tick: tick + offset, midi, durationTicks: evtTicks,
+    durationMultiplier: durMult, velocity, instrumentId: instId, partIndex: pi,
+  };
+  events.push(newEvent);
+  if (isTied) pendingTies.set(key, newEvent);
+}
+
+/** Remove all pending ties for a given (part, voice) — used when a tie is broken by rest/slash/etc. */
+function clearPendingTiesForVoice(pendingTies: Map<string, PlayEvent>, pi: number, vi: number): void {
+  const prefix = `${pi}:${vi}:`;
+  for (const k of Array.from(pendingTies.keys())) {
+    if (k.startsWith(prefix)) pendingTies.delete(k);
+  }
+}
+
+/** Remove pending ties for a voice whose pitch is NOT in the given set (tie not continued by next note). */
+function clearPendingTiesNotIn(pendingTies: Map<string, PlayEvent>, pi: number, vi: number, keep: Set<number>): void {
+  const prefix = `${pi}:${vi}:`;
+  for (const k of Array.from(pendingTies.keys())) {
+    if (!k.startsWith(prefix)) continue;
+    const midi = Number(k.slice(prefix.length));
+    if (!keep.has(midi)) pendingTies.delete(k);
+  }
+}
+
+/**
+ * Process a single measure's voices into play events, honoring ties across
+ * events and measures via pendingTies.
+ */
+function processMeasureVoices(
+  score: Score,
+  mi: number,
+  baseTick: number,
+  dynamicMaps: Map<string, number>[],
+  hairpinMaps: Map<string, number>[],
+  pendingTies: Map<string, PlayEvent>,
+): void {
+  for (let pi = 0; pi < score.parts.length; pi++) {
+    const part = score.parts[pi];
+    const m = part.measures[mi];
+    if (!m) continue;
+    const instId = part.instrumentId;
+    const transposition = getInstrument(instId)?.transposition ?? 0;
+    const dynMap = dynamicMaps[pi];
+    const hpMap = hairpinMaps[pi];
+    for (let vi = 0; vi < m.voices.length; vi++) {
+      const voice = m.voices[vi];
+      let offset = 0;
+      const graceBuffer: { midi: number; instrumentId: string; velocity: number }[] = [];
+      for (const evt of voice.events) {
+        if (evt.kind === "grace") {
+          if (!evt.muted) {
+            const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
+            graceBuffer.push({ midi: pitchToMidi(evt.head.pitch) + transposition, instrumentId: instId, velocity: vel });
+          }
+          continue;
+        }
+        const evtTicks = durationToTicks(evt.duration);
+
+        // Resolve velocity and articulations
+        let baseVel = hpMap?.get(evt.id) ?? dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
+        let durMult = 0.9;
+        if ((evt.kind === "note" || evt.kind === "chord") && evt.articulations?.length) {
+          const result = applyArticulations(evt.articulations, baseVel, durMult);
+          baseVel = result.velocity;
+          durMult = result.durationMultiplier;
+        }
+
+        // Play buffered grace notes just before this event
+        if (graceBuffer.length > 0) {
+          const graceDur = Math.min(60, evtTicks / (graceBuffer.length + 1));
+          for (let gi = 0; gi < graceBuffer.length; gi++) {
+            const graceOffset = offset - graceDur * (graceBuffer.length - gi);
+            events.push({ tick: baseTick + Math.max(0, graceOffset), midi: graceBuffer[gi].midi, durationTicks: graceDur, durationMultiplier: 0.9, velocity: graceBuffer[gi].velocity, instrumentId: graceBuffer[gi].instrumentId, partIndex: pi });
+          }
+          graceBuffer.length = 0;
+        }
+
+        if (evt.kind === "note") {
+          const midi = pitchToMidi(evt.head.pitch) + transposition;
+          const tied = evt.head.tied === true;
+          emitOrExtendPitch(midi, evtTicks, durMult, baseVel, baseTick, offset, instId, pi, vi, tied, !!evt.muted, pendingTies);
+          clearPendingTiesNotIn(pendingTies, pi, vi, new Set([midi]));
+        } else if (evt.kind === "chord") {
+          const chordMidis = new Set<number>();
+          for (const h of evt.heads) {
+            const midi = pitchToMidi(h.pitch) + transposition;
+            chordMidis.add(midi);
+            const tied = h.tied === true;
+            emitOrExtendPitch(midi, evtTicks, durMult, baseVel, baseTick, offset, instId, pi, vi, tied, !!evt.muted, pendingTies);
+          }
+          clearPendingTiesNotIn(pendingTies, pi, vi, chordMidis);
+        } else {
+          // rest, slash — break any pending ties for this voice
+          clearPendingTiesForVoice(pendingTies, pi, vi);
+        }
+        offset += evtTicks;
+      }
+    }
+  }
+}
+
 function buildEvents(score: Score): void {
   events = [];
   metronomeBeats = [];
   measureBoundaries = [];
 
   const lastMi = findLastContentMeasure(score);
-  let dynamicMaps: Map<string, number>[] = [];
-  let hairpinMaps: Map<string, number>[] = [];
-  dynamicMaps = buildDynamicMap(score, lastMi);
-  hairpinMaps = buildHairpinMap(score, lastMi, dynamicMaps);
+  const dynamicMaps = buildDynamicMap(score, lastMi);
+  const hairpinMaps = buildHairpinMap(score, lastMi, dynamicMaps);
+  const pendingTies = new Map<string, PlayEvent>();
   let tick = 0;
 
   // Use playback order to follow repeats, D.S., D.C., voltas, etc.
@@ -304,56 +434,7 @@ function buildEvents(score: Score): void {
     const beatTicks = (TICKS_PER_QUARTER * 4) / m0.timeSignature.denominator;
     measureBoundaries.push({ tick, measureIndex: mi, swing: currentSwing, beatTicks });
 
-    for (let pi = 0; pi < score.parts.length; pi++) {
-      const part = score.parts[pi];
-      const m = part.measures[mi];
-      if (!m) continue;
-      const instId = part.instrumentId;
-      const transposition = getInstrument(instId)?.transposition ?? 0;
-      const dynMap = dynamicMaps[pi];
-      const hpMap = hairpinMaps[pi];
-      for (const voice of m.voices) {
-        let offset = 0;
-        const graceBuffer: { midi: number; instrumentId: string; velocity: number }[] = [];
-        for (const evt of voice.events) {
-          if (evt.kind === "grace") {
-            if (!evt.muted) {
-              const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
-              graceBuffer.push({ midi: pitchToMidi(evt.head.pitch) + transposition, instrumentId: instId, velocity: vel });
-            }
-            continue;
-          }
-          const evtTicks = durationToTicks(evt.duration);
-
-          // Resolve velocity and articulations
-          let baseVel = hpMap?.get(evt.id) ?? dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
-          let durMult = 0.9;
-          if ((evt.kind === "note" || evt.kind === "chord") && evt.articulations?.length) {
-            const result = applyArticulations(evt.articulations, baseVel, durMult);
-            baseVel = result.velocity;
-            durMult = result.durationMultiplier;
-          }
-
-          // Play buffered grace notes just before this event
-          if (graceBuffer.length > 0) {
-            const graceDur = Math.min(60, evtTicks / (graceBuffer.length + 1));
-            for (let gi = 0; gi < graceBuffer.length; gi++) {
-              const graceOffset = offset - graceDur * (graceBuffer.length - gi);
-              events.push({ tick: tick + Math.max(0, graceOffset), midi: graceBuffer[gi].midi, durationTicks: graceDur, durationMultiplier: 0.9, velocity: graceBuffer[gi].velocity, instrumentId: graceBuffer[gi].instrumentId, partIndex: pi });
-            }
-            graceBuffer.length = 0;
-          }
-          if (evt.kind === "note" && !evt.muted) {
-            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
-          } else if (evt.kind === "chord" && !evt.muted) {
-            for (const h of evt.heads) {
-              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
-            }
-          }
-          offset += evtTicks;
-        }
-      }
-    }
+    processMeasureVoices(score, mi, tick, dynamicMaps, hairpinMaps, pendingTies);
 
     const beats = m0.timeSignature.numerator;
     for (let b = 0; b < beats; b++) {
@@ -376,6 +457,7 @@ function buildEventsForRange(score: Score, startMeasure: number, endMeasure: num
   const lastMi = findLastContentMeasure(score);
   const dynamicMaps = buildDynamicMap(score, lastMi);
   const hairpinMaps = buildHairpinMap(score, lastMi, dynamicMaps);
+  const pendingTies = new Map<string, PlayEvent>();
   let tick = 0;
   let currentSwing: SwingSettings | undefined;
 
@@ -393,54 +475,7 @@ function buildEventsForRange(score: Score, startMeasure: number, endMeasure: num
     const beatTicks = (TICKS_PER_QUARTER * 4) / m0.timeSignature.denominator;
     measureBoundaries.push({ tick, measureIndex: mi, swing: currentSwing, beatTicks });
 
-    for (let pi = 0; pi < score.parts.length; pi++) {
-      const part = score.parts[pi];
-      const m = part.measures[mi];
-      if (!m) continue;
-      const instId = part.instrumentId;
-      const transposition = getInstrument(instId)?.transposition ?? 0;
-      const dynMap = dynamicMaps[pi];
-      const hpMap = hairpinMaps[pi];
-      for (const voice of m.voices) {
-        let offset = 0;
-        const graceBuffer: { midi: number; instrumentId: string; velocity: number }[] = [];
-        for (const evt of voice.events) {
-          if (evt.kind === "grace") {
-            if (!evt.muted) {
-              const vel = dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
-              graceBuffer.push({ midi: pitchToMidi(evt.head.pitch) + transposition, instrumentId: instId, velocity: vel });
-            }
-            continue;
-          }
-          const evtTicks = durationToTicks(evt.duration);
-
-          let baseVel = hpMap?.get(evt.id) ?? dynMap?.get(evt.id) ?? DEFAULT_VELOCITY;
-          let durMult = 0.9;
-          if ((evt.kind === "note" || evt.kind === "chord") && evt.articulations?.length) {
-            const result = applyArticulations(evt.articulations, baseVel, durMult);
-            baseVel = result.velocity;
-            durMult = result.durationMultiplier;
-          }
-
-          if (graceBuffer.length > 0) {
-            const graceDur = Math.min(60, evtTicks / (graceBuffer.length + 1));
-            for (let gi = 0; gi < graceBuffer.length; gi++) {
-              const graceOffset = offset - graceDur * (graceBuffer.length - gi);
-              events.push({ tick: tick + Math.max(0, graceOffset), midi: graceBuffer[gi].midi, durationTicks: graceDur, durationMultiplier: 0.9, velocity: graceBuffer[gi].velocity, instrumentId: graceBuffer[gi].instrumentId, partIndex: pi });
-            }
-            graceBuffer.length = 0;
-          }
-          if (evt.kind === "note" && !evt.muted) {
-            events.push({ tick: tick + offset, midi: pitchToMidi(evt.head.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
-          } else if (evt.kind === "chord" && !evt.muted) {
-            for (const h of evt.heads) {
-              events.push({ tick: tick + offset, midi: pitchToMidi(h.pitch) + transposition, durationTicks: evtTicks, durationMultiplier: durMult, velocity: baseVel, instrumentId: instId, partIndex: pi });
-            }
-          }
-          offset += evtTicks;
-        }
-      }
-    }
+    processMeasureVoices(score, mi, tick, dynamicMaps, hairpinMaps, pendingTies);
 
     const beats = m0.timeSignature.numerator;
     for (let b = 0; b < beats; b++) {
@@ -798,4 +833,14 @@ export function previewPitches(midis: number[], instrumentId?: string): void {
   for (const midi of midis) {
     customPlayer.play(midi, 0.5, now, instrumentId, 90);
   }
+}
+
+/** Test-only: build playback events and return them for assertions. */
+export function _buildEventsForTest(score: Score): Array<{
+  tick: number; midi: number; durationTicks: number; velocity: number; partIndex: number;
+}> {
+  buildEvents(score);
+  return events.map((e) => ({
+    tick: e.tick, midi: e.midi, durationTicks: e.durationTicks, velocity: e.velocity, partIndex: e.partIndex,
+  }));
 }
