@@ -3,18 +3,8 @@ import { defaultSettings } from "../Settings";
 import { SHORTCUT_ACTIONS } from "../keybindings";
 
 describe("defaultSettings", () => {
-  it("returns expected default tempo", () => {
-    expect(defaultSettings().defaultTempo).toBe(120);
-  });
-
-  it("returns 4/4 time signature", () => {
-    const ts = defaultSettings().defaultTimeSignature;
-    expect(ts.numerator).toBe(4);
-    expect(ts.denominator).toBe(4);
-  });
-
-  it("returns treble clef", () => {
-    expect(defaultSettings().defaultClef).toBe("treble");
+  it("starts with insert mode off by default", () => {
+    expect(defaultSettings().startInInsertMode).toBe(false);
   });
 
 

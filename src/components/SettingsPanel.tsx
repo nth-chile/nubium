@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSettings, updateSettings, subscribeSettings, type AppSettings, type DisplaySettings, SHORTCUT_ACTIONS, formatBinding, eventToBinding, defaultKeyBindings } from "../settings";
-import type { ClefType } from "../model";
 import { useEditorStore } from "../state";
 import { useLayoutStore } from "../state/LayoutState";
 import { getLicenseState, activateLicense, deactivateLicense } from "../licensing";
@@ -194,65 +193,6 @@ export function SettingsPanel({ visible, onClose }: SettingsPanelProps) {
           <section>
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">General</h3>
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Default Tempo</span>
-                <Input
-                  type="number"
-                  min={20}
-                  max={300}
-                  value={settings.defaultTempo}
-                  onChange={(e) => update("defaultTempo", parseInt(e.target.value) || 120)}
-                  className="w-20 h-7"
-                />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Time Signature</span>
-                <div className="flex gap-1 items-center">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={16}
-                    value={settings.defaultTimeSignature.numerator}
-                    onChange={(e) =>
-                      update("defaultTimeSignature", {
-                        ...settings.defaultTimeSignature,
-                        numerator: parseInt(e.target.value) || 4,
-                      })
-                    }
-                    className="w-12 h-7"
-                  />
-                  <span className="text-muted-foreground">/</span>
-                  <select
-                    value={settings.defaultTimeSignature.denominator}
-                    onChange={(e) =>
-                      update("defaultTimeSignature", {
-                        ...settings.defaultTimeSignature,
-                        denominator: parseInt(e.target.value),
-                      })
-                    }
-                    className="h-7 rounded-md border border-input bg-background px-2 text-sm"
-                  >
-                    <option value={2}>2</option>
-                    <option value={4}>4</option>
-                    <option value={8}>8</option>
-                    <option value={16}>16</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Default Clef</span>
-                <select
-                  value={settings.defaultClef}
-                  onChange={(e) => update("defaultClef", e.target.value as ClefType)}
-                  className="h-7 rounded-md border border-input bg-background px-2 text-sm"
-                >
-                  <option value="treble">Treble</option>
-                  <option value="bass">Bass</option>
-                  <option value="alto">Alto</option>
-                  <option value="tenor">Tenor</option>
-                </select>
-              </div>
-
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
@@ -265,7 +205,22 @@ export function SettingsPanel({ visible, onClose }: SettingsPanelProps) {
                   }}
                   className="accent-primary"
                 />
-                Pitch before duration
+                Start in Pitch-before-Duration mode
+              </label>
+
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.startInInsertMode}
+                  onChange={(e) => {
+                    update("startInInsertMode", e.target.checked);
+                    useEditorStore.setState((s) => ({
+                      inputState: { ...s.inputState, insertMode: e.target.checked },
+                    }));
+                  }}
+                  className="accent-primary"
+                />
+                Start in Insert mode
               </label>
 
               <label className="flex items-center gap-2 text-sm cursor-pointer">

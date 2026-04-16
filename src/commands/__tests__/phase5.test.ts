@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { factory } from "../../model";
+import { INSTRUMENTS } from "../../model/instruments";
 import { AddPart } from "../AddPart";
 import { RemovePart } from "../RemovePart";
 import { ReorderParts } from "../ReorderParts";
@@ -78,6 +79,16 @@ describe("AddPart", () => {
     const result = cmd.execute(snap);
 
     expect(result.score.parts[1].measures[0].clef.type).toBe("bass");
+  });
+
+  it.each(INSTRUMENTS)("opens $name with $clef clef on every measure", (inst) => {
+    const snap = makeSnapshot();
+    const result = new AddPart(inst.id).execute(snap);
+    const added = result.score.parts[1];
+    expect(added.instrumentId).toBe(inst.id);
+    for (const m of added.measures) {
+      expect(m.clef.type).toBe(inst.clef);
+    }
   });
 });
 

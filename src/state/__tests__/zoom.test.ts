@@ -33,9 +33,9 @@ describe("Score-only zoom (#228)", () => {
   });
 
   it("preserves other settings when changing zoom", () => {
-    updateSettings({ defaultTempo: 140 });
+    updateSettings({ metronomeEnabled: true });
     updateSettings({ scoreZoom: 2 });
-    expect(getSettings().defaultTempo).toBe(140);
+    expect(getSettings().metronomeEnabled).toBe(true);
     expect(getSettings().scoreZoom).toBe(2);
   });
 

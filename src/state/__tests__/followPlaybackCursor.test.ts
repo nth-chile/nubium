@@ -36,12 +36,12 @@ describe("followPlaybackCursor setting (#215)", () => {
   it("survives a round-trip through updateSettings without affecting other fields", () => {
     resetSettings();
     const before = getSettings();
-    const originalTempo = before.defaultTempo;
+    const originalMetronome = before.metronomeEnabled;
 
     updateSettings({ followPlaybackCursor: false });
     const after = getSettings();
 
     expect(after.followPlaybackCursor).toBe(false);
-    expect(after.defaultTempo).toBe(originalTempo);
+    expect(after.metronomeEnabled).toBe(originalMetronome);
   });
 });

@@ -1,4 +1,3 @@
-import type { ClefType } from "../model/time";
 import { type KeyBinding, defaultKeyBindings, migrateKeyBindings } from "./keybindings";
 
 export interface DisplaySettings {
@@ -13,10 +12,6 @@ export interface DisplaySettings {
 }
 
 export interface AppSettings {
-  defaultTempo: number;
-  defaultTimeSignature: { numerator: number; denominator: number };
-  defaultClef: ClefType;
-
   metronomeEnabled: boolean;
   countInEnabled: boolean;
   historyMaxSnapshots: number;
@@ -24,6 +19,7 @@ export interface AppSettings {
   viewMode: string;
   display: DisplaySettings;
   pitchBeforeDuration: boolean;
+  startInInsertMode: boolean;
   followPlaybackCursor: boolean;
   scoreZoom: number;
   telemetryOptOut: boolean;
@@ -50,10 +46,6 @@ function defaultDisplaySettings(): DisplaySettings {
 
 function defaultSettings(): AppSettings {
   return {
-    defaultTempo: 120,
-    defaultTimeSignature: { numerator: 4, denominator: 4 },
-    defaultClef: "treble",
-
     metronomeEnabled: false,
     countInEnabled: false,
     historyMaxSnapshots: 50,
@@ -61,6 +53,7 @@ function defaultSettings(): AppSettings {
     viewMode: "full-score",
     display: defaultDisplaySettings(),
     pitchBeforeDuration: false,
+    startInInsertMode: false,
     followPlaybackCursor: true,
     scoreZoom: 1,
     telemetryOptOut: false,

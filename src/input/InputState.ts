@@ -57,7 +57,7 @@ export function defaultInputState(): InputState {
     },
     octave: 4,
     noteEntry: false,
-    insertMode: false,
+    insertMode: getSettings().startInInsertMode,
     graceNoteMode: false,
     textInputMode: null,
     textInputBuffer: "",
