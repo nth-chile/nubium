@@ -614,13 +614,11 @@ export function renderScore(
         const firstMeasure = filteredScore.parts[0]?.measures[mi];
         if (firstMeasure && !firstMeasure.isPickup) {
           // Compute display measure number: count non-pickup measures up to and including mi.
-          // Section breaks reset numbering to 1.
+          // Numbering is continuous (Dorico convention — section breaks don't reset numbers).
           let displayNum = 0;
           for (let j = 0; j <= mi; j++) {
             const mj = filteredScore.parts[0]?.measures[j];
             if (mj && !mj.isPickup) displayNum++;
-            // A section break on measure j resets numbering for the NEXT measure
-            if (j < mi && mj?.break === "section") displayNum = 0;
           }
           // Skip drawing "1" on the very first measure (Dorico convention)
           if (displayNum > 1) {
