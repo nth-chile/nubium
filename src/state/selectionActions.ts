@@ -328,14 +328,20 @@ export function createSelectionActions(get: GetState, set: SetState, history: Co
         const startEventIdx = ns ? ns.startEvent : ms ? 0 : cursor.eventIndex;
         const destStave = cursor.staveIndex ?? 0;
 
-        // Clear the selected range before inserting
+        // Clear the selected range before inserting.
+        // Only clear the source voice if it's on the same staff as the destination —
+        // otherwise we'd wipe treble notes when pasting onto bass.
         if (ns) {
-          for (let m = ns.endMeasure; m >= ns.startMeasure; m--) {
-            const vc = part.measures[m]?.voices[ns.voiceIndex];
-            if (!vc) continue;
-            const sIdx = m === ns.startMeasure ? ns.startEvent : 0;
-            const eIdx = m === ns.endMeasure ? ns.endEvent : vc.events.length - 1;
-            vc.events.splice(sIdx, eIdx - sIdx + 1);
+          const nsVoice = part.measures[ns.startMeasure]?.voices[ns.voiceIndex];
+          const nsStaff = nsVoice?.staff ?? 0;
+          if (nsStaff === destStave) {
+            for (let m = ns.endMeasure; m >= ns.startMeasure; m--) {
+              const vc = part.measures[m]?.voices[ns.voiceIndex];
+              if (!vc) continue;
+              const sIdx = m === ns.startMeasure ? ns.startEvent : 0;
+              const eIdx = m === ns.endMeasure ? ns.endEvent : vc.events.length - 1;
+              vc.events.splice(sIdx, eIdx - sIdx + 1);
+            }
           }
         } else if (ms) {
           for (let m = ms.measureEnd; m >= ms.measureStart; m--) {
@@ -478,13 +484,35 @@ export function createSelectionActions(get: GetState, set: SetState, history: Co
           otherPart.measures.push(otherMeasure);
         }
       }
+      const destStave = cursor.staveIndex ?? 0;
       for (let i = 0; i < measuresToInsert.length; i++) {
         const targetIdx = startIndex + i;
-        part.measures[targetIdx].voices = measuresToInsert[i].voices;
+        const targetMeasure = part.measures[targetIdx];
+        if (targetStaves >= 2) {
+          // Grand staff: only paste voices from the source staff, remap to destination staff
+          const keptVoices = targetMeasure.voices.filter((v) => (v.staff ?? 0) !== destStave);
+          // Determine which staff the clipboard voices came from — pick the most common staff tag
+          const sourceStaffCounts = new Map<number, number>();
+          for (const v of measuresToInsert[i].voices) {
+            const s = v.staff ?? 0;
+            sourceStaffCounts.set(s, (sourceStaffCounts.get(s) ?? 0) + 1);
+          }
+          // Default: use staff 0 (treble) voices from source, or whichever has the most voices
+          let sourceStaff = 0;
+          if (sourceStaffCounts.size > 0) {
+            sourceStaff = [...sourceStaffCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+          }
+          const pastedVoices = measuresToInsert[i].voices
+            .filter((v) => (v.staff ?? 0) === sourceStaff)
+            .map((v) => ({ ...v, staff: destStave }));
+          targetMeasure.voices = [...keptVoices, ...pastedVoices];
+        } else {
+          targetMeasure.voices = measuresToInsert[i].voices;
+        }
         const pastedAnnotations = measuresToInsert[i].annotations;
         if (pastedAnnotations.length > 0) {
-          const existing = part.measures[targetIdx].annotations;
-          part.measures[targetIdx].annotations = [...existing, ...pastedAnnotations];
+          const existing = targetMeasure.annotations;
+          targetMeasure.annotations = [...existing, ...pastedAnnotations];
         }
       }
 
