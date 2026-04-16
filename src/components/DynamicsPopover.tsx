@@ -289,7 +289,15 @@ function GoToMeasureContent() {
     const store = useEditorStore.getState();
     const part = store.score.parts[store.inputState.cursor.partIndex];
     if (!part) return;
-    const measureIndex = Math.min(num - 1, part.measures.length - 1);
+    // Match displayed measure numbers: count non-pickup measures, reset at section breaks.
+    let displayNum = 0;
+    let measureIndex = part.measures.length - 1; // fallback to last
+    for (let j = 0; j < part.measures.length; j++) {
+      const mj = part.measures[j];
+      if (!mj.isPickup) displayNum++;
+      if (displayNum === num) { measureIndex = j; break; }
+      if (mj.break === "section") displayNum = 0;
+    }
     store.setCursorDirect({
       ...store.inputState.cursor,
       measureIndex,

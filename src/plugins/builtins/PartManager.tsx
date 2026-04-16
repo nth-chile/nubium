@@ -7,6 +7,7 @@ import { getSettings, subscribeSettings } from "../../settings";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { GripVertical, Trash2 } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 /** Quarter note icon — filled oval notehead + stem */
 function QuarterNoteIcon({ className }: { className?: string }) {
@@ -135,17 +136,16 @@ function PartsPanel() {
               <div className="p-0.5 flex-shrink-0 cursor-grab">
                 <GripVertical className="h-3 w-3 text-muted-foreground" />
               </div>
-              <select
-                value={part.instrumentId}
-                onChange={(e) => { e.stopPropagation(); changeInstrument(index, e.target.value); }}
-                onClick={(e) => e.stopPropagation()}
-                className="h-7 text-[11px] rounded border border-input bg-background px-1.5 min-w-0"
-                title="Change instrument"
-              >
-                {INSTRUMENTS.map((inst) => (
-                  <option key={inst.id} value={inst.id}>{inst.name}</option>
-                ))}
-              </select>
+              <Select value={part.instrumentId} onValueChange={(v) => changeInstrument(index, v)}>
+                <SelectTrigger className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INSTRUMENTS.map((inst) => (
+                    <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="flex-1" />
               <div className="flex flex-col gap-1 items-end">
                 {(() => {
@@ -216,15 +216,16 @@ function PartsPanel() {
       </div>
 
       <div className="flex gap-1 p-2 border-t">
-        <select
-          value={selectedInstrument}
-          onChange={(e) => setSelectedInstrument(e.target.value)}
-          className="flex-1 h-7 text-[11px] rounded border border-input bg-background px-1.5"
-        >
-          {INSTRUMENTS.map((inst) => (
-            <option key={inst.id} value={inst.id}>{inst.name}</option>
-          ))}
-        </select>
+        <Select value={selectedInstrument} onValueChange={setSelectedInstrument}>
+          <SelectTrigger className="flex-1">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {INSTRUMENTS.map((inst) => (
+              <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button variant="outline" className="h-7 text-[11px] px-2 rounded" onClick={() => addPart(selectedInstrument)}>
           Add Part
         </Button>
