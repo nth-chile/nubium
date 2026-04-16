@@ -606,6 +606,36 @@ export function renderScore(
           renderSystemBarline(ctx, barlineX, topY, bottomY);
         }
       }
+
+      // Draw measure number at the start of each system
+      // Convention (Dorico): skip measure 1, skip pickup measures
+      {
+        const mi = system.startMeasure;
+        const firstMeasure = filteredScore.parts[0]?.measures[mi];
+        if (firstMeasure && !firstMeasure.isPickup) {
+          // Compute display measure number: count non-pickup measures up to and including mi
+          let displayNum = 0;
+          for (let j = 0; j <= mi; j++) {
+            const mj = filteredScore.parts[0]?.measures[j];
+            if (mj && !mj.isPickup) displayNum++;
+          }
+          // Skip drawing "1" on the very first measure (Dorico convention)
+          if (displayNum > 1) {
+            const topStave = system.staves.find(
+              (s) => s.partIndex === 0 && s.staveIndex === 0
+            );
+            if (topStave) {
+              rawCtx.save();
+              rawCtx.font = "10px sans-serif";
+              rawCtx.fillStyle = "#888";
+              rawCtx.textAlign = "left";
+              rawCtx.fillText(String(displayNum), topStave.x + 2, topStave.y + 30);
+              rawCtx.textAlign = "start";
+              rawCtx.restore();
+            }
+          }
+        }
+      }
     }
   }
 
