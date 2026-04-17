@@ -32,7 +32,10 @@ describe("ToggleMute", () => {
   });
 
   it("works on chords", () => {
-    const chord = factory.chord(["C4", "E4", "G4"], factory.dur("quarter"));
+    const chord = factory.chord(
+      [factory.noteHead("C", 4), factory.noteHead("E", 4), factory.noteHead("G", 4)],
+      factory.dur("quarter"),
+    );
     const snap = snapWith([chord as never]);
     const result = new ToggleMute().execute(snap);
     const evt = result.score.parts[0].measures[0].voices[0].events[0];

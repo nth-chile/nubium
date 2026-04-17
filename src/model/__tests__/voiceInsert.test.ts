@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { splitEventAtTick, shiftVoiceForward } from "../voiceInsert";
 import { factory } from "../../model";
 import { durationToTicks, voiceTicksUsed, measureCapacity } from "../duration";
-import type { NoteEvent } from "../note";
 
 describe("splitEventAtTick", () => {
   it("returns event in before when ticksBefore >= total", () => {

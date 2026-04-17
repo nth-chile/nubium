@@ -138,7 +138,7 @@ describe("ClearSelectedMeasures", () => {
   it("preserves measure annotations after clearing", () => {
     const m = factory.measure(
       [factory.voice([factory.note("C", 4, factory.dur("whole"))])],
-      { annotations: [{ type: "chord", beat: 0, symbol: "Cmaj7" }] },
+      { annotations: [{ kind: "rehearsal-mark", text: "A" }] },
     );
     const snap = makeSnapshot({ measures: [m] });
 
@@ -149,6 +149,6 @@ describe("ClearSelectedMeasures", () => {
     // Events cleared but annotation preserved
     expect(result.score.parts[0].measures[0].voices[0].events[0].kind).toBe("rest");
     expect(result.score.parts[0].measures[0].annotations).toHaveLength(1);
-    expect(result.score.parts[0].measures[0].annotations[0].type).toBe("chord");
+    expect(result.score.parts[0].measures[0].annotations[0].kind).toBe("rehearsal-mark");
   });
 });

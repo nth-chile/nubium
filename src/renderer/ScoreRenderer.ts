@@ -17,7 +17,7 @@ import { getInstrument } from "../model/instruments";
 import {
   PAGE_BACKGROUND, PAGE_BOUNDARY, PART_LABEL, MEASURE_NUMBER,
   BREAK_MARKER, VOICE_COLORS as VOICE_COLORS_CONST, CURSOR_BLUE,
-  PLAYBACK_CURSOR, SELECTION_FILL, PLAYBACK_ACTIVE,
+  PLAYBACK_CURSOR, SELECTION_FILL,
 } from "./colors";
 
 /** Detect whether time/key signature changed from the previous measure. */

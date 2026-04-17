@@ -3,8 +3,6 @@ import {
   pitchToTab,
   STANDARD_TUNING,
   DROP_D_TUNING,
-  OPEN_G_TUNING,
-  DADGAD_TUNING,
   ALL_TUNINGS,
 } from "../guitar";
 import type { Pitch } from "../pitch";

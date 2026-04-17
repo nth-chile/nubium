@@ -59,7 +59,7 @@ describe("overfill/underfill indicator", () => {
   it("hides indicator for an empty measure (zero ticks)", () => {
     const m = {
       timeSignature: { numerator: 4, denominator: 4 },
-      voices: [{ events: [] }],
+      voices: [{ events: [] as NoteEvent[] }],
     } as Parameters<typeof shouldShowIndicator>[0];
     expect(shouldShowIndicator(m)).toEqual({ show: false });
   });

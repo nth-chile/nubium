@@ -30,7 +30,7 @@ function chordAnnotation(text: string, beat = 0): Annotation {
 }
 
 function rehearsalAnnotation(label: string): Annotation {
-  return { kind: "rehearsal-mark", label } as Annotation;
+  return { kind: "rehearsal-mark", text: label } as Annotation;
 }
 
 function dynamicAnnotation(level: string, noteEventId: string): Annotation {

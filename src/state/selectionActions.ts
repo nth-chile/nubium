@@ -490,7 +490,7 @@ export function createSelectionActions(get: GetState, set: SetState, history: Co
         const targetMeasure = part.measures[targetIdx];
         if (targetStaves >= 2) {
           // Grand staff: only paste voices from the source staff, remap to destination staff
-          const keptVoices = targetMeasure.voices.filter((v) => (v.staff ?? 0) !== destStave);
+          const keptVoices = targetMeasure.voices.filter((v: import("../model").Voice) => (v.staff ?? 0) !== destStave);
           // Determine which staff the clipboard voices came from — pick the most common staff tag
           const sourceStaffCounts = new Map<number, number>();
           for (const v of measuresToInsert[i].voices) {

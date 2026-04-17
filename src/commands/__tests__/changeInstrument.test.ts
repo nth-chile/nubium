@@ -134,7 +134,7 @@ describe("ChangeInstrument", () => {
   it("clears guitar-specific fields when switching away from guitar", () => {
     const snap = makeSnapshot({ instrumentId: "guitar" });
     const part = snap.score.parts[0];
-    part.tuning = [64, 59, 55, 50, 45, 40];
+    part.tuning = { name: "Standard", strings: [40, 45, 50, 55, 59, 64] };
     part.capo = 2;
 
     const cmd = new ChangeInstrument(0, "violin");
