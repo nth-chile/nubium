@@ -2,7 +2,7 @@
 
 Anonymous launch telemetry for Nubium. Cloudflare Worker backed by D1.
 
-- Dashboard: https://nubium-telemetry.jaredsalzano.workers.dev/
+- Dashboard: https://stats.nubium.rocks
 - D1 database: `nubium-telemetry` (ID `ab4a35b8-92c6-459d-a7a4-a3d912d6b734`)
 
 ## Endpoints

@@ -1,6 +1,11 @@
 name = "nubium-telemetry"
 main = "worker.ts"
 compatibility_date = "2024-01-01"
+workers_dev = true
+
+routes = [
+  { pattern = "stats.nubium.rocks", custom_domain = true },
+]
 
 [[d1_databases]]
 binding = "DB"

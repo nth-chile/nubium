@@ -1,4 +1,4 @@
-const ENDPOINT = "https://nubium-telemetry.jaredsalzano.workers.dev/ping";
+const ENDPOINT = "https://stats.nubium.rocks/ping";
 
 export function sendLaunchPing() {
   if (import.meta.env.DEV) return;

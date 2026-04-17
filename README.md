@@ -32,6 +32,10 @@ VITE_CLEAN_SETTINGS=1 npm run tauri dev
 - `/test-matrix` — Comprehensive scan of all features vs test coverage. Writes missing unit tests and creates GitHub issues for manual-only items.
 - `/convo-review` — End-of-conversation review. Saves important context to memory, surfaces loose ends that got ignored, suggests new skills for repeated workflows, and keeps the README up to date.
 
+## Telemetry
+
+Anonymous launch pings (version, OS, platform — no IP, no user ID). Dashboard: [stats.nubium.rocks](https://stats.nubium.rocks). Worker source in [`workers/telemetry/`](workers/telemetry/README.md).
+
 ## License
 
 AGPL-3.0 — see [LICENSE](LICENSE) for details.
