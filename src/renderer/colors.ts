@@ -16,8 +16,8 @@
 /** Brand blue (--color-primary). Used for playback active notes, break markers. */
 export const PRIMARY = "#3b82f6";
 
-/** Destructive red (--color-destructive). Used for out-of-range notes, overfill. */
-export const DESTRUCTIVE = "#ef4444";
+/** Warm red — desaturated to suit parchment canvas. */
+export const DESTRUCTIVE = "#cc4b4b";
 
 // -- Notation ---------------------------------------------------------------
 
@@ -54,7 +54,10 @@ export const PLAYBACK_CURSOR = "#888";
 
 // -- Voices (1-4) -----------------------------------------------------------
 
-export const VOICE_COLORS = [PRIMARY, "#22c55e", "#f97316", DESTRUCTIVE] as const;
+/** Voice 3 warm amber — shared with underfill indicator. */
+export const AMBER = "#e09000";
+
+export const VOICE_COLORS = [PRIMARY, "#2baa35", AMBER, DESTRUCTIVE] as const;
 
 // -- Selection --------------------------------------------------------------
 
@@ -102,5 +105,5 @@ export const BREAK_MARKER = PRIMARY;
 /** Overfilled measure. */
 export const OVERFILL = DESTRUCTIVE;
 
-/** Underfilled measure. */
-export const UNDERFILL = "#f59e0b";
+/** Underfilled measure — same as voice 3 amber. */
+export const UNDERFILL = AMBER;
