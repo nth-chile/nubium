@@ -24,7 +24,7 @@ import { SetAccidental as SetAccidentalCmd } from "../commands/SetAccidental";
 import { NudgePitch } from "../commands/NudgePitch";
 import type { NoteEvent } from "../model/note";
 import { pitchToMidi, midiToPitch, stepUp, stepDown, keyAccidental } from "../model/pitch";
-import { updateSettings } from "../settings";
+import { getSettings, updateSettings } from "../settings";
 import { smartOctave, cursorOnExistingEvent, resolveChordHead, previewEventAt } from "./editorHelpers";
 import type { StoreApi } from "zustand";
 
@@ -518,7 +518,7 @@ export function createNoteEntryActions(get: GetState, set: SetState, history: Co
           inputState: {
             ...s.inputState,
             noteEntry: entering,
-            insertMode: entering ? s.inputState.insertMode : false,
+            insertMode: entering ? getSettings().startInInsertMode : false,
             graceNoteMode: entering ? s.inputState.graceNoteMode : false,
             pendingPitch: entering ? s.inputState.pendingPitch : null,
           },

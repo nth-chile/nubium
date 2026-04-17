@@ -22,7 +22,6 @@ export interface AppSettings {
   startInInsertMode: boolean;
   followPlaybackCursor: boolean;
   scoreZoom: number;
-  telemetryOptOut: boolean;
 }
 
 const STORAGE_KEY = "nubium-settings";
@@ -56,7 +55,6 @@ function defaultSettings(): AppSettings {
     startInInsertMode: false,
     followPlaybackCursor: true,
     scoreZoom: 1,
-    telemetryOptOut: false,
   };
 }
 

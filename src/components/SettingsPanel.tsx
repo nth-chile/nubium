@@ -205,7 +205,7 @@ export function SettingsPanel({ visible, onClose }: SettingsPanelProps) {
                   }}
                   className="accent-primary"
                 />
-                Start in Pitch-before-Duration mode
+                Start in pitch-before-duration mode
               </label>
 
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -220,7 +220,7 @@ export function SettingsPanel({ visible, onClose }: SettingsPanelProps) {
                   }}
                   className="accent-primary"
                 />
-                Start in Insert mode
+                Note entry: default to insert mode
               </label>
 
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -230,7 +230,7 @@ export function SettingsPanel({ visible, onClose }: SettingsPanelProps) {
                   onChange={(e) => update("followPlaybackCursor", e.target.checked)}
                   className="accent-primary"
                 />
-                Follow playback cursor
+                Auto-scroll score during playback
               </label>
             </div>
           </section>
@@ -277,21 +277,6 @@ export function SettingsPanel({ visible, onClose }: SettingsPanelProps) {
                   className="w-20 h-7"
                 />
               </div>
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Privacy</h3>
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.telemetryOptOut}
-                  onChange={(e) => update("telemetryOptOut", e.target.checked)}
-                  className="accent-primary"
-                />
-                Disable anonymous usage statistics
-              </label>
             </div>
           </section>
 
