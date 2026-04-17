@@ -40,6 +40,10 @@ export interface Measure {
   timeSignature: TimeSignature;
   keySignature: KeySignature;
   barlineEnd: BarlineType;
+  /** Number of times the repeat section (ending at this barline) should play,
+   *  including the first pass. Only applies when barlineEnd is "repeat-end" or
+   *  "repeat-both". Omitted or 2 means one repeat (standard behavior). */
+  repeatTimes?: number;
   navigation?: NavigationMarks;
   annotations: Annotation[];
   voices: Voice[];

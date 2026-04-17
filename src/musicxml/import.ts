@@ -215,12 +215,13 @@ function parseLyric(noteEl: Element, eventId: NoteEventId): Lyric[] {
   return lyrics;
 }
 
-function parseBarline(measureEl: Element): { barlineEnd: BarlineType; volta?: Volta } {
+function parseBarline(measureEl: Element): { barlineEnd: BarlineType; volta?: Volta; repeatTimes?: number } {
   const barlineEls = getDirectChildren(measureEl, "barline");
   let hasRepeatStart = false;
   let hasRepeatEnd = false;
   let barlineEnd: BarlineType = "single";
   let volta: Volta | undefined = undefined;
+  let repeatTimes: number | undefined = undefined;
 
   for (const barlineEl of barlineEls) {
     const location = barlineEl.getAttribute("location") ?? "right";
@@ -230,7 +231,14 @@ function parseBarline(measureEl: Element): { barlineEnd: BarlineType; volta?: Vo
     if (repeatEl) {
       const direction = repeatEl.getAttribute("direction");
       if (direction === "forward") hasRepeatStart = true;
-      if (direction === "backward") hasRepeatEnd = true;
+      if (direction === "backward") {
+        hasRepeatEnd = true;
+        const timesAttr = repeatEl.getAttribute("times");
+        if (timesAttr) {
+          const n = parseInt(timesAttr, 10);
+          if (!isNaN(n) && n > 2) repeatTimes = n;
+        }
+      }
     } else if (location === "right") {
       if (barStyle === "light-light") barlineEnd = "double";
       else if (barStyle === "light-heavy") barlineEnd = "final";
@@ -254,7 +262,7 @@ function parseBarline(measureEl: Element): { barlineEnd: BarlineType; volta?: Vo
   else if (hasRepeatEnd) barlineEnd = "repeat-end";
   else if (hasRepeatStart) barlineEnd = "repeat-start";
 
-  return { barlineEnd, volta };
+  return { barlineEnd, volta, repeatTimes };
 }
 
 interface HairpinState {
@@ -896,6 +904,7 @@ function parseMeasure(
     timeSignature: timeSig,
     keySignature: measureKeySig,
     barlineEnd,
+    repeatTimes: barlineResult.repeatTimes,
     navigation,
     annotations,
     voices,

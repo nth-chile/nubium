@@ -439,6 +439,18 @@ export function drawStaveAnnotations(
     rawCtx.fillText(ann.text, rehX + (boxSize - pad * 2 - tw) / 2, aboveY + boxSize / 2 + 7);
     rawCtx.restore();
   }
+
+  // Repeat-count label ("×N") above the right barline when times > 2
+  const hasRepeatEnd = m.barlineEnd === "repeat-end" || m.barlineEnd === "repeat-both";
+  if (hasRepeatEnd && m.repeatTimes && m.repeatTimes > 2) {
+    rawCtx.save();
+    rawCtx.font = "italic bold 11px serif";
+    rawCtx.fillStyle = INK;
+    const label = `\u00D7${m.repeatTimes}`;
+    const tw = rawCtx.measureText(label).width;
+    rawCtx.fillText(label, x + width - tw - 6, y - 4);
+    rawCtx.restore();
+  }
 }
 
 export function applyBarline(stave: Stave, barlineType: BarlineType): void {

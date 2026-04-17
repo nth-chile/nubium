@@ -50,6 +50,20 @@ describe("Navigation mark serialization", () => {
     expect(restored.parts[0].measures[3].navigation?.dcText).toBe("D.C. al Fine");
   });
 
+  it("round-trips repeatTimes count", () => {
+    const m1 = factory.measure([factory.voice([])]);
+    m1.barlineEnd = "repeat-end";
+    m1.repeatTimes = 4;
+
+    const m2 = factory.measure([factory.voice([])]);
+
+    const score = factory.score("Repeat Count Test", "", [factory.part("P1", "P1", [m1, m2])]);
+    const restored = deserialize(serialize(score));
+
+    expect(restored.parts[0].measures[0].repeatTimes).toBe(4);
+    expect(restored.parts[0].measures[1].repeatTimes).toBeUndefined();
+  });
+
   it("round-trips slash notes", () => {
     const m = factory.measure([
       factory.voice([

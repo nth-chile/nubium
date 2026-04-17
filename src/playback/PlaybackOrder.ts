@@ -93,8 +93,9 @@ export function computePlaybackOrder(
       // Check if volta brackets follow — defer repeat logic to volta handling
       const nextHasVolta = i + 1 < measures.length && measures[i + 1].navigation?.volta;
       if (!nextHasVolta) {
-        if (repeatPass === 1) {
-          repeatPass = 2;
+        const totalPasses = Math.max(2, m.repeatTimes ?? 2);
+        if (repeatPass < totalPasses) {
+          repeatPass++;
           i = repeatStartIdx;
           continue;
         } else {

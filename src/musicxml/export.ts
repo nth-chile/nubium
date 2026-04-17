@@ -728,10 +728,12 @@ function exportMeasure(
         xml += `        <bar-style>heavy-light</bar-style>\n`;
         xml += `        <repeat direction="forward"/>\n`;
         break;
-      case "repeat-end":
+      case "repeat-end": {
         xml += `        <bar-style>light-heavy</bar-style>\n`;
-        xml += `        <repeat direction="backward"/>\n`;
+        const timesAttr = measure.repeatTimes && measure.repeatTimes > 2 ? ` times="${measure.repeatTimes}"` : "";
+        xml += `        <repeat direction="backward"${timesAttr}/>\n`;
         break;
+      }
     }
     if (hasVolta) {
       const volta = measure.navigation!.volta!;

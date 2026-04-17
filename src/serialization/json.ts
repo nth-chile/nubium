@@ -151,6 +151,7 @@ function measureToJson(m: Measure, index: number): Record<string, unknown> {
 
   if (m.isPickup) obj.pickup = true;
   if (m.barlineEnd !== "single") obj.barline = m.barlineEnd;
+  if (m.repeatTimes !== undefined) obj.repeatTimes = m.repeatTimes;
   if (m.break) obj.break = m.break;
 
   if (m.annotations.length > 0) {
@@ -439,6 +440,7 @@ export function parseMeasure(m: Record<string, unknown>): Measure {
     timeSignature: { numerator: num || 4, denominator: den || 4 },
     keySignature: { fifths: (m.key as number) ?? 0 },
     barlineEnd: ((m.barline as string) || "single") as BarlineType,
+    repeatTimes: typeof m.repeatTimes === "number" ? (m.repeatTimes as number) : undefined,
     annotations,
     navigation: (m.navigation as NavigationMarks) || undefined,
     voices,

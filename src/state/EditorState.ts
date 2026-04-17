@@ -28,6 +28,7 @@ import { ChangeInstrument } from "../commands/ChangeInstrument";
 import { RemovePart } from "../commands/RemovePart";
 import { ReorderParts } from "../commands/ReorderParts";
 import { SetRepeatBarline } from "../commands/SetRepeatBarline";
+import { SetRepeatCount } from "../commands/SetRepeatCount";
 import { SetMeasureBreak } from "../commands/SetMeasureBreak";
 import type { MeasureBreak } from "../model";
 import { SetVolta } from "../commands/SetVolta";
@@ -198,6 +199,7 @@ interface EditorStore {
 
   // Phase 10: Navigation marks
   setRepeatBarline(barlineType: BarlineType): void;
+  setRepeatCount(times: number | undefined): void;
   setMeasureBreak(breakType: MeasureBreak | null): void;
   setVolta(volta: Volta | null): void;
   setNavigationMark(markType: NavigationMarkType, value?: string | boolean): void;
@@ -664,6 +666,13 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     setRepeatBarline(barlineType: BarlineType) {
       const state = get();
       const cmd = new SetRepeatBarline(barlineType);
+      const result = history.execute(cmd, { score: state.score, inputState: state.inputState });
+      set({ score: result.score, inputState: result.inputState });
+    },
+
+    setRepeatCount(times: number | undefined) {
+      const state = get();
+      const cmd = new SetRepeatCount(times);
       const result = history.execute(cmd, { score: state.score, inputState: state.inputState });
       set({ score: result.score, inputState: result.inputState });
     },

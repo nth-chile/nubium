@@ -1507,6 +1507,31 @@ describe("MusicXML Round-trip", () => {
     expect(imported.parts[1].measures[0].voices[0].events).toHaveLength(3);
   });
 
+  it("should round-trip repeat count via times attribute", () => {
+    const m1 = factory.measure([factory.voice([factory.note("C", 4, factory.dur("whole"))])]);
+    const m2 = factory.measure([factory.voice([factory.note("D", 4, factory.dur("whole"))])]);
+    m2.barlineEnd = "repeat-end";
+    m2.repeatTimes = 4;
+    const s = factory.score("Test", "", [factory.part("Piano", "Pno", [m1, m2])]);
+
+    const xml = exportToMusicXML(s);
+    expect(xml).toContain('<repeat direction="backward" times="4"/>');
+
+    const reimported = importFromMusicXML(xml);
+    expect(reimported.parts[0].measures[1].barlineEnd).toBe("repeat-end");
+    expect(reimported.parts[0].measures[1].repeatTimes).toBe(4);
+  });
+
+  it("omits times attribute when repeatTimes is default", () => {
+    const m1 = factory.measure([factory.voice([factory.note("C", 4, factory.dur("whole"))])]);
+    m1.barlineEnd = "repeat-end";
+    const s = factory.score("Test", "", [factory.part("Piano", "Pno", [m1])]);
+
+    const xml = exportToMusicXML(s);
+    expect(xml).toContain('<repeat direction="backward"/>');
+    expect(xml).not.toContain('times="');
+  });
+
   it("should round-trip volta brackets", () => {
     const m1 = factory.measure([factory.voice([factory.note("C", 4, factory.dur("whole"))])]);
     m1.navigation = { volta: { endings: [1], label: "1." } };

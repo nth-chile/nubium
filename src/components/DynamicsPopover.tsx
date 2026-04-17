@@ -243,10 +243,23 @@ function RehearsalContent() {
 
 function BarlineContent() {
   const setRepeatBarline = useEditorStore((s) => s.setRepeatBarline);
+  const setRepeatCount = useEditorStore((s) => s.setRepeatCount);
   const setPopover = useEditorStore((s) => s.setPopover);
+  const score = useEditorStore((s) => s.score);
+  const cursor = useEditorStore((s) => s.inputState.cursor);
+  const measure = score.parts[cursor.partIndex]?.measures[cursor.measureIndex];
+  const isRepeatEnd = measure?.barlineEnd === "repeat-end" || measure?.barlineEnd === "repeat-both";
+  const currentTimes = measure?.repeatTimes ?? 2;
+  const [timesValue, setTimesValue] = useState(String(currentTimes));
+  const timesInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setTimesValue(String(currentTimes));
+  }, [currentTimes]);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
+      if (document.activeElement === timesInputRef.current) return;
       const n = parseInt(e.key);
       if (n >= 1 && n <= BARLINES.length) {
         e.preventDefault();
@@ -259,19 +272,47 @@ function BarlineContent() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [setRepeatBarline, setPopover]);
 
+  const submitTimes = () => {
+    const n = parseInt(timesValue, 10);
+    if (!isNaN(n) && n >= 2) setRepeatCount(n);
+  };
+
   return (
-    <div className="flex gap-0.5">
-      {BARLINES.map((b, i) => (
-        <button
-          key={b.type}
-          onClick={() => { setRepeatBarline(b.type); setPopover(null); }}
-          className="px-2 py-1 text-sm hover:bg-accent rounded relative"
-          title={`${b.label} (${i + 1})`}
-        >
-          {b.label}
-          <span className="absolute -top-2.5 right-0 text-[8px] text-muted-foreground/40 pointer-events-none">{i + 1}</span>
-        </button>
-      ))}
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-0.5">
+        {BARLINES.map((b, i) => (
+          <button
+            key={b.type}
+            onClick={() => { setRepeatBarline(b.type); setPopover(null); }}
+            className="px-2 py-1 text-sm hover:bg-accent rounded relative"
+            title={`${b.label} (${i + 1})`}
+          >
+            {b.label}
+            <span className="absolute -top-2.5 right-0 text-[8px] text-muted-foreground/40 pointer-events-none">{i + 1}</span>
+          </button>
+        ))}
+      </div>
+      {isRepeatEnd && (
+        <div>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+            Play count
+          </div>
+          <div className="flex items-center gap-1">
+            <input
+              ref={timesInputRef}
+              type="text"
+              inputMode="numeric"
+              value={timesValue}
+              onChange={(e) => setTimesValue(e.target.value.replace(/[^0-9]/g, ""))}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitTimes(); } }}
+              className="w-14 px-2 py-1 text-sm bg-background border rounded outline-none"
+              placeholder="2"
+            />
+            <button onClick={submitTimes} className="px-2 py-1 text-sm hover:bg-accent rounded">Set</button>
+            <span className="text-[10px] text-muted-foreground">times (min 2)</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

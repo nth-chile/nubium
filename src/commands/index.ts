@@ -19,6 +19,7 @@ export { AddPart } from "./AddPart";
 export { RemovePart } from "./RemovePart";
 export { ReorderParts } from "./ReorderParts";
 export { SetRepeatBarline } from "./SetRepeatBarline";
+export { SetRepeatCount } from "./SetRepeatCount";
 export { SetVolta } from "./SetVolta";
 export { SetNavigationMark } from "./SetNavigationMark";
 export type { NavigationMarkType } from "./SetNavigationMark";

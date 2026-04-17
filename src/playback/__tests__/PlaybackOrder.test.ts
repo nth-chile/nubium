@@ -87,6 +87,36 @@ describe("computePlaybackOrder", () => {
     expect(order).toEqual([0, 1, 2, 0, 1]);
   });
 
+  it("plays a section the configured number of times", () => {
+    // m0: normal, m1: repeat-end with repeatTimes=4
+    // Expected: play 0,1 four times total
+    const m1 = makeMeasure("repeat-end");
+    m1.repeatTimes = 4;
+    const s = makeScore([makeMeasure(), m1]);
+    expect(computePlaybackOrder(s, 0)).toEqual([0, 1, 0, 1, 0, 1, 0, 1]);
+  });
+
+  it("treats repeatTimes=2 the same as default (one repeat)", () => {
+    const m1 = makeMeasure("repeat-end");
+    m1.repeatTimes = 2;
+    const s = makeScore([makeMeasure(), m1]);
+    expect(computePlaybackOrder(s, 0)).toEqual([0, 1, 0, 1]);
+  });
+
+  it("honors repeatTimes across repeat-start/end pair", () => {
+    // m0, m1 repeat-start, m2 repeat-end times=3, m3
+    // Expected: 0, (1,2)×3, 3
+    const m2 = makeMeasure("repeat-end");
+    m2.repeatTimes = 3;
+    const s = makeScore([
+      makeMeasure(),
+      makeMeasure("repeat-start"),
+      m2,
+      makeMeasure(),
+    ]);
+    expect(computePlaybackOrder(s, 0)).toEqual([0, 1, 2, 1, 2, 1, 2, 3]);
+  });
+
   it("returns empty for empty part", () => {
     const s = makeScore([]);
     expect(computePlaybackOrder(s, 0)).toEqual([]);
