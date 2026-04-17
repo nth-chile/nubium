@@ -20,6 +20,8 @@ import {
   PLAYBACK_CURSOR, SELECTION_FILL,
 } from "./colors";
 
+export const MEASURE_NUMBER_FONT = "11px sans-serif";
+
 /** Detect whether time/key signature changed from the previous measure. */
 function sigChanges(m: Measure, mi: number, prevMeasure: Measure | undefined, isFirstInLine: boolean) {
   const isPickup = m.isPickup;
@@ -144,7 +146,13 @@ export function calculateContentHeight(score: Score, viewConfig?: ViewConfig, av
   const width = availableWidth ?? 1000;
   const extra = titleHeight(score);
   if (!viewConfig) {
-    return totalContentHeight(score, { ...DEFAULT_LAYOUT, adaptiveWidths: true, availableWidth: width, topMargin: DEFAULT_LAYOUT.topMargin + extra });
+    return totalContentHeight(score, {
+      ...DEFAULT_LAYOUT,
+      adaptiveWidths: true,
+      availableWidth: width,
+      topMargin: DEFAULT_LAYOUT.topMargin + extra,
+      ...(score.parts.length <= 1 ? { partLabelWidth: 0 } : {}),
+    });
   }
   const visiblePartIndices = getVisiblePartIndices(score, viewConfig);
   const filteredScore = filterScoreParts(score, visiblePartIndices);
@@ -160,7 +168,11 @@ export function calculateContentHeight(score: Score, viewConfig?: ViewConfig, av
     ...(viewConfig.layoutConfig.compact
       ? { staffSpacing: 60 }
       : {}),
-    ...(!viewConfig.layoutConfig.showPartNames ? { partLabelWidth: 0 } : {}),
+    // Indent the first system only when part-name labels will actually be drawn.
+    // Labels are only rendered for multi-part scores (see renderScore).
+    ...(!viewConfig.layoutConfig.showPartNames || filteredScore.parts.length <= 1
+      ? { partLabelWidth: 0 }
+      : {}),
     ...(pageLayout ? { pageBreaks: true } : {}),
   };
   return totalContentHeight(filteredScore, config, getTabParts(viewConfig), viewConfig);
@@ -213,7 +225,11 @@ export function renderScore(
     ...(layoutOverrides?.compact
       ? { staffSpacing: 60 }
       : {}),
-    ...(!showPartNames ? { partLabelWidth: 0 } : {}),
+    // Indent the first system only when part-name labels will actually be drawn.
+    // Labels are only rendered for multi-part scores (see below, ~l.547).
+    ...(!showPartNames || filteredScore.parts.length <= 1
+      ? { partLabelWidth: 0 }
+      : {}),
     ...(pageLayoutEnabled ? { pageBreaks: true } : {}),
   };
   // Add space for title/composer above the first system
@@ -632,7 +648,7 @@ export function renderScore(
             );
             if (topStave) {
               rawCtx.save();
-              rawCtx.font = "10px sans-serif";
+              rawCtx.font = MEASURE_NUMBER_FONT;
               rawCtx.fillStyle = MEASURE_NUMBER;
               rawCtx.textAlign = "left";
               rawCtx.fillText(String(displayNum), topStave.x + 2, topStave.y + 30);

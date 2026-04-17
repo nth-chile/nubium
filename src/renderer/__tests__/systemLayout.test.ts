@@ -5,6 +5,7 @@ import {
   partHasTab,
   partStaveCount,
   systemHeight,
+  computeLayout,
   DEFAULT_LAYOUT,
 } from "../SystemLayout";
 import type { Score } from "../../model/score";
@@ -111,6 +112,44 @@ describe("partStaveCount", () => {
     const score = makeScore(["piano"]);
     const vc = configWith({ 0: { standard: true, tab: true, slash: true } });
     expect(partStaveCount(score, 0, undefined, vc)).toBe(4);
+  });
+});
+
+describe("first-system indent (partLabelWidth)", () => {
+  it("indents the first system by partLabelWidth when set", () => {
+    const score = makeScore(["piano", "violin"]);
+    const config = { ...DEFAULT_LAYOUT, availableWidth: 1000, adaptiveWidths: true, partLabelWidth: 60 };
+    const systems = computeLayout(score, config);
+    expect(systems.length).toBeGreaterThan(0);
+    const firstStave = systems[0].staves[0];
+    expect(firstStave.x).toBe(config.leftMargin + 60);
+  });
+
+  it("does not indent the first system when partLabelWidth is 0", () => {
+    const score = makeScore(["piano"]);
+    const config = { ...DEFAULT_LAYOUT, availableWidth: 1000, adaptiveWidths: true, partLabelWidth: 0 };
+    const systems = computeLayout(score, config);
+    expect(systems.length).toBeGreaterThan(0);
+    const firstStave = systems[0].staves[0];
+    expect(firstStave.x).toBe(config.leftMargin);
+  });
+
+  it("only indents the first system — later systems flush to leftMargin", () => {
+    // Force many measures so we get multiple systems
+    const score = makeScore(["piano", "violin"]);
+    for (const part of score.parts) {
+      const template = part.measures[0];
+      for (let i = 0; i < 16; i++) {
+        part.measures.push({ ...template, id: `m-${i + 1}` as typeof template.id });
+      }
+    }
+    const config = { ...DEFAULT_LAYOUT, availableWidth: 600, adaptiveWidths: true, partLabelWidth: 60 };
+    const systems = computeLayout(score, config);
+    expect(systems.length).toBeGreaterThan(1);
+    const firstStave = systems[0].staves[0];
+    const laterStave = systems[1].staves[0];
+    expect(firstStave.x).toBe(config.leftMargin + 60);
+    expect(laterStave.x).toBe(config.leftMargin);
   });
 });
 
