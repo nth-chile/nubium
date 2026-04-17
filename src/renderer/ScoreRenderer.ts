@@ -118,6 +118,43 @@ export interface ScoreRenderResult {
   contentHeight: number;
 }
 
+/**
+ * Compute the X coordinate of the cursor caret.
+ *
+ * When `targetBox` is present, the cursor is on a visible event — center it
+ * on that notehead.
+ *
+ * Otherwise the event has no noteBox: either the cursor is past the end of
+ * the voice (append position), or it's on an event that isn't rendered with
+ * a noteBox (rests in tab view → VexFlow GhostNote). In both cases we scan
+ * backward from the cursor position to find the previous visible event and
+ * place the caret just after its box. This prevents rests in tab-only views
+ * from making the caret jump to the end of the measure.
+ */
+export function computeCursorX(
+  targetBox: NoteBox | undefined,
+  eventIndex: number,
+  staveIndex: number,
+  eventIds: NoteEventId[],
+  hitBoxes: NoteBox[] | undefined,
+  noteBoxes: Map<NoteEventId, NoteBox> | undefined,
+  noteStartX: number,
+): number {
+  if (targetBox) {
+    return targetBox.headX + targetBox.headWidth / 2;
+  }
+  const eventCount = eventIds.length;
+  const searchStart = Math.min(eventIndex, eventCount) - 1;
+  for (let i = searchStart; i >= 0; i--) {
+    const eid = eventIds[i];
+    const nb = hitBoxes?.find((b) => b.id === eid && b.staveIndex === staveIndex) ?? noteBoxes?.get(eid);
+    if (nb) {
+      return nb.x + nb.width + 10;
+    }
+  }
+  return noteStartX + 10;
+}
+
 // Keep old constants exported for backward compatibility
 const MEASURE_WIDTH = DEFAULT_LAYOUT.measureWidth;
 const STAFF_HEIGHT = DEFAULT_LAYOUT.staffHeight + DEFAULT_LAYOUT.staffSpacing;
@@ -825,26 +862,16 @@ function drawCursor(
   }
 
   // Determine cursor X position
-  let cursorX: number;
-  if (targetBox) {
-    cursorX = targetBox.headX + targetBox.headWidth / 2;
-  } else {
-    // Append position: after the last note in the measure
-    const voice = score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
-    const eventCount = voice?.events.length ?? 0;
-    cursorX = mp.noteStartX + 10;
-    if (voice) {
-      const staveIdx = cursor.staveIndex ?? 0;
-      for (let i = eventCount - 1; i >= 0; i--) {
-        const eid = voice.events[i].id;
-        const nb = hitBoxes?.find((b) => b.id === eid && b.staveIndex === staveIdx) ?? noteBoxes?.get(eid);
-        if (nb) {
-          cursorX = nb.x + nb.width + 10;
-          break;
-        }
-      }
-    }
-  }
+  const voiceForX = score.parts[cursor.partIndex]?.measures[cursor.measureIndex]?.voices[cursor.voiceIndex];
+  const cursorX = computeCursorX(
+    targetBox,
+    cursor.eventIndex,
+    cursor.staveIndex ?? 0,
+    voiceForX?.events.map((e) => e.id) ?? [],
+    hitBoxes,
+    noteBoxes,
+    mp.noteStartX,
+  );
 
   // VexFlow staves have headroom above the top staff line
   // Standard: 4 * 10px = 40px, Tab: 4 * 13px = 52px
