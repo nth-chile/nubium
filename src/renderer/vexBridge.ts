@@ -1241,26 +1241,6 @@ export function renderMeasure(
     }
   }
 
-  // Show overfill/underfill indicator as a big bold "+" or "−" above the
-  // top-right corner of the measure. Skip pickup measures (intentionally underfilled).
-  if (!m.isPickup) {
-    const capacity = measureCapacityFn(m.timeSignature.numerator, m.timeSignature.denominator);
-    const maxTicks = Math.max(...m.voices.map((v) => voiceTicksUsedFn(v.events)), 0);
-    if (maxTicks > 0 && maxTicks !== capacity) {
-      const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
-      if (rawCtx.save) {
-        rawCtx.save();
-        const isOver = maxTicks > capacity;
-        rawCtx.fillStyle = isOver ? OVERFILL : UNDERFILL;
-        rawCtx.font = "bold 24px sans-serif";
-        rawCtx.textAlign = "right";
-        rawCtx.fillText(isOver ? "+" : "\u2212", x + width - 4, y - 4);
-        rawCtx.textAlign = "start";
-        rawCtx.restore();
-      }
-    }
-  }
-
   // Build staveNote map for cross-measure tie/slur rendering
   const staveNoteMap = new Map<NoteEventId, StaveNote>();
   for (const vfVoice of vfVoices) {
@@ -1279,6 +1259,34 @@ export function renderMeasure(
     staveNoteMap,
     vexStave: stave,
   };
+}
+
+/**
+ * Draw the overfill/underfill indicator ("+" or "−") above the top-right
+ * corner of a measure. No-op for pickup measures and for measures whose
+ * max voice ticks equal capacity or are zero.
+ */
+export function drawFillIndicator(
+  ctx: RenderContext,
+  m: Measure,
+  x: number,
+  y: number,
+  width: number,
+): void {
+  if (m.isPickup) return;
+  const capacity = measureCapacityFn(m.timeSignature.numerator, m.timeSignature.denominator);
+  const maxTicks = Math.max(...m.voices.map((v) => voiceTicksUsedFn(v.events)), 0);
+  if (maxTicks === 0 || maxTicks === capacity) return;
+  const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
+  if (!rawCtx.save) return;
+  rawCtx.save();
+  const isOver = maxTicks > capacity;
+  rawCtx.fillStyle = isOver ? OVERFILL : UNDERFILL;
+  rawCtx.font = "bold 24px sans-serif";
+  rawCtx.textAlign = "right";
+  rawCtx.fillText(isOver ? "+" : "\u2212", x + width - 4, y - 4);
+  rawCtx.textAlign = "start";
+  rawCtx.restore();
 }
 
 /**

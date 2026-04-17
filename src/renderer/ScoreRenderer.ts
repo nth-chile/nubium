@@ -1,7 +1,7 @@
 import type { Score, NoteEventId } from "../model";
 import { TICKS_PER_QUARTER, durationToTicks } from "../model/duration";
 import { StaveTie, TabTie, type StaveNote } from "vexflow";
-import { renderMeasure, renderMultiMeasureRest, renderSystemBarline, renderBrace, clearCanvas, createVexStave, type RenderContext, type NoteBox, type AnnotationBox, type MeasureRenderResult } from "./vexBridge";
+import { renderMeasure, renderMultiMeasureRest, renderSystemBarline, renderBrace, clearCanvas, createVexStave, drawFillIndicator, type RenderContext, type NoteBox, type AnnotationBox, type MeasureRenderResult } from "./vexBridge";
 import { getMeasureIndexForTick } from "../playback/TonePlayback";
 import { renderTabMeasure, type TabMeasureRenderResult } from "./TabRenderer";
 import { renderSlashMeasure } from "./SlashRenderer";
@@ -514,6 +514,13 @@ export function renderScore(
             noteStartX: ('vexStave' in result && result.vexStave) ? result.vexStave.getNoteStartX() : (layout.x + 60),
             isTab: isTabStave || undefined,
           });
+
+          // Overfill/underfill indicator: draw once per measure, above the
+          // topmost rendered stave (si === 0), regardless of whether that
+          // stave is standard, tab, or slash.
+          if (si === 0) {
+            drawFillIndicator(ctx, m, layout.x, layout.y, layout.width);
+          }
 
           for (const nb of result.noteBoxes) {
             // Tag each noteBox with the stave it was rendered on

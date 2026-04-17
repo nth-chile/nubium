@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { measureCapacity, voiceTicksUsed } from "../../model/duration";
 import type { NoteEvent } from "../../model/note";
 import type { Measure } from "../../model/score";
+import { drawFillIndicator } from "../vexBridge";
 
 /**
  * Tests for the overfill/underfill indicator displayed at top-right of
@@ -99,5 +100,70 @@ describe("overfill/underfill indicator", () => {
       voices: [{ events: [mkEvent("quarter"), mkEvent("quarter"), mkEvent("quarter")] }],
     } as Parameters<typeof shouldShowIndicator>[0];
     expect(shouldShowIndicator(m)).toEqual({ show: false });
+  });
+});
+
+/**
+ * #261 — drawFillIndicator must be callable from any renderer (standard,
+ * tab, slash). Verify it writes to the canvas context when the measure is
+ * under/overfilled, and is a no-op otherwise.
+ */
+describe("drawFillIndicator (#261)", () => {
+  function makeCtx() {
+    const calls: { op: string; args: unknown[] }[] = [];
+    const canvas2d = {
+      save: vi.fn(() => { calls.push({ op: "save", args: [] }); }),
+      restore: vi.fn(() => { calls.push({ op: "restore", args: [] }); }),
+      fillText: vi.fn((...args: unknown[]) => { calls.push({ op: "fillText", args }); }),
+      fillStyle: "",
+      font: "",
+      textAlign: "",
+    };
+    return { ctx: { context: canvas2d } as unknown as Parameters<typeof drawFillIndicator>[0], calls };
+  }
+
+  const mkMeasure = (events: NoteEvent[], num = 4, den = 4, isPickup = false): Measure => ({
+    id: "m" as never,
+    clef: { type: "treble" },
+    timeSignature: { numerator: num, denominator: den },
+    keySignature: { fifths: 0 },
+    barlineEnd: "single",
+    annotations: [],
+    voices: [{ id: "v" as never, events, staff: 0 }],
+    isPickup,
+  } as unknown as Measure);
+
+  it("draws '+' for overfilled measure", () => {
+    const { ctx, calls } = makeCtx();
+    drawFillIndicator(ctx, mkMeasure([mkEvent("whole"), mkEvent("quarter")]), 0, 0, 100);
+    const fill = calls.find((c) => c.op === "fillText");
+    expect(fill).toBeDefined();
+    expect(fill?.args[0]).toBe("+");
+  });
+
+  it("draws '−' for underfilled measure", () => {
+    const { ctx, calls } = makeCtx();
+    drawFillIndicator(ctx, mkMeasure([mkEvent("quarter")]), 0, 0, 100);
+    const fill = calls.find((c) => c.op === "fillText");
+    expect(fill).toBeDefined();
+    expect(fill?.args[0]).toBe("\u2212");
+  });
+
+  it("no-ops for a fully filled measure", () => {
+    const { ctx, calls } = makeCtx();
+    drawFillIndicator(ctx, mkMeasure([mkEvent("whole")]), 0, 0, 100);
+    expect(calls.find((c) => c.op === "fillText")).toBeUndefined();
+  });
+
+  it("no-ops for a pickup measure even if underfilled", () => {
+    const { ctx, calls } = makeCtx();
+    drawFillIndicator(ctx, mkMeasure([mkEvent("quarter")], 4, 4, true), 0, 0, 100);
+    expect(calls.find((c) => c.op === "fillText")).toBeUndefined();
+  });
+
+  it("no-ops for an empty measure", () => {
+    const { ctx, calls } = makeCtx();
+    drawFillIndicator(ctx, mkMeasure([]), 0, 0, 100);
+    expect(calls.find((c) => c.op === "fillText")).toBeUndefined();
   });
 });

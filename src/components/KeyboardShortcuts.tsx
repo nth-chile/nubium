@@ -240,7 +240,9 @@ export function KeyboardShortcuts() {
         const { tabFretBuffer, tabString } = state.inputState;
 
         // Digit keys → fret entry (multi-digit buffering: "1" then "2" → fret 12)
-        if (e.key >= "0" && e.key <= "9" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Only intercept when note entry is on — otherwise digits change duration
+        // (matches A-G keys, which only insert notes in note-entry mode).
+        if (state.inputState.noteEntry && e.key >= "0" && e.key <= "9" && !e.ctrlKey && !e.metaKey && !e.altKey) {
           e.preventDefault();
           const newBuffer = tabFretBuffer + e.key;
           const fretNum = parseInt(newBuffer, 10);
@@ -318,8 +320,10 @@ export function KeyboardShortcuts() {
           // Fall through to normal cursor handling
         }
 
-        // Tab technique shortcuts (Guitar Pro style single-key)
-        if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        // Tab technique shortcuts (Guitar Pro style single-key). Only active
+        // in note-entry mode so normal-mode letters (B, C, L, D, ...) still
+        // run their usual commands like opening the barline / chord popover.
+        if (state.inputState.noteEntry && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
           const key = e.key.toLowerCase();
           const TAB_TECHNIQUE_MAP: Record<string, import("../model/note").ArticulationKind> = {
             b: "bend",
