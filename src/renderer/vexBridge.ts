@@ -8,6 +8,10 @@ import { resolveStylesheet } from "../model/stylesheet";
 import { durationToTicks as durationToTicksFn, measureCapacity as measureCapacityFn, voiceTicksUsed as voiceTicksUsedFn } from "../model/duration";
 import { keyAccidental, pitchToMidi } from "../model/pitch";
 import { getBeamGroups } from "./beaming";
+import {
+  INK, LYRIC_TEXT, OUT_OF_RANGE, MUTED_NOTE, PLAYBACK_ACTIVE,
+  SELECTED_NOTE, OVERFILL, UNDERFILL,
+} from "./colors";
 
 export interface RenderContext {
   renderer: Renderer;
@@ -369,7 +373,7 @@ export function drawStaveAnnotations(
   if (m.navigation?.coda) {
     rawCtx.save();
     rawCtx.font = "28px Bravura, Petaluma, serif";
-    rawCtx.fillStyle = "#000";
+    rawCtx.fillStyle = INK;
     rawCtx.fillText("\uE048", x - 10, y - 28);
     rawCtx.restore();
   }
@@ -390,7 +394,7 @@ export function drawStaveAnnotations(
     if (textItems.length > 0) {
       rawCtx.save();
       rawCtx.font = "italic bold 11px serif";
-      rawCtx.fillStyle = "#000";
+      rawCtx.fillStyle = INK;
       let navY = aboveY;
       for (const text of textItems) {
         navY -= 14;
@@ -407,7 +411,7 @@ export function drawStaveAnnotations(
   if (tempoAnn) {
     rawCtx.save();
     rawCtx.font = "bold 12px serif";
-    rawCtx.fillStyle = "#000";
+    rawCtx.fillStyle = INK;
     const tempoText = tempoAnn.text
       ? `${tempoAnn.text} (\u2669 = ${tempoAnn.bpm})`
       : `\u2669 = ${tempoAnn.bpm}`;
@@ -425,13 +429,13 @@ export function drawStaveAnnotations(
     const pad = 6;
     const boxSize = Math.max(tw + pad * 2, 20 + pad * 2);
     aboveY -= boxSize + 2;
-    rawCtx.strokeStyle = "#000";
+    rawCtx.strokeStyle = INK;
     rawCtx.lineWidth = 2;
     rawCtx.beginPath();
     const rehX = stave.getNoteStartX() + 10;
     rawCtx.rect(rehX - pad, aboveY, boxSize, boxSize);
     rawCtx.stroke();
-    rawCtx.fillStyle = "#000";
+    rawCtx.fillStyle = INK;
     rawCtx.fillText(ann.text, rehX + (boxSize - pad * 2 - tw) / 2, aboveY + boxSize / 2 + 7);
     rawCtx.restore();
   }
@@ -571,7 +575,7 @@ export function renderMeasure(
   if (m.navigation?.coda && !isSecondaryStaveLocal && rawCtx.save) {
     rawCtx.save();
     rawCtx.font = "28px Bravura, Petaluma, serif";
-    rawCtx.fillStyle = "#000";
+    rawCtx.fillStyle = INK;
     const codaShift = hasChordSymbols ? style.chordSymbolSize + 8 : 0;
     rawCtx.fillText("\uE048", x - 10, y - 28 - codaShift);
     rawCtx.restore();
@@ -603,7 +607,7 @@ export function renderMeasure(
       const navBaseY = aboveY; // same level as segno
       aboveStaveCtx.save();
       aboveStaveCtx.font = "italic bold 11px serif";
-      aboveStaveCtx.fillStyle = "#000";
+      aboveStaveCtx.fillStyle = INK;
       let navY = navBaseY;
       for (const text of textItems) {
         navY -= 14;
@@ -621,7 +625,7 @@ export function renderMeasure(
   if (tempoAnn && aboveStaveCtx.save && !isSecondaryStaveLocal) {
     aboveStaveCtx.save();
     aboveStaveCtx.font = "bold 12px serif";
-    aboveStaveCtx.fillStyle = "#000";
+    aboveStaveCtx.fillStyle = INK;
     const tempoText = tempoAnn.text
       ? `${tempoAnn.text} (\u2669 = ${tempoAnn.bpm})`
       : `\u2669 = ${tempoAnn.bpm}`;
@@ -642,13 +646,13 @@ export function renderMeasure(
     const pad = 6;
     const boxSize = Math.max(tw + pad * 2, 20 + pad * 2);
     aboveY -= boxSize + 2;
-    aboveStaveCtx.strokeStyle = "#000";
+    aboveStaveCtx.strokeStyle = INK;
     aboveStaveCtx.lineWidth = 2;
     aboveStaveCtx.beginPath();
     const rehX = stave.getNoteStartX() + 10;
     aboveStaveCtx.rect(rehX - pad, aboveY, boxSize, boxSize);
     aboveStaveCtx.stroke();
-    aboveStaveCtx.fillStyle = "#000";
+    aboveStaveCtx.fillStyle = INK;
     aboveStaveCtx.fillText(ann.text, rehX + (boxSize - pad * 2 - tw) / 2, aboveY + boxSize / 2 + 7);
     aboveStaveCtx.restore();
   }
@@ -870,7 +874,7 @@ export function renderMeasure(
         data.__staveNotes.forEach((sn, idx) => {
           const ev = voiceEvents[idx];
           if (ev && (ev.kind === "note" || ev.kind === "chord") && ev.muted) {
-            sn.setStyle({ fillStyle: "rgba(0,0,0,0.4)", strokeStyle: "rgba(0,0,0,0.4)" });
+            sn.setStyle({ fillStyle: MUTED_NOTE, strokeStyle: MUTED_NOTE });
           }
         });
       }
@@ -881,7 +885,7 @@ export function renderMeasure(
         const voiceEvents = m.voices[data.__voiceIndex]?.events ?? [];
         data.__staveNotes.forEach((sn, idx) => {
           if (isOutOfRange(voiceEvents[idx])) {
-            sn.setStyle({ fillStyle: "#e57373", strokeStyle: "#e57373" });
+            sn.setStyle({ fillStyle: OUT_OF_RANGE, strokeStyle: OUT_OF_RANGE });
           }
         });
       }
@@ -891,7 +895,7 @@ export function renderMeasure(
         const data = vfVoice as unknown as { __staveNotes: StaveNote[]; __eventIds: NoteEventId[] };
         data.__staveNotes.forEach((sn, idx) => {
           if (activeNoteIds.has(data.__eventIds[idx])) {
-            sn.setStyle({ fillStyle: "#4a6fa5", strokeStyle: "#4a6fa5" });
+            sn.setStyle({ fillStyle: PLAYBACK_ACTIVE, strokeStyle: PLAYBACK_ACTIVE });
           }
         });
       }
@@ -906,10 +910,10 @@ export function renderMeasure(
             // Style only the specific chord head.
             try {
               const heads = (sn as unknown as { noteHeads: { setStyle: (s: { fillStyle: string; strokeStyle: string }) => void }[] }).noteHeads;
-              heads[headIdx]?.setStyle({ fillStyle: "#3b82f6", strokeStyle: "#3b82f6" });
+              heads[headIdx]?.setStyle({ fillStyle: SELECTED_NOTE, strokeStyle: SELECTED_NOTE });
             } catch { /* fall through */ }
           } else {
-            sn.setStyle({ fillStyle: "#3b82f6", strokeStyle: "#3b82f6" });
+            sn.setStyle({ fillStyle: SELECTED_NOTE, strokeStyle: SELECTED_NOTE });
           }
         });
       }
@@ -1005,7 +1009,7 @@ export function renderMeasure(
     if (crossStaffStave && crossStaffNoteSet.size > 0) {
       for (const sn of crossStaffNoteSet) {
         sn.setStave(crossStaffStave);
-        sn.setStyle({ fillStyle: "#000", strokeStyle: "#000" });
+        sn.setStyle({ fillStyle: INK, strokeStyle: INK });
         sn.setContext(ctx.context);
         sn.drawWithStyle();
       }
@@ -1132,7 +1136,7 @@ export function renderMeasure(
     if (csCtx.save) {
       csCtx.save();
       csCtx.font = `bold ${style.chordSymbolSize}px sans-serif`;
-      csCtx.fillStyle = "#000";
+      csCtx.fillStyle = INK;
       for (const ann of m.annotations) {
         if (ann.kind !== "chord-symbol") continue;
         if (ann.noteEventId && renderedChordIds.has(ann.noteEventId)) continue;
@@ -1194,7 +1198,7 @@ export function renderMeasure(
 
         lCtx.save();
         lCtx.font = `italic ${style.lyricSize}px ${style.fontFamily}`;
-        lCtx.fillStyle = "#555";
+        lCtx.fillStyle = LYRIC_TEXT;
         lCtx.textAlign = "center";
         for (const ann of lyricAnnotations) {
           if (ann.kind !== "lyric") continue;
@@ -1233,7 +1237,7 @@ export function renderMeasure(
       if (rawCtx.save) {
         rawCtx.save();
         const isOver = maxTicks > capacity;
-        rawCtx.fillStyle = isOver ? "#ef4444" : "#f59e0b";
+        rawCtx.fillStyle = isOver ? OVERFILL : UNDERFILL;
         rawCtx.font = "bold 24px sans-serif";
         rawCtx.textAlign = "right";
         rawCtx.fillText(isOver ? "+" : "\u2212", x + width - 4, y - 4);
@@ -1275,7 +1279,7 @@ export function renderSystemBarline(
   const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
   if (rawCtx.save) {
     rawCtx.save();
-    rawCtx.strokeStyle = "#000";
+    rawCtx.strokeStyle = INK;
     rawCtx.lineWidth = 1.5;
     rawCtx.beginPath();
     rawCtx.moveTo(x, topY);
@@ -1305,7 +1309,7 @@ export function renderBrace(
     const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
     if (rawCtx.save) {
       rawCtx.save();
-      rawCtx.strokeStyle = "#000";
+      rawCtx.strokeStyle = INK;
       rawCtx.lineWidth = 2;
       const midY = (topY + bottomY) / 2;
       const height = bottomY - topY;
@@ -1367,12 +1371,12 @@ export function renderMultiMeasureRest(
         const pad = 4;
         const boxH = 14 + pad * 2;
         aboveY -= boxH + 2;
-        rawCtx.strokeStyle = "#000";
+        rawCtx.strokeStyle = INK;
         rawCtx.lineWidth = 1.5;
         rawCtx.beginPath();
         rawCtx.rect(x + 2 - pad, aboveY, tw + pad * 2, boxH);
         rawCtx.stroke();
-        rawCtx.fillStyle = "#000";
+        rawCtx.fillStyle = INK;
         rawCtx.fillText(ann.text, x + 2, aboveY + boxH - pad - 2);
         rawCtx.restore();
       }
@@ -1382,7 +1386,7 @@ export function renderMultiMeasureRest(
     if (tempoAnn) {
       rawCtx.save();
       rawCtx.font = "bold 12px serif";
-      rawCtx.fillStyle = "#000";
+      rawCtx.fillStyle = INK;
       const text = tempoAnn.text
         ? `${tempoAnn.text} (\u2669 = ${tempoAnn.bpm})`
         : `\u2669 = ${tempoAnn.bpm}`;

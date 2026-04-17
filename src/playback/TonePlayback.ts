@@ -852,8 +852,9 @@ export function previewPitches(midis: number[], instrumentId?: string): void {
   if (!customPlayer || midis.length === 0) return;
   customPlayer.resume?.();
   const now = Tone.now();
+  const transposition = instrumentId ? (getInstrument(instrumentId)?.transposition ?? 0) : 0;
   for (const midi of midis) {
-    customPlayer.play(midi, 0.5, now, instrumentId, 90);
+    customPlayer.play(midi + transposition, 0.5, now, instrumentId, 90);
   }
 }
 

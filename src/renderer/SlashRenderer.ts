@@ -4,6 +4,7 @@ import { durationToTicks as durationToTicksFn, measureCapacity as measureCapacit
 import { getBeamGroups } from "./beaming";
 import type { RenderContext, NoteBox, MeasureRenderResult, AnnotationBox } from "./vexBridge";
 import { applyBarline, applyStaveDecorations, drawStaveAnnotations } from "./vexBridge";
+import { INK } from "./colors";
 
 const DUR_VEX: Record<string, string> = {
   whole: "w",
@@ -197,7 +198,7 @@ export function renderSlashMeasure(
     if (chordAnns.length > 0 && rawCtx.save) {
       rawCtx.save();
       rawCtx.font = "bold 14px sans-serif";
-      rawCtx.fillStyle = "#000";
+      rawCtx.fillStyle = INK;
       const chordY = y - 4;
       const renderedIds = new Set<string>();
       for (const ann of chordAnns) {

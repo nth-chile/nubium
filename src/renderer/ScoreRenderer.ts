@@ -14,6 +14,11 @@ import type { Selection } from "../plugins/PluginAPI";
 import type { Measure } from "../model";
 import { useEditorStore } from "../state/EditorState";
 import { getInstrument } from "../model/instruments";
+import {
+  PAGE_BACKGROUND, PAGE_BOUNDARY, PART_LABEL, MEASURE_NUMBER,
+  BREAK_MARKER, VOICE_COLORS as VOICE_COLORS_CONST, CURSOR_BLUE,
+  PLAYBACK_CURSOR, SELECTION_FILL, PLAYBACK_ACTIVE,
+} from "./colors";
 
 /** Detect whether time/key signature changed from the previous measure. */
 function sigChanges(m: Measure, mi: number, prevMeasure: Measure | undefined, isFirstInLine: boolean) {
@@ -236,13 +241,13 @@ export function renderScore(
     for (let p = 0; p < pages; p++) {
       const pageTop = p * config.pageHeight;
       // Soft off-white page background (less contrast against dark canvas)
-      rawCtx.fillStyle = "#ffffff";
+      rawCtx.fillStyle = PAGE_BACKGROUND;
       const pageX = pageLayoutEnabled ? (effectiveWidth - config.pageWidth) / 2 : 0;
       rawCtx.fillRect(Math.max(pageX, 0), pageTop, config.pageWidth, config.pageHeight);
 
       // Page boundary line at the bottom of each page (except the last)
       if (p < pages - 1) {
-        rawCtx.strokeStyle = "#cccccc";
+        rawCtx.strokeStyle = PAGE_BOUNDARY;
         rawCtx.lineWidth = 1;
         rawCtx.setLineDash([4, 4]);
         rawCtx.beginPath();
@@ -558,7 +563,7 @@ export function renderScore(
 
           rawCtx.save();
           rawCtx.font = isFirstSystem ? "bold 11px sans-serif" : "10px sans-serif";
-          rawCtx.fillStyle = "#333";
+          rawCtx.fillStyle = PART_LABEL;
           rawCtx.textAlign = "left";
           rawCtx.fillText(
             isFirstSystem ? part.name : part.abbreviation,
@@ -628,7 +633,7 @@ export function renderScore(
             if (topStave) {
               rawCtx.save();
               rawCtx.font = "10px sans-serif";
-              rawCtx.fillStyle = "#888";
+              rawCtx.fillStyle = MEASURE_NUMBER;
               rawCtx.textAlign = "left";
               rawCtx.fillText(String(displayNum), topStave.x + 2, topStave.y + 30);
               rawCtx.textAlign = "start";
@@ -680,7 +685,7 @@ export function renderScore(
         const ctx2d = (rawCtx as unknown as { context2D?: CanvasRenderingContext2D }).context2D;
         if (ctx2d) {
           ctx2d.save();
-          const color = "#4a6fa5";
+          const color = BREAK_MARKER;
           // Transparent background with blue border
           if (ctx2d.roundRect) { ctx2d.beginPath(); ctx2d.roundRect(bx, by, size, size, 3); }
           else { ctx2d.beginPath(); ctx2d.rect(bx, by, size, size); }
@@ -738,7 +743,7 @@ export function renderScore(
   return { noteBoxes: allNoteBoxes, hitBoxes: allHitBoxes, annotationBoxes: allAnnotationBoxes, measurePositions, breakBoxes, contentHeight };
 }
 
-const VOICE_COLORS = ["#3b82f6", "#22c55e", "#f97316", "#ef4444"];
+const VOICE_COLORS = VOICE_COLORS_CONST;
 
 function drawCursor(
   ctx: RenderContext,
@@ -900,7 +905,7 @@ function drawCursor(
     if (ctx2d) {
       ctx2d.save();
       ctx2d.globalAlpha = 0.45;
-      ctx2d.fillStyle = "#3b82f6";  // same blue as cursor
+      ctx2d.fillStyle = CURSOR_BLUE;
       ctx2d.font = "42px Bravura";
       // SMuFL noteheadBlack = U+E0A4. Offset to center glyph on yPos.
       ctx2d.fillText("\uE0A4", cursorX - 5, yPos);
@@ -1081,7 +1086,7 @@ function drawPlaybackCursor(
   const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
   if (rawCtx.strokeStyle !== undefined) {
     rawCtx.save();
-    rawCtx.strokeStyle = "#888";
+    rawCtx.strokeStyle = PLAYBACK_CURSOR;
     rawCtx.lineWidth = 3;
     rawCtx.setLineDash([]);
     rawCtx.globalAlpha = 0.7;
@@ -1106,7 +1111,7 @@ function drawSelection(
   _config: LayoutConfig
 ): void {
   rawCtx.save();
-  rawCtx.fillStyle = "rgba(66, 133, 244, 0.15)";
+  rawCtx.fillStyle = SELECTION_FILL;
   for (const mp of measurePositions) {
     if (
       mp.partIndex === selection.partIndex &&

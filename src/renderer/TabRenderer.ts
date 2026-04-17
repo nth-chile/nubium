@@ -6,6 +6,7 @@ import { durationToTicks as durationToTicksFn } from "../model/duration";
 import type { RenderContext, NoteBox } from "./vexBridge";
 import { applyBarline, applyStaveDecorations, drawStaveAnnotations } from "./vexBridge";
 import { TAB_STAFF_HEIGHT } from "./SystemLayout";
+import { INK } from "./colors";
 
 // Monkey-patch TabNote.tabToElement to use sans-serif for all frets.
 // VexFlow renders "X" as a double-sharp glyph (accidentalDoubleSharp) which looks wrong.
@@ -219,7 +220,7 @@ function drawTabAnnotations(
       const onStaffText = ON_STAFF_TEXTS[art.kind];
       if (onStaffText) {
         rawCtx.font = "italic 10px sans-serif";
-        rawCtx.fillStyle = typeof prevFill === "string" ? prevFill : "#000";
+        rawCtx.fillStyle = typeof prevFill === "string" ? prevFill : INK;
         rawCtx.fillText(onStaffText, noteX - 4, onStaffTextY);
         continue;
       }
@@ -229,7 +230,7 @@ function drawTabAnnotations(
       if (belowText) {
         const isFingerpick = art.kind.startsWith("fingerpick-");
         rawCtx.font = isFingerpick ? "italic 12px sans-serif" : "12px sans-serif";
-        rawCtx.fillStyle = typeof prevFill === "string" ? prevFill : "#000";
+        rawCtx.fillStyle = typeof prevFill === "string" ? prevFill : INK;
         rawCtx.fillText(belowText, noteX - 3, belowStaffY);
         continue;
       }
@@ -237,7 +238,7 @@ function drawTabAnnotations(
       // Slide-in: short diagonal line before the note at the note's string position
       // from-below: line goes ↗ into note, from-above: line goes ↘ into note
       if (art.kind === "slide-in-below" || art.kind === "slide-in-above") {
-        rawCtx.strokeStyle = typeof prevStroke === "string" ? prevStroke : "#000";
+        rawCtx.strokeStyle = typeof prevStroke === "string" ? prevStroke : INK;
         rawCtx.lineWidth = 1.5;
         const endX = noteX - 3;
         const startX = endX - 12;
@@ -257,7 +258,7 @@ function drawTabAnnotations(
       // Slide-out: short diagonal line after the note at the note's string position
       // out-above: line goes ↗ away, out-below: line goes ↘ away
       if (art.kind === "slide-out-below" || art.kind === "slide-out-above") {
-        rawCtx.strokeStyle = typeof prevStroke === "string" ? prevStroke : "#000";
+        rawCtx.strokeStyle = typeof prevStroke === "string" ? prevStroke : INK;
         rawCtx.lineWidth = 1.5;
         const startX = noteX + 6;
         const endX = startX + 12;
@@ -422,7 +423,7 @@ export function renderTabMeasure(
       if (chordAnns.length > 0 && rawCtx.save) {
         rawCtx.save();
         rawCtx.font = "bold 14px sans-serif";
-        rawCtx.fillStyle = "#000";
+        rawCtx.fillStyle = INK;
         const chordY = y - 4;
         const renderedIds = new Set<string>();
         for (const ann of chordAnns) {

@@ -273,7 +273,9 @@ function parseMeasure(
   let clef = { ...currentClef };
   let timeSig = { ...currentTimeSig };
   let keySig = { ...currentKeySig };
+  let measureKeySig = { ...currentKeySig }; // key sig for THIS measure (may differ from keySig if mid-measure change)
   let divisions = currentDivisions;
+  let hasSeenNotes = false; // track whether notes appeared before an attributes change
   const annotations: Annotation[] = [];
 
   // Group note events by voice, track staff assignments
@@ -394,7 +396,16 @@ function parseMeasure(
         if (newClef) clef = newClef;
 
         const newKeySig = parseKeySignature(el);
-        if (newKeySig) keySig = newKeySig;
+        if (newKeySig) {
+          // Always update keySig (carried to next measure), but only update
+          // measureKeySig if no notes have been seen yet.  A mid-measure key
+          // change is deferred to the next measure since our model stores one
+          // key signature per measure.
+          keySig = newKeySig;
+          if (!hasSeenNotes) {
+            measureKeySig = newKeySig;
+          }
+        }
 
         const newTimeSig = parseTimeSignature(el);
         if (newTimeSig) timeSig = newTimeSig;
@@ -408,6 +419,7 @@ function parseMeasure(
       }
 
       case "note": {
+        hasSeenNotes = true;
         const isChord = getDirectChild(el, "chord") !== null;
         const isRest = getDirectChild(el, "rest") !== null;
         const isGrace = getDirectChild(el, "grace") !== null;
@@ -882,7 +894,7 @@ function parseMeasure(
     id: newId<MeasureId>("msr"),
     clef,
     timeSignature: timeSig,
-    keySignature: keySig,
+    keySignature: measureKeySig,
     barlineEnd,
     navigation,
     annotations,

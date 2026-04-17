@@ -7,6 +7,7 @@ import { AnnotationPopover } from "./DynamicsPopover";
 import { getSettings, subscribeSettings, type DisplaySettings } from "../settings";
 import { getMeasureIndexForTick } from "../playback/TonePlayback";
 import type { AnnotationFilter, ViewConfig } from "../views/ViewMode";
+import { CANVAS_BACKGROUND, NOTE_SELECTION_BAND } from "../renderer/colors";
 
 const DISPLAY_TO_FILTER: [keyof DisplaySettings, AnnotationFilter[]][] = [
   ["showLyrics", ["lyric"]],
@@ -200,7 +201,7 @@ export function ScoreCanvas() {
   function drawSelectionBand(rawCtx: CanvasRenderingContext2D, result: ReturnType<typeof renderScore>) {
     if (!noteSelection || !noteSelection.rangeMode) return;
     rawCtx.save();
-    rawCtx.fillStyle = "rgba(59, 130, 246, 0.18)";
+    rawCtx.fillStyle = NOTE_SELECTION_BAND;
     const selStaveIndex = inputState.cursor.staveIndex ?? 0;
     const staveBoxes = new Map<string, (typeof result.hitBoxes)[0]>();
     for (const hb of result.hitBoxes) {
@@ -253,7 +254,7 @@ export function ScoreCanvas() {
 
     const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
     rawCtx.save();
-    rawCtx.fillStyle = "#f0e9de";
+    rawCtx.fillStyle = CANVAS_BACKGROUND;
     rawCtx.fillRect(0, 0, width, height);
     rawCtx.restore();
 
@@ -302,7 +303,7 @@ export function ScoreCanvas() {
 
     const rawCtx = ctx.context as unknown as CanvasRenderingContext2D;
     rawCtx.save();
-    rawCtx.fillStyle = "#f0e9de";
+    rawCtx.fillStyle = CANVAS_BACKGROUND;
     rawCtx.fillRect(0, 0, width, height);
     rawCtx.restore();
 
@@ -325,7 +326,7 @@ export function ScoreCanvas() {
     <div
       ref={containerRef}
       data-score-container=""
-      style={{ flex: 1, overflow: "auto", background: "#f0e9de", minWidth: 0, position: "relative" }}
+      style={{ flex: 1, overflow: "auto", background: CANVAS_BACKGROUND, minWidth: 0, position: "relative" }}
     >
       <canvas ref={canvasRef} style={{ display: "block" }} />
       <ScoreOverlay width={containerWidth / zoom} height={canvasHeight} zoom={zoom} />
