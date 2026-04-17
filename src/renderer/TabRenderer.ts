@@ -11,10 +11,12 @@ import { INK } from "./colors";
 // Monkey-patch TabNote.tabToElement to use sans-serif for all frets.
 // VexFlow renders "X" as a double-sharp glyph (accidentalDoubleSharp) which looks wrong.
 // Override to render "X" as plain text in the same font as fret numbers.
+const TAB_FRET_FONT_SIZE = 11;
+
 TabNote.tabToElement = (fret: string) => {
   const el = new Element("TabNote.text");
   el.setText(fret.toUpperCase() === "X" ? "X" : fret);
-  el.setFont("Arial, sans-serif", el.fontInfo?.size, el.fontInfo?.weight);
+  el.setFont("Arial, sans-serif", TAB_FRET_FONT_SIZE, el.fontInfo?.weight);
   el.setYShift(el.getHeight() / 2);
   return el;
 };
